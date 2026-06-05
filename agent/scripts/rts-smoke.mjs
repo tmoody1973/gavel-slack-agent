@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // RTS smoke test (MOO-38): prove assistant.search.context works with a real user token.
 //
-//   SLACK_USER_TOKEN=xoxp-... node scripts/rts-smoke.mjs "didn't we oppose this developer before"
+//   node scripts/rts-smoke.mjs "didn't we oppose this developer before"
 //
-// Reads the user token from env, calls the Real-Time Search API once, prints the raw JSON.
-// Exits non-zero if Slack returns ok:false so it can gate the issue's verification checklist.
+// Reads SLACK_USER_TOKEN from agent/.env (or the shell env), calls the Real-Time Search API
+// once, prints the raw JSON. Exits non-zero if Slack returns ok:false so it can gate the
+// issue's verification checklist.
+import "dotenv/config";
 
 const SLACK_API = "https://slack.com/api/assistant.search.context";
 const REQUIRED_SCOPE = "search:read.public";
