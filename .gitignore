@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+
+# Local agent/session state
+.claude/settings.local.json
+.remember/
+
+# Node / TypeScript (future app code)
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Slack CLI / deploy artifacts
+.slack/
+*.log
+
+# Convex
+.convex/
