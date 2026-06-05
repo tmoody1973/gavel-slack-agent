@@ -51,6 +51,8 @@ Honor each issue's **"Out of scope"** — do not expand past the stated criteria
 
 **Precedence (important):** for this build, let **superpowers (process) + linear-build (contract)** lead over the PAI Algorithm / global-CLAUDE.md ceremony — they are the more specific fit. If any skill or instruction conflicts with an issue's **"Out of scope," the issue wins** — it is the contract.
 
+**Journaling habit:** at the end of a meaningful work session, write a dated dev journal to `journal/YYYY-MM-DD.md` (what we did, decisions, learnings, risks retired, next steps). Commit journals **directly to `main`** as small `docs:` commits — they're not feature work, so no branch/PR. They're the human-readable companion to Linear's per-issue record.
+
 ## Architecture: the three-memory model (the load-bearing idea)
 
 One agent orchestrating three distinct retrieval modalities. Understanding which memory a given feature touches is the key to working in this codebase:
