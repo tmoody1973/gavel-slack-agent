@@ -16,5 +16,5 @@ registerListeners(app);
 
 (async () => {
   await app.start();
-  app.logger.info('Starter Agent is running!');
+  app.logger.info('Gavel is running!');
 })();
