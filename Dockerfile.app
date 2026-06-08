@@ -16,5 +16,12 @@ RUN cd agent && npm ci --omit=dev && cd ../mcp-server && npm ci --omit=dev
 COPY agent ./agent
 COPY mcp-server ./mcp-server
 
+# The agent runs the Claude Code SDK, which refuses --dangerously-skip-permissions
+# (permissionMode 'bypassPermissions') when running as root. Run as the unprivileged
+# 'node' user (uid 1000, present in the base image) so the agent loop is allowed.
+RUN chown -R node:node /app
+USER node
+ENV HOME=/home/node
+
 WORKDIR /app/agent
 CMD ["node", "app.js"]
