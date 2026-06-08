@@ -127,6 +127,8 @@ OData notes: dates use the `datetime'YYYY-MM-DD'` literal; `substringof(needle, 
 6. **Voice votes have no roll call.** `Votes` is empty for many routine items; rely on `EventItemPassedFlagName` + `Tally` and only promise per-member votes where roll calls exist.
 7. **Be a polite client.** No published rate limits, but it's a shared gov endpoint: cache lookup tables, poll hourly not minutely, use `$select`, and set a UA string identifying Gavel. (Also just good citizenship for a civic tool.)
 8. **County rides along.** `milwaukeecounty` is a separate Legistar client — same code, second jurisdiction, post-hackathon flag flip.
+9. **`EventAgendaLastPublishedUTC` is UTC but ships *without* a `Z`.** ✅ MOO-41 verified: the raw value looks like `2026-06-08T14:38:48.597` — genuinely UTC, but unsuffixed, so `new Date(...)`/`Date.parse(...)` misparse it as **local** time (Central → 5h skew → timestamps that read as the future and produce *negative* latencies). Tag it `Z` (or otherwise parse as UTC) before doing any time math. Do **not** do this to `EventDate` (`2026-06-10T00:00:00`) — that's a local calendar date for the meeting, not an instant. The poller normalizes the publish stamp at the `mapEvent` boundary (`agent/poller/legistar.js`).
+10. **~half of EventItems are boilerplate, not matters.** ✅ MOO-41 verified on live data: of 179 agenda items across 8 `Final` events, only **89 carried an `EventItemMatterId`** — the other 90 were meeting headers, webcast/accessibility notices, and Spanish-caption boilerplate (no matter, no agenda number, nothing to summarize). Filter to items with an `EventItemMatterId` before treating something as an alert-worthy matter. (The poller already does this before enqueuing.)
 
 ---
 

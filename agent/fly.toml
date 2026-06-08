@@ -1,0 +1,15 @@
+# Gavel poller (MOO-41) — 5-minute Legistar cron via supercronic.
+# Deploy: fly secrets set CONVEX_URL="$CONVEX_URL" && fly deploy
+app = "gavel-poller"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  POLL_CLIENT = "milwaukee"
+
+# Always-on single small machine; supercronic fires the poll every 5 minutes.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

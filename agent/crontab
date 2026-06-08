@@ -1,0 +1,2 @@
+# Gavel poller — detect new Final agenda items every 5 minutes (MOO-41).
+*/5 * * * * node /app/scripts/poll-once.mjs
