@@ -30,7 +30,7 @@ const legistar = createLegistarClient({
   client: CLIENT,
   userAgent: 'GavelCivicAgent/0.1 (contact tarik@radiomilwaukee.org)',
 });
-const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+const slack = new WebClient(process.env.SLACK_BOT_TOKEN || process.env.SLACK_USER_TOKEN);
 const generate = createClaudeGenerate({ schema: BILINGUAL_OUTPUT_SCHEMA });
 
 const pending = await convex.query(api.detectedItems.listPending, { client: CLIENT });

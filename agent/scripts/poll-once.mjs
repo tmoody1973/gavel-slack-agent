@@ -29,7 +29,7 @@ if (!url) {
 
 const convex = new ConvexHttpClient(url);
 const legistar = createLegistarClient({ fetch, client: CLIENT, userAgent: USER_AGENT });
-const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+const slack = new WebClient(process.env.SLACK_BOT_TOKEN || process.env.SLACK_USER_TOKEN);
 const generate = createClaudeGenerate({ schema: BILINGUAL_OUTPUT_SCHEMA });
 
 async function main() {
