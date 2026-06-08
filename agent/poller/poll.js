@@ -23,7 +23,13 @@ export async function runPoll(deps) {
   const fetched = [];
   for (const event of events) {
     const items = await fetchEventItems(event.eventId);
-    for (const item of items) fetched.push(toDetectedItem(client, event, item));
+    for (const item of items) {
+      // Only matter-bearing items become alert jobs — boilerplate agenda lines
+      // (webcast/accessibility notices, headers) carry no EventItemMatterId and
+      // are nothing to summarize.
+      if (item.matterId === undefined) continue;
+      fetched.push(toDetectedItem(client, event, item));
+    }
   }
 
   const seenIds = await readSeenEventItemIds(client);

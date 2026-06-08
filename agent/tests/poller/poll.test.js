@@ -45,6 +45,21 @@ test('second run is idempotent — nothing new, enqueue not called', async () =>
   assert.equal(f.enqueued.length, before);
 });
 
+test('boilerplate items without a matterId are not enqueued', async () => {
+  const itemsByEvent = {
+    1: [
+      { eventItemId: 9, title: 'Rezoning', matterId: 3, agendaNumber: '14' },
+      { eventItemId: 10, title: 'This meeting will be webcast live', agendaNumber: undefined },
+    ],
+  };
+  const f = fakes({ events: EVENTS, itemsByEvent });
+  const result = await runPoll(f.deps);
+  assert.equal(result.fetchedCount, 1, 'only the matter-bearing item counts as fetched');
+  assert.equal(result.newItems.length, 1);
+  assert.equal(result.newItems[0].eventItemId, 9);
+  assert.equal(f.enqueued.length, 1);
+});
+
 test('same eventItemId under a different client is still detected (isolation)', async () => {
   const f = fakes({ events: EVENTS, itemsByEvent: ITEMS, seenIds: [9] });
   // seen contains 9 for THIS client; a county poll with the same id must still detect.
