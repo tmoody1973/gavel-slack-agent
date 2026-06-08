@@ -9,9 +9,11 @@ function makeHandler(label, message) {
     try {
       const userId = /** @type {string} */ (context.userId);
       const channelId = /** @type {string} */ (body.channel?.id);
-      const messageTs = /** @type {string} */ (body.message?.ts);
       const eventItemId = body.actions?.[0]?.value;
-      await client.chat.postEphemeral({ channel: channelId, user: userId, thread_ts: messageTs, text: message });
+      // No thread_ts: the alert card is a top-level channel message, so the
+      // ephemeral ack should appear in the channel where the user clicked, not
+      // buried in a thread.
+      await client.chat.postEphemeral({ channel: channelId, user: userId, text: message });
       logger.info(`alert ${label}: eventItemId=${eventItemId} user=${userId}`);
     } catch (e) {
       logger.error(`alert ${label} failed: ${e}`);

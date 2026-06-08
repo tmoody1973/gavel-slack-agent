@@ -29,6 +29,8 @@ for (const [name, handler] of [
     assert.equal(calls.ack, 1);
     assert.equal(calls.ephemeral.length, 1);
     assert.equal(calls.ephemeral[0].user, 'U1');
+    assert.equal(calls.ephemeral[0].channel, 'C1');
+    assert.ok(!('thread_ts' in calls.ephemeral[0]), 'ack is channel-level, not threaded');
     assert.ok(calls.logs.some((l) => l.includes('490695')));
   });
 }
