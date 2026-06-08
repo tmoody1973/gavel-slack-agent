@@ -7,11 +7,14 @@ test('mapMatter picks the file number', () => {
 });
 
 test('mapSponsor picks primary sponsor name + person id', () => {
-  assert.deepEqual(mapSponsor({ MatterSponsorName: 'ALD. PEREZ', MatterSponsorNameId: 2462, MatterSponsorSequence: 0 }), {
-    name: 'ALD. PEREZ',
-    personId: 2462,
-    sequence: 0,
-  });
+  assert.deepEqual(
+    mapSponsor({ MatterSponsorName: 'ALD. PEREZ', MatterSponsorNameId: 2462, MatterSponsorSequence: 0 }),
+    {
+      name: 'ALD. PEREZ',
+      personId: 2462,
+      sequence: 0,
+    },
+  );
 });
 
 test('mapPerson picks contact fields, undefined when absent', () => {

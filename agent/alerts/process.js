@@ -20,7 +20,17 @@ import { matchSubscriptions } from './match.js';
  * }} deps
  */
 export async function processPendingAlerts(deps) {
-  const { client, listPending, listSubscriptions, enrich, generateBilingual, buildFooterText, postCard, markSent, logger } = deps;
+  const {
+    client,
+    listPending,
+    listSubscriptions,
+    enrich,
+    generateBilingual,
+    buildFooterText,
+    postCard,
+    markSent,
+    logger,
+  } = deps;
   const pending = await listPending(client);
   const subscriptions = await listSubscriptions(client);
   const results = [];

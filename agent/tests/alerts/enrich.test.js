@@ -14,7 +14,10 @@ function fakeLegistar({ sponsors }) {
 const row = { matterId: 70036, eventId: 13355 };
 
 test('enriches matter + event + primary sponsor person', async () => {
-  const ctx = await enrichForAlert(row, fakeLegistar({ sponsors: [{ name: 'ALD. PEREZ', personId: 2462, sequence: 0 }] }));
+  const ctx = await enrichForAlert(
+    row,
+    fakeLegistar({ sponsors: [{ name: 'ALD. PEREZ', personId: 2462, sequence: 0 }] }),
+  );
   assert.equal(ctx.matter.fileNumber, '241554');
   assert.equal(ctx.event.location, 'Room 301-B');
   assert.equal(ctx.person.email, 'jperez@milwaukee.gov');

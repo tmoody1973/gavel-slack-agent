@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildFooter, HOW_TO_PARTICIPATE_URL } from '../../alerts/footer.js';
 
-const event = { date: '2026-06-10T00:00:00', time: '1:30 PM', location: 'Room 301-B, City Hall', inSiteUrl: 'https://x' };
+const event = {
+  date: '2026-06-10T00:00:00',
+  time: '1:30 PM',
+  location: 'Room 301-B, City Hall',
+  inSiteUrl: 'https://x',
+};
 
 test('footer includes hearing date/time, location, registration link, person contact', () => {
   const { text } = buildFooter(event, { name: 'ALD. PEREZ', email: 'jperez@milwaukee.gov', phone: '414-286-2221' });

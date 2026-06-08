@@ -44,9 +44,25 @@ export function buildAlertCard({ row, matter, event, summary, footer }) {
     {
       type: 'actions',
       elements: [
-        { type: 'button', action_id: 'alert_watch', text: { type: 'plain_text', text: '👁 Watch', emoji: true }, value, style: 'primary' },
-        { type: 'button', action_id: 'alert_history', text: { type: 'plain_text', text: '🕓 History', emoji: true }, value },
-        { type: 'button', action_id: 'alert_ask', text: { type: 'plain_text', text: '💬 Ask Gavel', emoji: true }, value },
+        {
+          type: 'button',
+          action_id: 'alert_watch',
+          text: { type: 'plain_text', text: '👁 Watch', emoji: true },
+          value,
+          style: 'primary',
+        },
+        {
+          type: 'button',
+          action_id: 'alert_history',
+          text: { type: 'plain_text', text: '🕓 History', emoji: true },
+          value,
+        },
+        {
+          type: 'button',
+          action_id: 'alert_ask',
+          text: { type: 'plain_text', text: '💬 Ask Gavel', emoji: true },
+          value,
+        },
       ],
     },
   );
