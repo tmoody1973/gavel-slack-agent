@@ -51,3 +51,51 @@ export const SUMMARY_OUTPUT_SCHEMA = {
   required: ['summary', 'whyItMatters', 'addresses'],
   additionalProperties: false,
 };
+
+// Curated EN→ES civic glossary injected so Spanish is composed natively with
+// correct civic terms (not machine-translated).
+const CIVIC_GLOSSARY = [
+  'zoning = zonificación',
+  'ordinance = ordenanza',
+  'resolution = resolución',
+  'hearing = audiencia',
+  'public comment = comentario público',
+  'alderperson = concejal',
+  'Common Council = Concejo Municipal',
+  'rezoning = recalificación de zona',
+  'demolition = demolición',
+  'license = licencia',
+].join('; ');
+
+export const BILINGUAL_SYSTEM_PROMPT = `${SUMMARY_SYSTEM_PROMPT}
+
+Produce the SAME three things in BOTH English and Spanish, composed natively in each language (do not translate word-for-word — write each as a fluent civic explainer would). Return an object with "en" and "es" objects, each holding "summary" and "whyItMatters", plus a single shared "addresses" array.
+
+Keep file numbers, street addresses, and committee names in English in both. Use this civic glossary for Spanish terms: ${CIVIC_GLOSSARY}.`;
+
+export const BILINGUAL_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    en: {
+      type: 'object',
+      properties: { summary: { type: 'string' }, whyItMatters: { type: 'string' } },
+      required: ['summary', 'whyItMatters'],
+      additionalProperties: false,
+    },
+    es: {
+      type: 'object',
+      properties: { summary: { type: 'string' }, whyItMatters: { type: 'string' } },
+      required: ['summary', 'whyItMatters'],
+      additionalProperties: false,
+    },
+    addresses: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['en', 'es', 'addresses'],
+  additionalProperties: false,
+};
+
+/** Bilingual user prompt — same source context, asks for EN+ES. */
+export function buildBilingualPrompt(matter) {
+  const { contextText } = buildSourceContext(matter);
+  return `Summarize this Milwaukee civic matter for a neighbor, in English and Spanish.\n\n${contextText}`;
+}
