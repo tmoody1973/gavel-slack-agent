@@ -1,0 +1,15 @@
+# Gavel interactive app (MOO-70) — always-on Bolt worker in Socket Mode.
+# Separate Fly app from gavel-poller (different lifecycle: always-on listener
+# vs 5-min cron). No [http_service]: Socket Mode dials out, nothing inbound.
+# Deploy: fly deploy -c fly.app.toml --remote-only
+app = "gavel-app"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile.app"
+
+# Single always-on machine. The agent (Node + Claude Agent SDK) also spawns the
+# milwaukee-civic MCP server as a subprocess, so give it headroom over the poller.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

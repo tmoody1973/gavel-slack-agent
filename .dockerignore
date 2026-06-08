@@ -1,0 +1,12 @@
+# Repo-root build context for Dockerfile.app (gavel-app). Keep node_modules and
+# secrets out of the image; deps are reinstalled and secrets come from Fly.
+**/node_modules
+**/.env
+**/.env.*
+.git
+agent/.slack
+agent/.remember
+.claude
+journal
+docs
+.planning
