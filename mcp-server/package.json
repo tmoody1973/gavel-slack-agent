@@ -1,0 +1,26 @@
+{
+  "name": "milwaukee-civic-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing Milwaukee Legistar (city legislation) as tools.",
+  "type": "module",
+  "bin": {
+    "milwaukee-civic-mcp": "./src/server.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "verify": "node scripts/mcp-verify.mjs",
+    "lint": "biome check ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16"
+  }
+}

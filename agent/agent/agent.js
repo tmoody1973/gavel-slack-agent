@@ -119,8 +119,14 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
   });
 
   /** @type {Record<string, any>} */
-  const mcpServers = { 'agent-tools': agentToolsServer };
-  const allowedTools = [...ALLOWED_TOOLS];
+  const mcpServers = {
+    'agent-tools': agentToolsServer,
+    'milwaukee-civic': {
+      command: 'node',
+      args: [new URL('../../mcp-server/src/server.js', import.meta.url).pathname],
+    },
+  };
+  const allowedTools = [...ALLOWED_TOOLS, 'mcp__milwaukee-civic__*'];
 
   if (deps?.userToken) {
     mcpServers['slack-mcp'] = {
