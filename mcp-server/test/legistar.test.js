@@ -63,3 +63,62 @@ test('throws a clear error on a non-ok response', async () => {
   });
   await assert.rejects(() => client.fetchUpcomingFinalEvents(), /Legistar.*503/);
 });
+
+test('getMatterHistories hits /matters/{id}/histories with notes', async () => {
+  const { fetch, calls } = fakeFetch({
+    histories: [{
+      MatterHistoryId: 5, MatterHistoryActionDate: '2026-05-01T00:00:00',
+      MatterHistoryActionName: 'Held', MatterHistoryActionBodyName: 'ZONING',
+      MatterHistoryPassedFlag: 0, MatterHistoryTally: '4-1',
+    }],
+  });
+  const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
+  const out = await client.getMatterHistories(73181);
+  assert.equal(out[0].actionName, 'Held');
+  assert.equal(out[0].tally, '4-1');
+  assert.ok(calls[0].url.includes('/matters/73181/histories'));
+  assert.ok(calls[0].url.includes('AgendaNote=1'));
+});
+
+test('getMatterTexts hits /matters/{id}/versions then /texts/{id}', async () => {
+  const fetch = async (url) => {
+    if (url.includes('/versions')) return { ok: true, status: 200, json: async () => [{ Key: '2', Value: 'v2' }] };
+    return { ok: true, status: 200, json: async () => ({ MatterTextId: 2, MatterTextPlain: 'full text' }) };
+  };
+  const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
+  const out = await client.getMatterTexts(73181);
+  assert.equal(out.plain, 'full text');
+});
+
+test('getMatterAttachments hits /matters/{id}/attachments', async () => {
+  const { fetch, calls } = fakeFetch({
+    attachments: [{ MatterAttachmentId: 7, MatterAttachmentName: 'Staff report', MatterAttachmentHyperlink: 'http://x/File' }],
+  });
+  const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
+  const out = await client.getMatterAttachments(73181);
+  assert.equal(out[0].name, 'Staff report');
+  assert.ok(calls[0].url.includes('/matters/73181/attachments'));
+});
+
+test('getEventItemVotes hits /eventitems/{id}/votes, maps members', async () => {
+  const { fetch, calls } = fakeFetch({
+    votes: [{ VotePersonId: 11, VotePersonName: 'Ald. Smith', VoteValueName: 'Aye' }],
+  });
+  const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
+  const out = await client.getEventItemVotes(491773);
+  assert.equal(out[0].person, 'Ald. Smith');
+  assert.equal(out[0].value, 'Aye');
+  assert.ok(calls[0].url.includes('/eventitems/491773/votes'));
+});
+
+test('searchMatters builds substringof + $top filter on /matters', async () => {
+  const { fetch, calls } = fakeFetch({
+    matters: [{ MatterId: 1, MatterFile: '230001', MatterTitle: 'XYZ Holdings rezoning' }],
+  });
+  const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
+  const out = await client.searchMatters({ query: 'XYZ Holdings', top: 20 });
+  assert.equal(out[0].file, '230001');
+  const url = decodeURIComponent(calls[0].url);
+  assert.ok(url.includes("substringof('XYZ Holdings',MatterTitle)"));
+  assert.ok(url.includes('$top=20'));
+});

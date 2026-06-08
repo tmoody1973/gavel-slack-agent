@@ -95,6 +95,44 @@ export function mapEventDetail(raw) {
   };
 }
 
+/** Normalize a raw matter history action. */
+export function mapHistory(raw) {
+  return {
+    id: raw.MatterHistoryId,
+    actionDate: raw.MatterHistoryActionDate,
+    actionName: raw.MatterHistoryActionName,
+    bodyName: raw.MatterHistoryActionBodyName,
+    passed: raw.MatterHistoryPassedFlag === 1,
+    tally: raw.MatterHistoryTally ?? null,
+    actionText: raw.MatterHistoryActionText ?? null,
+  };
+}
+
+/** Normalize a raw matter attachment. */
+export function mapAttachment(raw) {
+  return {
+    id: raw.MatterAttachmentId,
+    name: raw.MatterAttachmentName,
+    url: raw.MatterAttachmentHyperlink ?? null,
+  };
+}
+
+/** Normalize a raw vote record. */
+export function mapVote(raw) {
+  return { personId: raw.VotePersonId, person: raw.VotePersonName, value: raw.VoteValueName };
+}
+
+/** Normalize a raw matter to a lightweight summary. */
+export function mapMatterSummary(raw) {
+  return {
+    matterId: raw.MatterId,
+    file: raw.MatterFile ?? null,
+    title: raw.MatterTitle ?? null,
+    introDate: raw.MatterIntroDate ?? null,
+    status: raw.MatterStatusName ?? null,
+  };
+}
+
 const LEGISTAR_BASE = 'https://webapi.legistar.com/v1';
 
 /**
@@ -146,5 +184,41 @@ export function createLegistarClient({
     return mapEventDetail(await getJson(`events/${eventId}`));
   }
 
-  return { fetchUpcomingFinalEvents, fetchEventItems, getMatter, getMatterSponsors, getPerson, getEvent };
+  async function getMatterHistories(matterId) {
+    const raw = await getJson(`matters/${matterId}/histories?AgendaNote=1&MinutesNote=1`);
+    return raw.map(mapHistory);
+  }
+
+  async function getMatterTexts(matterId) {
+    const versions = await getJson(`matters/${matterId}/versions`);
+    const latest = versions.at(-1);
+    if (!latest) return { plain: null, version: null };
+    const text = await getJson(`matters/${matterId}/texts/${latest.Key}`);
+    return { version: latest.Key, plain: text.MatterTextPlain ?? text.MatterTextRtf ?? null };
+  }
+
+  async function getMatterAttachments(matterId) {
+    const raw = await getJson(`matters/${matterId}/attachments`);
+    return raw.map(mapAttachment);
+  }
+
+  async function getEventItemVotes(eventItemId) {
+    const raw = await getJson(`eventitems/${eventItemId}/votes`);
+    return raw.map(mapVote);
+  }
+
+  async function searchMatters({ query, sinceDate, top = 20, skip = 0 }) {
+    const clauses = [];
+    if (query) clauses.push(`substringof('${query}',MatterTitle)`);
+    if (sinceDate) clauses.push(`MatterIntroDate ge datetime'${sinceDate}'`);
+    const filter = clauses.length ? `$filter=${clauses.join(' and ')}&` : '';
+    const path = `matters?${filter}$orderby=MatterIntroDate desc&$top=${top}&$skip=${skip}`;
+    const raw = await getJson(encodeURI(path));
+    return raw.map(mapMatterSummary);
+  }
+
+  return {
+    fetchUpcomingFinalEvents, fetchEventItems, getMatter, getMatterSponsors, getPerson, getEvent,
+    getMatterHistories, getMatterTexts, getMatterAttachments, getEventItemVotes, searchMatters,
+  };
 }
