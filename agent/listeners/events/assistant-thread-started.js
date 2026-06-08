@@ -1,7 +1,14 @@
 const SUGGESTED_PROMPTS = [
-  { title: 'Write a Message', message: 'Help me draft a message to my team' },
-  { title: 'Summarize', message: 'Can you help me summarize something?' },
-  { title: 'Brainstorm', message: 'I need help brainstorming ideas' },
+  { title: "This week's meetings", message: 'What meetings are coming up at Milwaukee city government this week?' },
+  {
+    title: 'Look up a file',
+    message: "What's happening with a Milwaukee legislative file? I'll give you the file number.",
+  },
+  {
+    title: 'Who represents me?',
+    message: 'Who sponsored a matter before the Common Council, and how do I contact them?',
+  },
+  { title: 'En español', message: '¿Qué decisiones está por tomar el gobierno de Milwaukee esta semana?' },
 ];
 
 /**
@@ -16,7 +23,7 @@ export async function handleAssistantThreadStarted({ client, event, logger }) {
     await client.assistant.threads.setSuggestedPrompts({
       channel_id: channelId,
       thread_ts: threadTs,
-      title: 'How can I help you today?',
+      title: 'Ask Gavel about Milwaukee city government',
       prompts: SUGGESTED_PROMPTS,
     });
   } catch (e) {
