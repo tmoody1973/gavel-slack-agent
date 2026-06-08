@@ -51,6 +51,19 @@ export const enqueueDetected = mutation({
   },
 });
 
+/** Flag a detected item as alerted so the poller never re-posts it. */
+export const markSent = mutation({
+  args: { client: clientValidator, eventItemId: v.number() },
+  handler: async (ctx, { client, eventItemId }) => {
+    const existing = await ctx.db
+      .query('detectedAgendaItems')
+      .withIndex('by_client_item', (q) => q.eq('client', client).eq('eventItemId', eventItemId))
+      .unique();
+    if (existing) await ctx.db.patch(existing._id, { alertStatus: 'sent' });
+    return existing?._id ?? null;
+  },
+});
+
 /** Pending alerts awaiting summarize+post (MOO-44's consumer). */
 export const listPending = query({
   args: { client: v.optional(clientValidator) },

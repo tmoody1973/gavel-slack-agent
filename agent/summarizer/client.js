@@ -18,7 +18,7 @@ export const SUMMARY_MODEL = 'claude-sonnet-4-6';
  * @returns {import('./summarize.js').Generate}
  */
 export function createClaudeGenerate(options = {}) {
-  const { apiKey, model = SUMMARY_MODEL, client } = options;
+  const { apiKey, model = SUMMARY_MODEL, client, schema = SUMMARY_OUTPUT_SCHEMA } = options;
   const anthropic = client ?? new Anthropic(apiKey ? { apiKey } : undefined);
 
   return async function generate({ system, prompt }) {
@@ -27,7 +27,7 @@ export function createClaudeGenerate(options = {}) {
       max_tokens: 1024,
       system,
       messages: [{ role: 'user', content: prompt }],
-      output_config: { format: { type: 'json_schema', schema: SUMMARY_OUTPUT_SCHEMA } },
+      output_config: { format: { type: 'json_schema', schema } },
     });
 
     const text = response.content.find((block) => block.type === 'text')?.text ?? '';

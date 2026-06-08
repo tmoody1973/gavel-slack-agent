@@ -1,3 +1,4 @@
+import { handleAlertAsk, handleAlertHistory, handleAlertWatch } from './alert-buttons.js';
 import { handleFeedbackButton } from './feedback-buttons.js';
 
 /**
@@ -7,4 +8,7 @@ import { handleFeedbackButton } from './feedback-buttons.js';
  */
 export function register(app) {
   app.action('feedback', handleFeedbackButton);
+  app.action('alert_watch', handleAlertWatch);
+  app.action('alert_history', handleAlertHistory);
+  app.action('alert_ask', handleAlertAsk);
 }
