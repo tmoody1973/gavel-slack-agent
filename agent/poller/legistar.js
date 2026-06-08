@@ -69,6 +69,33 @@ export function toDetectedItem(client, event, item) {
   return row;
 }
 
+/** Normalize a raw Legistar matter to the card's file number. */
+export function mapMatter(raw) {
+  return { fileNumber: raw.MatterFile };
+}
+
+/** Normalize a raw sponsor row (the alderperson behind a matter). */
+export function mapSponsor(raw) {
+  return { name: raw.MatterSponsorName, personId: raw.MatterSponsorNameId, sequence: raw.MatterSponsorSequence };
+}
+
+/** Normalize a raw person to contact fields; empty strings/null → undefined. */
+export function mapPerson(raw) {
+  const clean = (value) => (value ? value : undefined);
+  return { name: raw.PersonFullName, email: clean(raw.PersonEmail), phone: clean(raw.PersonPhone) };
+}
+
+/** Normalize a raw event to its hearing detail (time/location/links). */
+export function mapEventDetail(raw) {
+  return {
+    date: raw.EventDate,
+    time: raw.EventTime ?? undefined,
+    location: raw.EventLocation ?? undefined,
+    inSiteUrl: raw.EventInSiteURL ?? undefined,
+    agendaPdf: raw.EventAgendaFile ?? undefined,
+  };
+}
+
 const LEGISTAR_BASE = 'https://webapi.legistar.com/v1';
 
 /**
@@ -103,5 +130,22 @@ export function createLegistarClient({
     return raw.map(mapEventItem);
   }
 
-  return { fetchUpcomingFinalEvents, fetchEventItems };
+  async function getMatter(matterId) {
+    return mapMatter(await getJson(`matters/${matterId}`));
+  }
+
+  async function getMatterSponsors(matterId) {
+    const raw = await getJson(`matters/${matterId}/sponsors`);
+    return raw.map(mapSponsor).sort((a, b) => a.sequence - b.sequence);
+  }
+
+  async function getPerson(personId) {
+    return mapPerson(await getJson(`persons/${personId}`));
+  }
+
+  async function getEvent(eventId) {
+    return mapEventDetail(await getJson(`events/${eventId}`));
+  }
+
+  return { fetchUpcomingFinalEvents, fetchEventItems, getMatter, getMatterSponsors, getPerson, getEvent };
 }
