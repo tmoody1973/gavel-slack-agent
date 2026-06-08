@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createLegistarClient } from '../src/legistar.js';
+import { createLegistarClient, mapMatter } from '../src/legistar.js';
 
 function fakeFetch(routes) {
   const calls = [];
@@ -12,6 +12,25 @@ function fakeFetch(routes) {
   };
   return { fetch, calls };
 }
+
+test('mapMatter exposes the useful matter fields, not just the file number', () => {
+  const out = mapMatter({
+    MatterId: 73181,
+    MatterFile: '230001',
+    MatterTitle: 'A substitute motion on duty to intervene',
+    MatterStatusName: 'In Committee',
+    MatterIntroDate: '2026-05-01T00:00:00',
+    MatterBodyName: 'PUBLIC SAFETY & HEALTH COMMITTEE',
+  });
+  assert.deepEqual(out, {
+    matterId: 73181,
+    fileNumber: '230001',
+    title: 'A substitute motion on duty to intervene',
+    status: 'In Committee',
+    introDate: '2026-05-01T00:00:00',
+    bodyName: 'PUBLIC SAFETY & HEALTH COMMITTEE',
+  });
+});
 
 test('fetchUpcomingFinalEvents hits /events with the window query, UA, mapped result', async () => {
   const { fetch, calls } = fakeFetch({

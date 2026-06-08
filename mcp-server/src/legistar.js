@@ -68,9 +68,16 @@ export function toDetectedItem(client, event, item) {
   return row;
 }
 
-/** Normalize a raw Legistar matter to the card's file number. */
+/** Normalize a raw Legistar matter to the useful file fields. */
 export function mapMatter(raw) {
-  return { fileNumber: raw.MatterFile };
+  return {
+    matterId: raw.MatterId,
+    fileNumber: raw.MatterFile ?? null,
+    title: raw.MatterTitle ?? raw.MatterName ?? null,
+    status: raw.MatterStatusName ?? null,
+    introDate: raw.MatterIntroDate ?? null,
+    bodyName: raw.MatterBodyName ?? null,
+  };
 }
 
 /** Normalize a raw sponsor row (the alderperson behind a matter). */
@@ -82,17 +89,6 @@ export function mapSponsor(raw) {
 export function mapPerson(raw) {
   const clean = (value) => (value ? value : undefined);
   return { name: raw.PersonFullName, email: clean(raw.PersonEmail), phone: clean(raw.PersonPhone) };
-}
-
-/** Normalize a raw event to its hearing detail (time/location/links). */
-export function mapEventDetail(raw) {
-  return {
-    date: raw.EventDate,
-    time: raw.EventTime ?? undefined,
-    location: raw.EventLocation ?? undefined,
-    inSiteUrl: raw.EventInSiteURL ?? undefined,
-    agendaPdf: raw.EventAgendaFile ?? undefined,
-  };
 }
 
 /** Normalize a raw matter history action. */
@@ -180,10 +176,6 @@ export function createLegistarClient({
     return mapPerson(await getJson(`persons/${personId}`));
   }
 
-  async function getEvent(eventId) {
-    return mapEventDetail(await getJson(`events/${eventId}`));
-  }
-
   async function getMatterHistories(matterId) {
     const raw = await getJson(`matters/${matterId}/histories?AgendaNote=1&MinutesNote=1`);
     return raw.map(mapHistory);
@@ -223,7 +215,6 @@ export function createLegistarClient({
     getMatter,
     getMatterSponsors,
     getPerson,
-    getEvent,
     getMatterHistories,
     getMatterTexts,
     getMatterAttachments,
