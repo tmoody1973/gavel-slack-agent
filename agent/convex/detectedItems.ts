@@ -64,6 +64,28 @@ export const markSent = mutation({
   },
 });
 
+/**
+ * Flush the pending queue without posting — flips every pending row to `sent`.
+ * One-shot go-live reset so enabling the post step doesn't dump the accumulated
+ * backfill. Returns the count flipped.
+ */
+export const markAllSent = mutation({
+  args: { client: v.optional(clientValidator) },
+  handler: async (ctx, { client }) => {
+    const pending = client
+      ? await ctx.db
+          .query('detectedAgendaItems')
+          .withIndex('by_client_status', (q) => q.eq('client', client).eq('alertStatus', 'pending'))
+          .collect()
+      : await ctx.db
+          .query('detectedAgendaItems')
+          .filter((q) => q.eq(q.field('alertStatus'), 'pending'))
+          .collect();
+    for (const row of pending) await ctx.db.patch(row._id, { alertStatus: 'sent' });
+    return pending.length;
+  },
+});
+
 /** Pending alerts awaiting summarize+post (MOO-44's consumer). */
 export const listPending = query({
   args: { client: v.optional(clientValidator) },
