@@ -35,7 +35,9 @@ runPoll({
   enqueueDetected: (items) => convex.mutation(api.detectedItems.enqueueDetected, { items }),
 })
   .then((r) => {
-    console.log(`[${new Date().toISOString()}] ${CLIENT}: fetched ${r.fetchedCount}, detected ${r.newItems.length} new`);
+    console.log(
+      `[${new Date().toISOString()}] ${CLIENT}: fetched ${r.fetchedCount}, detected ${r.newItems.length} new`,
+    );
     process.exit(0);
   })
   .catch((err) => {

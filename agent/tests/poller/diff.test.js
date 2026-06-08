@@ -1,7 +1,7 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { detectionKey } from '../../poller/keys.js';
+import { test } from 'node:test';
 import { diffNewItems } from '../../poller/diff.js';
+import { detectionKey } from '../../poller/keys.js';
 
 const item = (client, eventItemId) => ({ client, eventItemId, title: `item ${eventItemId}` });
 

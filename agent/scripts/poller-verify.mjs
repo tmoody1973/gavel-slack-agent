@@ -81,9 +81,7 @@ async function main() {
   // RUN 2 (immediate) — must detect ZERO (idempotent diff).
   const run2 = await runPoll(deps);
   console.log(`\nRUN 2 (immediate re-run): fetched ${run2.fetchedCount}, detected ${run2.newItems.length} NEW`);
-  console.log(
-    run2.newItems.length === 0 ? 'IDEMPOTENT ✓ — no duplicate detections' : 'NOT IDEMPOTENT ✗ — investigate',
-  );
+  console.log(run2.newItems.length === 0 ? 'IDEMPOTENT ✓ — no duplicate detections' : 'NOT IDEMPOTENT ✗ — investigate');
 
   // Latency headline: freshest agenda in the batch.
   const published = run1.newItems

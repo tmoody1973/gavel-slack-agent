@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { createLegistarClient } from '../../poller/legistar.js';
 
 function fakeFetch(routes) {
@@ -39,9 +39,7 @@ test('fetchUpcomingFinalEvents hits /events with the window query, UA, mapped re
 
 test('fetchEventItems hits /events/{id}/eventitems with Attachments=1, mapped', async () => {
   const { fetch, calls } = fakeFetch({
-    eventitems: [
-      { EventItemId: 9, EventItemTitle: 'Rezoning', EventItemMatterId: 3, EventItemAgendaNumber: '14' },
-    ],
+    eventitems: [{ EventItemId: 9, EventItemTitle: 'Rezoning', EventItemMatterId: 3, EventItemAgendaNumber: '14' }],
   });
   const client = createLegistarClient({
     fetch,

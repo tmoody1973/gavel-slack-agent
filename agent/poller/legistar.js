@@ -15,8 +15,7 @@ export function buildEventsQuery(nowIso, windowDays = DEFAULT_WINDOW_DAYS) {
   const start = nowIso.slice(0, 10);
   const end = addDaysIso(nowIso, windowDays).slice(0, 10);
   const filter =
-    `EventDate ge datetime'${start}' and EventDate lt datetime'${end}' ` +
-    `and EventAgendaStatusName eq 'Final'`;
+    `EventDate ge datetime'${start}' and EventDate lt datetime'${end}' ` + `and EventAgendaStatusName eq 'Final'`;
   const params = new URLSearchParams({ $filter: filter, $orderby: 'EventDate', $top: '1000' });
   return `events?${params.toString()}`;
 }

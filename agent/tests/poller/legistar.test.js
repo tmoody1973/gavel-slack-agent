@@ -1,12 +1,6 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  addDaysIso,
-  buildEventsQuery,
-  mapEvent,
-  mapEventItem,
-  toDetectedItem,
-} from '../../poller/legistar.js';
+import { test } from 'node:test';
+import { addDaysIso, buildEventsQuery, mapEvent, mapEventItem, toDetectedItem } from '../../poller/legistar.js';
 
 test('addDaysIso advances the date in UTC', () => {
   assert.equal(addDaysIso('2026-06-08T00:00:00.000Z', 7).slice(0, 10), '2026-06-15');
@@ -54,7 +48,12 @@ test('mapEvent normalizes a no-offset agendaPublishedUTC to a Z-suffixed instant
 });
 
 test('mapEvent leaves an already-Z agendaPublishedUTC unchanged', () => {
-  const e = mapEvent({ EventId: 1, EventBodyName: 'X', EventDate: 'd', EventAgendaLastPublishedUTC: '2026-06-08T14:38:48Z' });
+  const e = mapEvent({
+    EventId: 1,
+    EventBodyName: 'X',
+    EventDate: 'd',
+    EventAgendaLastPublishedUTC: '2026-06-08T14:38:48Z',
+  });
   assert.equal(e.agendaPublishedUTC, '2026-06-08T14:38:48Z');
 });
 

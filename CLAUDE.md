@@ -99,7 +99,8 @@ Phase 0 (curl-before-commit) → Phase 1 spine (poller + summarizer + Block Kit 
 
 ## Conventions when code lands
 
-- No build/lint/test commands exist yet — establish them in Phase 0/1 and document them here once the toolchain is chosen.
+- **Commands** (run from `agent/`): tests `node --test` · lint `npx @biomejs/biome check .` · Convex push/codegen `npx convex dev` (dev deployment `vivid-weasel-903`; `CONVEX_URL` in gitignored `.env.local`).
+- **Poller (MOO-41):** `node scripts/poller-verify.mjs` (live verify — cold detect, idempotent re-run, latency) · `node scripts/poll-once.mjs` (one real cycle; rows persist as the ledger). Deployed as Fly app **`gavel-poller`** running supercronic on `*/5` (`fly logs -a gavel-poller`). Detection writes `detectedAgendaItems` (`pending`) rows that MOO-44 drains.
 - Treat the "Real vs. Cached for Demo" table (PRD) as a contract: features marked real must actually run; cached/staged items must be disclosed in the demo. Do not quietly fake a "real" feature.
 
 # Clean Code Standards
