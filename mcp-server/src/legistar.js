@@ -218,7 +218,16 @@ export function createLegistarClient({
   }
 
   return {
-    fetchUpcomingFinalEvents, fetchEventItems, getMatter, getMatterSponsors, getPerson, getEvent,
-    getMatterHistories, getMatterTexts, getMatterAttachments, getEventItemVotes, searchMatters,
+    fetchUpcomingFinalEvents,
+    fetchEventItems,
+    getMatter,
+    getMatterSponsors,
+    getPerson,
+    getEvent,
+    getMatterHistories,
+    getMatterTexts,
+    getMatterAttachments,
+    getEventItemVotes,
+    searchMatters,
   };
 }

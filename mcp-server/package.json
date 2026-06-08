@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "description": "MCP server exposing Milwaukee Legistar (city legislation) as tools.",
   "type": "module",
-  "bin": { "milwaukee-civic-mcp": "./src/server.js" },
-  "files": ["src", "README.md"],
+  "bin": {
+    "milwaukee-civic-mcp": "./src/server.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test",

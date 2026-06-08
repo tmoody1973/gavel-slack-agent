@@ -66,11 +66,16 @@ test('throws a clear error on a non-ok response', async () => {
 
 test('getMatterHistories hits /matters/{id}/histories with notes', async () => {
   const { fetch, calls } = fakeFetch({
-    histories: [{
-      MatterHistoryId: 5, MatterHistoryActionDate: '2026-05-01T00:00:00',
-      MatterHistoryActionName: 'Held', MatterHistoryActionBodyName: 'ZONING',
-      MatterHistoryPassedFlag: 0, MatterHistoryTally: '4-1',
-    }],
+    histories: [
+      {
+        MatterHistoryId: 5,
+        MatterHistoryActionDate: '2026-05-01T00:00:00',
+        MatterHistoryActionName: 'Held',
+        MatterHistoryActionBodyName: 'ZONING',
+        MatterHistoryPassedFlag: 0,
+        MatterHistoryTally: '4-1',
+      },
+    ],
   });
   const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
   const out = await client.getMatterHistories(73181);
@@ -92,7 +97,9 @@ test('getMatterTexts hits /matters/{id}/versions then /texts/{id}', async () => 
 
 test('getMatterAttachments hits /matters/{id}/attachments', async () => {
   const { fetch, calls } = fakeFetch({
-    attachments: [{ MatterAttachmentId: 7, MatterAttachmentName: 'Staff report', MatterAttachmentHyperlink: 'http://x/File' }],
+    attachments: [
+      { MatterAttachmentId: 7, MatterAttachmentName: 'Staff report', MatterAttachmentHyperlink: 'http://x/File' },
+    ],
   });
   const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: 'UA' });
   const out = await client.getMatterAttachments(73181);

@@ -5,7 +5,9 @@ import { registerTools } from '../src/tools.js';
 function harness(clientOverrides) {
   const registered = new Map();
   const server = {
-    registerTool(name, config, handler) { registered.set(name, { config, handler }); },
+    registerTool(name, config, handler) {
+      registered.set(name, { config, handler });
+    },
   };
   registerTools(server, clientOverrides);
   return registered;
@@ -14,9 +16,17 @@ function harness(clientOverrides) {
 test('registers all nine tools', () => {
   const tools = harness({});
   for (const name of [
-    'get_upcoming_events', 'get_event_agenda', 'get_matter', 'get_sponsors',
-    'get_matter_history', 'get_matter_text', 'get_attachments', 'get_votes', 'search_matters',
-  ]) assert.ok(tools.has(name), `missing ${name}`);
+    'get_upcoming_events',
+    'get_event_agenda',
+    'get_matter',
+    'get_sponsors',
+    'get_matter_history',
+    'get_matter_text',
+    'get_attachments',
+    'get_votes',
+    'search_matters',
+  ])
+    assert.ok(tools.has(name), `missing ${name}`);
 });
 
 test('get_matter returns structuredContent on success', async () => {
@@ -27,7 +37,11 @@ test('get_matter returns structuredContent on success', async () => {
 });
 
 test('get_matter degrades to information_unavailable when the client throws', async () => {
-  const tools = harness({ getMatter: async () => { throw new Error('Legistar request failed: 404'); } });
+  const tools = harness({
+    getMatter: async () => {
+      throw new Error('Legistar request failed: 404');
+    },
+  });
   const res = await tools.get('get_matter').handler({ matter_id: 42 });
   assert.equal(res.structuredContent.status, 'information_unavailable');
 });

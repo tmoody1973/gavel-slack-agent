@@ -9,7 +9,7 @@ const client = createLegistarClient({ fetch, client: 'milwaukee', userAgent: UA 
 
 // --- Tool 1: get_upcoming_events ---
 const events = await client.fetchUpcomingFinalEvents();
-console.log(`\n=== get_upcoming_events ===`);
+console.log('\n=== get_upcoming_events ===');
 console.log(`total: ${events.length} events`);
 console.log('first event:', events[0] ?? '(none)');
 
