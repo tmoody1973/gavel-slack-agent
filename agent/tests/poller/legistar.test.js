@@ -39,6 +39,25 @@ test('mapEvent picks the spine fields and the agenda-published timestamp', () =>
   });
 });
 
+test('mapEvent normalizes a no-offset agendaPublishedUTC to a Z-suffixed instant', () => {
+  // Legistar returns EventAgendaLastPublishedUTC without a timezone designator
+  // ("...T14:38:48.597"); it is genuinely UTC, so tag it Z to avoid local-time
+  // misparse. eventDate is a local calendar date and stays raw.
+  const e = mapEvent({
+    EventId: 1,
+    EventBodyName: 'X',
+    EventDate: '2026-06-10T00:00:00',
+    EventAgendaLastPublishedUTC: '2026-06-08T14:38:48.597',
+  });
+  assert.equal(e.agendaPublishedUTC, '2026-06-08T14:38:48.597Z');
+  assert.equal(e.eventDate, '2026-06-10T00:00:00');
+});
+
+test('mapEvent leaves an already-Z agendaPublishedUTC unchanged', () => {
+  const e = mapEvent({ EventId: 1, EventBodyName: 'X', EventDate: 'd', EventAgendaLastPublishedUTC: '2026-06-08T14:38:48Z' });
+  assert.equal(e.agendaPublishedUTC, '2026-06-08T14:38:48Z');
+});
+
 test('mapEventItem normalizes id, matter, title, agenda number', () => {
   const it = mapEventItem({
     EventItemId: 555,

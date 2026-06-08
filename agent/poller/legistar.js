@@ -21,13 +21,23 @@ export function buildEventsQuery(nowIso, windowDays = DEFAULT_WINDOW_DAYS) {
   return `events?${params.toString()}`;
 }
 
+/**
+ * Tag a no-offset timestamp as UTC. Legistar returns EventAgendaLastPublishedUTC
+ * without a timezone designator (e.g. "2026-06-08T14:38:48.597") even though the
+ * field is genuinely UTC; left bare, `new Date()` would misparse it as local.
+ */
+function toUtcIso(value) {
+  if (value === undefined || value === null) return undefined;
+  return /[Zz]|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`;
+}
+
 /** Normalize a raw Legistar event to the fields the spine needs. */
 export function mapEvent(raw) {
   return {
     eventId: raw.EventId,
     eventBodyName: raw.EventBodyName,
     eventDate: raw.EventDate,
-    agendaPublishedUTC: raw.EventAgendaLastPublishedUTC ?? undefined,
+    agendaPublishedUTC: toUtcIso(raw.EventAgendaLastPublishedUTC),
   };
 }
 
