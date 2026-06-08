@@ -59,3 +59,40 @@ export function toDetectedItem(client, event, item) {
   if (event.agendaPublishedUTC !== undefined) row.agendaPublishedUTC = event.agendaPublishedUTC;
   return row;
 }
+
+const LEGISTAR_BASE = 'https://webapi.legistar.com/v1';
+
+/**
+ * Create a Legistar OData client for one city ({client}-aware). `fetch` and
+ * `now` are injected so the pure query/mapping logic is exercised in unit tests
+ * and only this thin wiring touches the network in the verify script.
+ */
+export function createLegistarClient({
+  fetch,
+  client,
+  userAgent,
+  now = () => new Date().toISOString(),
+  baseUrl = LEGISTAR_BASE,
+}) {
+  const root = `${baseUrl}/${client}`;
+  const headers = { 'User-Agent': userAgent, Accept: 'application/json' };
+
+  async function getJson(path) {
+    const url = `${root}/${path}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`Legistar request failed: ${res.status} for ${url}`);
+    return res.json();
+  }
+
+  async function fetchUpcomingFinalEvents() {
+    const raw = await getJson(buildEventsQuery(now()));
+    return raw.map(mapEvent);
+  }
+
+  async function fetchEventItems(eventId) {
+    const raw = await getJson(`events/${eventId}/eventitems?AgendaNote=1&Attachments=1`);
+    return raw.map(mapEventItem);
+  }
+
+  return { fetchUpcomingFinalEvents, fetchEventItems };
+}
