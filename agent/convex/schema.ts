@@ -21,4 +21,24 @@ export default defineSchema({
   })
     .index('by_channel', ['channelId'])
     .index('by_client', ['client']),
+
+  // Detection ledger AND alert queue in one (MOO-41). One row per genuinely-new
+  // Final agenda item: its presence guarantees idempotency (never re-detected),
+  // its alertStatus drives MOO-44's summarize+post. Civic-record keys only —
+  // never any Slack message content (the ToS guardrail).
+  detectedAgendaItems: defineTable({
+    client: v.union(v.literal('milwaukee'), v.literal('milwaukeecounty')),
+    eventItemId: v.number(),
+    eventId: v.number(),
+    matterId: v.optional(v.number()),
+    title: v.string(),
+    agendaNumber: v.optional(v.string()),
+    eventBodyName: v.string(),
+    eventDate: v.optional(v.string()),
+    agendaPublishedUTC: v.optional(v.string()),
+    detectedAt: v.number(),
+    alertStatus: v.union(v.literal('pending'), v.literal('sent')),
+  })
+    .index('by_client_item', ['client', 'eventItemId'])
+    .index('by_client_status', ['client', 'alertStatus']),
 });
