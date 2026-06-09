@@ -70,6 +70,7 @@ describe('formatResultsAsText', () => {
   it('truncates long content to 300 characters', () => {
     const text = formatResultsAsText([message({ content: 'x'.repeat(500) })]);
     assert.ok(!text.includes('x'.repeat(301)));
+    assert.match(text, /x{300}…/);
   });
 
   it('survives missing fields without throwing', () => {

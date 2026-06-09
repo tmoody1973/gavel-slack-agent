@@ -15,9 +15,7 @@ export function mergeAndDedupe(enMessages, esMessages) {
       byKey.set(key, message);
     }
   }
-  return [...byKey.values()]
-    .sort((a, b) => Number(b.message_ts) - Number(a.message_ts))
-    .slice(0, MERGED_RESULT_CAP);
+  return [...byKey.values()].sort((a, b) => Number(b.message_ts) - Number(a.message_ts)).slice(0, MERGED_RESULT_CAP);
 }
 
 /**
