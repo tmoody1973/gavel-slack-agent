@@ -27,6 +27,29 @@ const EVENTS = [
 ];
 const ITEMS = { 1: [{ eventItemId: 9, title: 'Rezoning', matterId: 3, agendaNumber: '14' }] };
 
+test('items detected <48h before the meeting are enqueued with the walk-on flag (MOO-51)', async () => {
+  const f = fakes({ events: EVENTS, itemsByEvent: ITEMS });
+  f.deps.now = () => '2026-06-09T12:00:00.000Z';
+  await runPoll(f.deps);
+  assert.equal(f.enqueued[0].walkOnFlag, true);
+});
+
+test('items detected ≥48h out carry no walk-on flag — normal scheduling is not accused (MOO-51)', async () => {
+  const f = fakes({ events: EVENTS, itemsByEvent: ITEMS });
+  f.deps.now = () => '2026-06-01T12:00:00.000Z';
+  await runPoll(f.deps);
+  assert.equal(f.enqueued[0].walkOnFlag, undefined);
+});
+
+test('consent-calendar items are enqueued with the consent flag (MOO-51)', async () => {
+  const consentItems = { 1: [{ eventItemId: 9, title: 'Rezoning', matterId: 3, agendaNumber: '14', consent: true }] };
+  const f = fakes({ events: EVENTS, itemsByEvent: consentItems });
+  f.deps.now = () => '2026-06-01T12:00:00.000Z';
+  await runPoll(f.deps);
+  assert.equal(f.enqueued[0].consentFlag, true);
+  assert.equal(f.enqueued[0].walkOnFlag, undefined);
+});
+
 test('cold run detects and enqueues every live item', async () => {
   const f = fakes({ events: EVENTS, itemsByEvent: ITEMS });
   const result = await runPoll(f.deps);

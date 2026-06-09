@@ -32,11 +32,11 @@ function buildMemberContextBlock(member) {
  * `text` is the notification/accessibility fallback and `blocks` is the
  * Block Kit payload. When `language` is 'es' the card is bilingual: EN section,
  * divider, ES section (file numbers/addresses/committee names stay English in
- * both — enforced upstream by the summarizer prompt). The <48h walk-on warning
- * is rendered only when row.walkOnFlag is true (dormant until Phase 3 wires it).
+ * both — enforced upstream by the summarizer prompt). The <48h walk-on and
+ * consent-calendar warnings render only when the poller set their flags (MOO-51).
  *
  * @param {{
- *   row: {eventItemId: number, eventBodyName: string, title: string, walkOnFlag?: boolean},
+ *   row: {eventItemId: number, eventBodyName: string, title: string, walkOnFlag?: boolean, consentFlag?: boolean},
  *   matter: {fileNumber?: string},
  *   event: {inSiteUrl?: string},
  *   summary: {en: {summary: string, whyItMatters: string}, es: {summary: string, whyItMatters: string}},
@@ -56,6 +56,18 @@ export function buildAlertCard({ row, matter, event, summary, footer, language =
     blocks.push({
       type: 'context',
       elements: [{ type: 'mrkdwn', text: '⚠️ *Added late* — on the agenda less than 48h before the meeting.' }],
+    });
+  }
+
+  if (row.consentFlag) {
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: '⚠️ *On the consent calendar* — set to pass in a batch vote without individual discussion unless someone asks to pull it.',
+        },
+      ],
     });
   }
 
