@@ -14,7 +14,11 @@ export function registerTools(server, client) {
 
   tool(
     'get_upcoming_events',
-    { description: 'Final-agenda meetings in the next 7 days.', inputSchema: z.object({}) },
+    {
+      description:
+        'Meetings with published (Final) agendas in the next 7 days. Milwaukee publishes meetings to its data feed only when the agenda is finalized — usually under a week before the meeting — so a scheduled future meeting may not appear here yet even though its date shows on the legistar.com calendar.',
+      inputSchema: z.object({}),
+    },
     () => client.fetchUpcomingFinalEvents(),
   );
 
