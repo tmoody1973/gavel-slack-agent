@@ -65,6 +65,10 @@ const CIVIC_GLOSSARY = [
   'rezoning = recalificación de zona',
   'demolition = demolición',
   'license = licencia',
+  'variance = excepción de zonificación (variance)',
+  'conditional use = uso condicional',
+  'TIF (tax incremental financing) = financiamiento por incremento de impuestos (TIF)',
+  'permit = permiso',
 ].join('; ');
 
 export const BILINGUAL_SYSTEM_PROMPT = `${SUMMARY_SYSTEM_PROMPT}

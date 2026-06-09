@@ -16,7 +16,7 @@ function harness({ pending, subscriptions }) {
       addresses: [],
     }),
     buildFooterText: () => ({ text: 'footer' }),
-    postCard: async (channel, card) => posted.push({ channel, title: card.text }),
+    postCard: async (channel, card) => posted.push({ channel, title: card.text, body: JSON.stringify(card.blocks) }),
     markSent: async (_client, eventItemId) => sent.push(eventItemId),
     logger: { error: () => {} },
   };
@@ -41,6 +41,27 @@ test('no matching subscription still marks sent (no audience, no reprocess)', as
   await processPendingAlerts(h.deps);
   assert.deepEqual(h.posted, []);
   assert.deepEqual(h.sent, [1]);
+});
+
+test('each channel gets a card in its subscribed language', async () => {
+  const h = harness({
+    pending: [row],
+    subscriptions: [
+      { channelId: 'C-EN', committees: ['ZONING'], keywords: [], language: 'en' },
+      { channelId: 'C-ES', committees: ['ZONING'], keywords: [], language: 'es' },
+    ],
+  });
+  const out = await processPendingAlerts(h.deps);
+  const byChannel = Object.fromEntries(h.posted.map((p) => [p.channel, p.body]));
+  assert.ok(!byChannel['C-EN'].includes('En español'));
+  assert.ok(byChannel['C-ES'].includes('En español'));
+  assert.equal(out[0].posted, 2);
+});
+
+test('a subscription without a language gets the English-only card', async () => {
+  const h = harness({ pending: [row], subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }] });
+  await processPendingAlerts(h.deps);
+  assert.ok(!h.posted[0].body.includes('En español'));
 });
 
 test('an enrichment failure leaves the row pending (not marked sent)', async () => {

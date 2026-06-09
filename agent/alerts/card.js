@@ -5,10 +5,12 @@ function headerText(title) {
 }
 
 /**
- * Assemble the bilingual Block Kit alert card. Pure — returns { text, blocks }
- * where `text` is the notification/accessibility fallback and `blocks` is the
- * Block Kit payload. The <48h walk-on warning is rendered only when
- * row.walkOnFlag is true (dormant until Phase 3 wires it).
+ * Assemble the Block Kit alert card. Pure — returns { text, blocks } where
+ * `text` is the notification/accessibility fallback and `blocks` is the
+ * Block Kit payload. When `language` is 'es' the card is bilingual: EN section,
+ * divider, ES section (file numbers/addresses/committee names stay English in
+ * both — enforced upstream by the summarizer prompt). The <48h walk-on warning
+ * is rendered only when row.walkOnFlag is true (dormant until Phase 3 wires it).
  *
  * @param {{
  *   row: {eventItemId: number, eventBodyName: string, title: string, walkOnFlag?: boolean},
@@ -16,10 +18,11 @@ function headerText(title) {
  *   event: {inSiteUrl?: string},
  *   summary: {en: {summary: string, whyItMatters: string}, es: {summary: string, whyItMatters: string}},
  *   footer: {text: string},
+ *   language?: 'en' | 'es',
  * }} input
  * @returns {{ text: string, blocks: object[] }}
  */
-export function buildAlertCard({ row, matter, event, summary, footer }) {
+export function buildAlertCard({ row, matter, event, summary, footer, language = 'en' }) {
   const value = String(row.eventItemId);
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: headerText(row.title), emoji: true } },
@@ -36,9 +39,17 @@ export function buildAlertCard({ row, matter, event, summary, footer }) {
   blocks.push(
     { type: 'section', text: { type: 'mrkdwn', text: summary.en.summary } },
     { type: 'context', elements: [{ type: 'mrkdwn', text: `💡 *Why it matters:* ${summary.en.whyItMatters}` }] },
-    { type: 'divider' },
-    { type: 'section', text: { type: 'mrkdwn', text: `*🇪🇸 En español*\n${summary.es.summary}` } },
-    { type: 'context', elements: [{ type: 'mrkdwn', text: `💡 *Por qué importa:* ${summary.es.whyItMatters}` }] },
+  );
+
+  if (language === 'es') {
+    blocks.push(
+      { type: 'divider' },
+      { type: 'section', text: { type: 'mrkdwn', text: `*🇪🇸 En español*\n${summary.es.summary}` } },
+      { type: 'context', elements: [{ type: 'mrkdwn', text: `💡 *Por qué importa:* ${summary.es.whyItMatters}` }] },
+    );
+  }
+
+  blocks.push(
     { type: 'divider' },
     { type: 'section', text: { type: 'mrkdwn', text: footer.text } },
     {

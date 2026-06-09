@@ -41,10 +41,24 @@ export async function processPendingAlerts(deps) {
       const matter = { fileNumber: ctx.matter.fileNumber, title: row.title, matterText: '', attachments: [] };
       const summary = await generateBilingual(matter);
       const footer = buildFooterText(ctx.event, ctx.person);
-      const card = buildAlertCard({ row, matter: ctx.matter, event: ctx.event, summary, footer });
+
+      // Per-channel language (MOO-43): ES channels get the bilingual card,
+      // everyone else the EN-only card. Each variant is built at most once.
+      const languageByChannel = new Map(subscriptions.map((sub) => [sub.channelId, sub.language]));
+      const cardByLanguage = new Map();
+      const cardFor = (language) => {
+        if (!cardByLanguage.has(language)) {
+          const built = buildAlertCard({ row, matter: ctx.matter, event: ctx.event, summary, footer, language });
+          cardByLanguage.set(language, built);
+        }
+        return cardByLanguage.get(language);
+      };
 
       const channels = matchSubscriptions(row, subscriptions);
-      for (const channel of channels) await postCard(channel, card);
+      for (const channel of channels) {
+        const language = languageByChannel.get(channel) === 'es' ? 'es' : 'en';
+        await postCard(channel, cardFor(language));
+      }
 
       await markSent(client, row.eventItemId);
       results.push({ eventItemId: row.eventItemId, posted: channels.length });
