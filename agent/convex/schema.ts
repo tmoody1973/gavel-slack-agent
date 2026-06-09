@@ -66,6 +66,10 @@ export default defineSchema({
     eventBodyName: v.string(),
     eventDate: v.optional(v.string()),
     agendaPublishedUTC: v.optional(v.string()),
+    // MOO-51 insider-knowledge flags, set at detection time: <48h notice and
+    // consent-calendar placement. Present only when true.
+    walkOnFlag: v.optional(v.boolean()),
+    consentFlag: v.optional(v.boolean()),
     detectedAt: v.number(),
     alertStatus: v.union(v.literal('pending'), v.literal('sent')),
   })

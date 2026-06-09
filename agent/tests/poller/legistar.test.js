@@ -69,7 +69,14 @@ test('mapEventItem normalizes id, matter, title, agenda number', () => {
     matterId: 999,
     title: 'A resolution relating to rezoning',
     agendaNumber: '14',
+    consent: false,
   });
+});
+
+test('mapEventItem maps EventItemConsent 1 → consent true (MOO-51)', () => {
+  assert.equal(mapEventItem({ EventItemId: 1, EventItemConsent: 1 }).consent, true);
+  assert.equal(mapEventItem({ EventItemId: 1, EventItemConsent: 0 }).consent, false);
+  assert.equal(mapEventItem({ EventItemId: 1 }).consent, false);
 });
 
 test('toDetectedItem joins event + item into the queue row and omits undefined', () => {

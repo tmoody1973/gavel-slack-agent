@@ -46,6 +46,7 @@ export function mapEventItem(raw) {
     matterId: raw.EventItemMatterId ?? undefined,
     title: raw.EventItemTitle ?? '',
     agendaNumber: raw.EventItemAgendaNumber ?? undefined,
+    consent: raw.EventItemConsent === 1,
   };
 }
 

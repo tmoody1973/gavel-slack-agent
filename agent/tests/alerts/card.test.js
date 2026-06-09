@@ -97,3 +97,18 @@ test('the <48h warning flag is absent unless row.walkOnFlag is true', () => {
   const withFlag = JSON.stringify(buildAlertCard({ ...input, row: { ...input.row, walkOnFlag: true } }).blocks);
   assert.ok(withFlag.includes('Added late'));
 });
+
+test('the consent-calendar warning renders only when row.consentFlag is true (MOO-51)', () => {
+  const without = JSON.stringify(buildAlertCard(input).blocks);
+  assert.ok(!without.includes('consent calendar'));
+  const withFlag = JSON.stringify(buildAlertCard({ ...input, row: { ...input.row, consentFlag: true } }).blocks);
+  assert.ok(withFlag.includes('consent calendar'));
+  assert.ok(withFlag.includes('batch'));
+});
+
+test('a late-added consent item shows both warnings (MOO-51)', () => {
+  const row = { ...input.row, walkOnFlag: true, consentFlag: true };
+  const all = JSON.stringify(buildAlertCard({ ...input, row }).blocks);
+  assert.ok(all.includes('Added late'));
+  assert.ok(all.includes('consent calendar'));
+});

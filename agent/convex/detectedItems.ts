@@ -16,6 +16,8 @@ const detectedItem = v.object({
   eventBodyName: v.string(),
   eventDate: v.optional(v.string()),
   agendaPublishedUTC: v.optional(v.string()),
+  walkOnFlag: v.optional(v.boolean()),
+  consentFlag: v.optional(v.boolean()),
 });
 
 /** The seen EventItemIds for a client — the poller's idempotency input. */
