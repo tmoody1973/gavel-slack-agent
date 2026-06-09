@@ -18,6 +18,7 @@ describe('buildAgentOptions', () => {
     assert.ok(allowedTools.includes('mcp__community-memory__*'));
     assert.ok(allowedTools.includes('mcp__slack-mcp__*'));
     assert.ok(systemPrompt.includes('COMMUNITY MEMORY'));
+    assert.ok(systemPrompt.includes('You are Gavel'), 'base prompt must be appended to, not replaced');
   });
 
   it('falls back to SLACK_USER_TOKEN from the environment (the prod path)', () => {

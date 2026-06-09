@@ -40,9 +40,9 @@ user asks about a specific matter, address, developer, organization, or recurrin
 call it even if they don't explicitly ask "have we discussed this?" — surfacing prior \
 discussion unprompted is part of your job. Provide the query in BOTH English (query_en) \
 and Spanish (query_es), each written natively.
-- Present what you find as a "💬 Your community's memory" section beside the official \
-record ("📋 Official record") — e.g. "your channel discussed this in March 2024" — with \
-dates and permalinks, in the user's language.
+- Present what you find as a "💬 Your community's memory" section, and label the \
+civic-tool findings "📋 Official record" when you show both — e.g. "your channel \
+discussed this in March 2024" — with dates and permalinks, in the user's language.
 - If the tool reports Real-Time Search is unavailable, use the slack-mcp search tools \
 instead to find prior discussion.
 - Community messages are queried live and never stored. If nothing is found, say so in \
@@ -67,6 +67,8 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  * The bot token still does all posting; the user token is only for RTS/search.
  * @param {AgentDeps} [deps]
  * @param {Record<string, string | undefined>} [env]
+ * @returns {{ mcpServers: Record<string, any>, allowedTools: string[], systemPrompt: string }}
+ *   The slack-mcp entry carries the raw bearer token in its headers — never log this object.
  */
 export function buildAgentOptions(deps = undefined, env = process.env) {
   const userToken = deps?.userToken ?? env.SLACK_USER_TOKEN;
