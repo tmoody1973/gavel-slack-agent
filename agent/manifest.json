@@ -15,7 +15,15 @@
     "bot_user": {
       "display_name": "Gavel",
       "always_online": true
-    }
+    },
+    "slash_commands": [
+      {
+        "command": "/gavel",
+        "description": "Configure Gavel civic alerts for this channel",
+        "usage_hint": "watch <entity> | status | unwatch | digest",
+        "should_escape": false
+      }
+    ]
   },
   "oauth_config": {
     "redirect_urls": ["https://ngrok-free.app/slack/oauth_redirect"],
@@ -51,7 +59,8 @@
         "reactions:write",
         "reactions:read",
         "users:read",
-        "assistant:write"
+        "assistant:write",
+        "commands"
       ]
     }
   },
