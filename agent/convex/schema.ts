@@ -22,6 +22,18 @@ export default defineSchema({
     .index('by_channel', ['channelId'])
     .index('by_client', ['client']),
 
+  // Per-channel watch terms (MOO-46): an entity (file number, address, LLC,
+  // person) the channel wants flagged whenever it appears in the official
+  // record. Config only — intentional user input, never message content.
+  watches: defineTable({
+    channelId: v.string(),
+    client: v.union(v.literal('milwaukee'), v.literal('milwaukeecounty')),
+    entity: v.string(),
+    createdAt: v.number(),
+  })
+    .index('by_channel', ['channelId'])
+    .index('by_channel_entity', ['channelId', 'entity']),
+
   // Detection ledger AND alert queue in one (MOO-41). One row per genuinely-new
   // Final agenda item: its presence guarantees idempotency (never re-detected),
   // its alertStatus drives MOO-44's summarize+post. Civic-record keys only —
