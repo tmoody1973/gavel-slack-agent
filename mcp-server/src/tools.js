@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { safeCall } from './errors.js';
 
-const text = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value });
+// JSON-as-text only. MCP requires structuredContent to be an object, but most
+// tools return arrays (event/agenda/sponsor lists), which fails protocol
+// validation (-32602). The text payload already carries everything the agent reads.
+const text = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
 
 export function registerTools(server, client) {
   const tool = (name, config, run) =>

@@ -1,64 +1,34 @@
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 
 const SYSTEM_PROMPT = `\
-You are a friendly Slack assistant. You help people by answering questions, \
-having conversations, and being generally useful in Slack.
+You are Gavel, a civic-transparency assistant for Milwaukee neighborhood associations. \
+You help residents understand what their city and county government is about to decide — \
+in plain language, before the vote — and how to make their voice heard.
 
-## PERSONALITY
-- Friendly, helpful, and approachable
-- Lightly witty — a touch of humor when appropriate, but never forced
-- Concise and clear — respect people's time
-- Confident but honest when you don't know something
+## USING YOUR TOOLS (most important)
+You have the milwaukee-civic tools, which query Milwaukee's official Legistar records live. \
+For ANY question about meetings, agendas, legislation, a specific file/matter, sponsors, \
+committees, or votes, you MUST use these tools — never answer civic-data questions from memory:
+- get_upcoming_events — meetings in the next 7 days
+- get_event_agenda — the items on a meeting's agenda
+- get_matter / search_matters — a specific legislative file, or a search by topic
+- get_sponsors — who sponsored a matter, with their contact info
+- get_matter_history / get_votes — what has happened to a file, and how members voted
+If a tool returns "information_unavailable", say so plainly instead of guessing.
 
-## RESPONSE GUIDELINES
-- Keep responses to 3 sentences max — be punchy, scannable, and actionable
-- End with a clear next step on its own line so it's easy to spot
-- Use a bullet list only for multi-step instructions
-- Use casual, conversational language
-- Use emoji sparingly — at most one per message, and only to set tone
+## HOW YOU ANSWER
+- Plain, jargon-free language a busy neighbor can act on — translate the legalese.
+- Be concise and scannable. Lead with what it is and why it matters to a neighborhood.
+- When it's relevant, close with how to be heard: the meeting time/place, or the alderperson to contact.
+- Stay non-partisan and factual. Cite the file number and committee so people can verify.
+- Keep official identifiers (file numbers, addresses, committee names) exactly as written.
 
-## FORMATTING RULES
-- Use standard Markdown syntax: **bold**, _italic_, \`code\`, \`\`\`code blocks\`\`\`, > blockquotes
-- Use bullet points for multi-step instructions
+## LANGUAGE
+Respond in the same language the user wrote in. If they write in Spanish, answer in Spanish — \
+keep file numbers, addresses, and committee names in their original form, clearly labeled.
 
-## EMOJI REACTIONS
-Always react to every user message with \`add_emoji_reaction\` before responding. \
-Pick any Slack emoji that reflects the *topic* or *tone* of the message — be creative and specific \
-(e.g. \`dog\` for dog topics, \`books\` for learning, \`wave\` for greetings). \
-Vary your picks across a thread; don't repeat the same emoji.
-
-## SLACK MCP SERVER
-You may have access to the Slack MCP Server, which gives you powerful Slack tools \
-beyond your built-in tools. Use them whenever they would help the user.
-
-Available capabilities:
-- **Search**: Search messages and files across public channels, search for channels by name
-- **Read**: Read channel message history, read thread replies, read canvas documents
-- **Write**: Send messages, create draft messages, schedule messages for later
-- **Canvases**: Create, read, and update Slack canvas documents
-
-Use these tools when they can help answer a question or complete a task — for example, \
-searching for relevant messages, checking a channel for context, or creating a canvas. \
-Also use them when the user explicitly asks you to perform a Slack action.`;
-
-const EMOJI_DESCRIPTION =
-  "Add an emoji reaction to the user's current message to acknowledge the topic.\n\n" +
-  'Use any standard Slack emoji that matches the topic or tone of the message. ' +
-  'Be creative and specific — if someone mentions a dog, use `dog`; if they sound ' +
-  'frustrated, use `sweat_smile`. The examples below are common picks, not the full set:\n' +
-  '- Gratitude/praise: pray, bow, blush, sparkles, star-struck, heart\n' +
-  '- Frustration/confusion: thinking_face, face_with_monocle, sweat_smile, upside_down_face\n' +
-  '- Something broken: wrench, hammer_and_wrench, mag\n' +
-  '- Performance/slow: hourglass_flowing_sand, snail\n' +
-  '- Urgency: rotating_light, zap, fire\n' +
-  '- Success/celebration: tada, raised_hands, partying_face, rocket, muscle\n' +
-  '- Setup/config: gear, package\n' +
-  '- Network/connectivity: satellite, signal_strength\n' +
-  '- Agreement/acknowledgment: thumbsup, ok_hand, saluting_face, +1';
-
-/** @type {string[]} */
-const ALLOWED_TOOLS = ['add_emoji_reaction'];
+## FORMATTING
+Use Slack markdown: *bold*, _italic_, and bullet points for lists. Keep it short and readable.`;
 
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
@@ -80,53 +50,14 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  * @returns {Promise<{responseText: string, sessionId: string | null}>}
  */
 export async function runAgent(text, sessionId = undefined, deps = undefined) {
-  const addEmojiReactionTool = tool(
-    'add_emoji_reaction',
-    EMOJI_DESCRIPTION,
-    { emoji_name: z.string().describe("The Slack emoji name without colons (e.g. 'tada', 'wrench', 'pray').") },
-    async ({ emoji_name }) => {
-      if (!deps) {
-        return { content: [{ type: 'text', text: 'No deps available to add reaction.' }] };
-      }
-
-      // Skip ~15% of reactions to feel more natural
-      if (Math.random() < 0.15) {
-        return {
-          content: [
-            { type: 'text', text: `Skipped :${emoji_name}: reaction (randomly omitted to avoid over-reacting)` },
-          ],
-        };
-      }
-
-      try {
-        await deps.client.reactions.add({
-          channel: deps.channelId,
-          timestamp: deps.messageTs,
-          name: emoji_name,
-        });
-        return { content: [{ type: 'text', text: `Reacted with :${emoji_name}:` }] };
-      } catch (e) {
-        const err = /** @type {any} */ (e);
-        return { content: [{ type: 'text', text: `Could not add reaction: ${err.data?.error || err.message}` }] };
-      }
-    },
-  );
-
-  const agentToolsServer = createSdkMcpServer({
-    name: 'agent-tools',
-    version: '1.0.0',
-    tools: [addEmojiReactionTool],
-  });
-
   /** @type {Record<string, any>} */
   const mcpServers = {
-    'agent-tools': agentToolsServer,
     'milwaukee-civic': {
       command: 'node',
       args: [new URL('../../mcp-server/src/server.js', import.meta.url).pathname],
     },
   };
-  const allowedTools = [...ALLOWED_TOOLS, 'mcp__milwaukee-civic__*'];
+  const allowedTools = ['mcp__milwaukee-civic__*'];
 
   if (deps?.userToken) {
     mcpServers['slack-mcp'] = {

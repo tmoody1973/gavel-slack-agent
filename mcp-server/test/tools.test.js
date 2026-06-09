@@ -29,11 +29,15 @@ test('registers all nine tools', () => {
     assert.ok(tools.has(name), `missing ${name}`);
 });
 
-test('get_matter returns structuredContent on success', async () => {
+// Tools return the payload as JSON text content (no structuredContent — MCP
+// rejects array structuredContent with -32602; see mcp-protocol.test.js).
+const payload = (res) => JSON.parse(res.content[0].text);
+
+test('get_matter returns its payload as JSON text content on success', async () => {
   const tools = harness({ getMatter: async (id) => ({ matterId: id, file: '230001' }) });
   const res = await tools.get('get_matter').handler({ matter_id: 42 });
-  assert.equal(res.structuredContent.file, '230001');
   assert.equal(res.content[0].type, 'text');
+  assert.equal(payload(res).file, '230001');
 });
 
 test('get_matter degrades to information_unavailable when the client throws', async () => {
@@ -43,7 +47,7 @@ test('get_matter degrades to information_unavailable when the client throws', as
     },
   });
   const res = await tools.get('get_matter').handler({ matter_id: 42 });
-  assert.equal(res.structuredContent.status, 'information_unavailable');
+  assert.equal(payload(res).status, 'information_unavailable');
 });
 
 test('get_sponsors enriches each sponsor with a person contact', async () => {
@@ -52,5 +56,5 @@ test('get_sponsors enriches each sponsor with a person contact', async () => {
     getPerson: async (id) => ({ personId: id, email: 'smith@milwaukee.gov', phone: '414-555-0100' }),
   });
   const res = await tools.get('get_sponsors').handler({ matter_id: 42 });
-  assert.equal(res.structuredContent[0].email, 'smith@milwaukee.gov');
+  assert.equal(payload(res)[0].email, 'smith@milwaukee.gov');
 });

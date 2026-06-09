@@ -17,26 +17,30 @@ describe('buildAppHomeView', () => {
     assert.strictEqual(view.blocks[1].type, 'section');
   });
 
-  it('shows disconnected status with learn-more link by default', () => {
+  it('presents Gavel as a Milwaukee civic agent', () => {
     const view = buildAppHomeView();
-    const mrkdwnTexts = view.blocks.filter((b) => b.type === 'section').map((b) => b.text.text);
-    const mcpText = mrkdwnTexts.find((t) => t.includes('MCP Server'));
-    assert.ok(mcpText);
-    assert.ok(mcpText.includes('disconnected'));
-    assert.ok(mcpText.includes('Learn how to enable'));
+    const header = view.blocks.find((b) => b.type === 'header');
+    assert.ok(header.text.text.includes('Gavel'));
+    const allText = view.blocks
+      .filter((b) => b.type === 'section')
+      .map((b) => b.text.text)
+      .join(' ');
+    assert.ok(allText.includes('Milwaukee'));
   });
 
-  it('shows disconnected status when installUrl is provided', () => {
-    const view = buildAppHomeView('https://example.com/slack/install');
-    const mrkdwnTexts = view.blocks.filter((b) => b.type === 'section').map((b) => b.text.text);
-    const hasDisconnected = mrkdwnTexts.some((t) => t.includes('disconnected'));
-    assert.strictEqual(hasDisconnected, true);
+  it('no longer surfaces the Slack MCP connection widget', () => {
+    const view = buildAppHomeView();
+    const allText = view.blocks
+      .filter((b) => b.type === 'section')
+      .map((b) => b.text.text)
+      .join(' ');
+    assert.ok(!allText.includes('MCP Server'));
+    assert.ok(!allText.toLowerCase().includes('disconnected'));
   });
 
-  it('shows connected status when isConnected is true', () => {
-    const view = buildAppHomeView(null, true);
-    const mrkdwnTexts = view.blocks.filter((b) => b.type === 'section').map((b) => b.text.text);
-    const hasConnected = mrkdwnTexts.some((t) => t.includes('connected'));
-    assert.strictEqual(hasConnected, true);
+  it('ignores the legacy installUrl/isConnected args (stays Gavel)', () => {
+    const view = buildAppHomeView('https://example.com/slack/install', true);
+    assert.strictEqual(view.blocks[0].type, 'header');
+    assert.ok(view.blocks[0].text.text.includes('Gavel'));
   });
 });
