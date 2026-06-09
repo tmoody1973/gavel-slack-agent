@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { summarizeMatterBilingual } from '../../summarizer/bilingual.js';
+import { BILINGUAL_SYSTEM_PROMPT } from '../../summarizer/prompt.js';
 
 const matter = {
   fileNumber: '241554',
@@ -29,6 +30,12 @@ test('returns validated bilingual structure', async () => {
   assert.equal(out.es.whyItMatters, 'Afecta a los inmigrantes.');
   assert.deepEqual(out.addresses, []);
   assert.equal(out.sourcesUsed[0], 'title');
+});
+
+test('civic glossary covers the planning/zoning terms the PRD names', () => {
+  for (const term of ['variance', 'conditional use', 'TIF', 'permit', 'zoning', 'hearing']) {
+    assert.ok(BILINGUAL_SYSTEM_PROMPT.includes(term), `glossary missing "${term}"`);
+  }
 });
 
 test('throws on a malformed result missing es', async () => {

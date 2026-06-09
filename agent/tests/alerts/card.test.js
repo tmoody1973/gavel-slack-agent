@@ -24,12 +24,28 @@ test('card has fallback text and a header with the title', () => {
   assert.match(blocks[0].text.text, /Immigration Advisory Board/);
 });
 
-test('card contains both EN and ES summary text', () => {
-  const { blocks } = buildAlertCard(input);
+test('ES-language card contains both EN and ES summary text', () => {
+  const { blocks } = buildAlertCard({ ...input, language: 'es' });
   const all = JSON.stringify(blocks);
   assert.ok(all.includes('The city creates a board.'));
   assert.ok(all.includes('La ciudad crea una junta.'));
   assert.ok(all.includes('En español'));
+});
+
+test('EN-language card (and the default) omits the Spanish section', () => {
+  for (const card of [buildAlertCard(input), buildAlertCard({ ...input, language: 'en' })]) {
+    const all = JSON.stringify(card.blocks);
+    assert.ok(all.includes('The city creates a board.'));
+    assert.ok(!all.includes('En español'));
+    assert.ok(!all.includes('La ciudad crea una junta.'));
+  }
+});
+
+test('file number stays untranslated in both language variants', () => {
+  for (const language of ['en', 'es']) {
+    const all = JSON.stringify(buildAlertCard({ ...input, language }).blocks);
+    assert.ok(all.includes('File #241554'));
+  }
 });
 
 test('card has the footer and the three action buttons carrying the eventItemId', () => {
