@@ -20,7 +20,9 @@ describe('createCommunityMemoryServer', () => {
     const registered = /** @type {any} */ (server).instance;
     assert.ok(registered, 'server should carry an MCP instance');
 
-    // Invoke the handler directly to verify text-only content and no structuredContent
+    // Deliberate private-field access (_registeredTools is private in @modelcontextprotocol/sdk):
+    // the SDK exposes no public way to invoke a registered handler, and the assert below
+    // fails loudly if the SDK ever renames the field.
     const toolHandler = registered._registeredTools.search_community_memory?.handler;
     assert.ok(toolHandler, 'search_community_memory tool should be registered');
     const result = await toolHandler({ query_en: 'test query', query_es: 'consulta de prueba' });
