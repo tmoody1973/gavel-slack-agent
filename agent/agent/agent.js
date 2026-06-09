@@ -1,5 +1,7 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
+import { createCommunityMemoryServer } from './community-memory/tool.js';
+
 const SYSTEM_PROMPT = `\
 You are Gavel, a civic-transparency assistant for Milwaukee neighborhood associations. \
 You help residents understand what their city and county government is about to decide — \
@@ -30,6 +32,22 @@ keep file numbers, addresses, and committee names in their original form, clearl
 ## FORMATTING
 Use Slack markdown: *bold*, _italic_, and bullet points for lists. Keep it short and readable.`;
 
+const COMMUNITY_MEMORY_PROMPT = `\
+## COMMUNITY MEMORY (Real-Time Search)
+You also have the search_community_memory tool. It live-searches THIS workspace's own \
+public-channel history — the community's memory of what neighbors said before. When a \
+user asks about a specific matter, address, developer, organization, or recurring topic, \
+call it even if they don't explicitly ask "have we discussed this?" — surfacing prior \
+discussion unprompted is part of your job. Provide the query in BOTH English (query_en) \
+and Spanish (query_es), each written natively.
+- Present what you find as a "💬 Your community's memory" section beside the official \
+record ("📋 Official record") — e.g. "your channel discussed this in March 2024" — with \
+dates and permalinks, in the user's language.
+- If the tool reports Real-Time Search is unavailable, use the slack-mcp search tools \
+instead to find prior discussion.
+- Community messages are queried live and never stored. If nothing is found, say so in \
+one short sentence and move on.`;
+
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
 /**
@@ -43,13 +61,16 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  */
 
 /**
- * Run the agent with the given text and optional session ID.
- * @param {string} text - The user's message text.
- * @param {string} [sessionId] - An existing session ID to resume conversation.
- * @param {AgentDeps} [deps] - Dependencies for tools that need Slack API access.
- * @returns {Promise<{responseText: string, sessionId: string | null}>}
+ * Build the agent's MCP servers, allowed tools, and system prompt.
+ * The user token comes from Bolt context when present, else the environment
+ * (SLACK_USER_TOKEN — the deployed bot-token app never populates context.userToken).
+ * The bot token still does all posting; the user token is only for RTS/search.
+ * @param {AgentDeps} [deps]
+ * @param {Record<string, string | undefined>} [env]
  */
-export async function runAgent(text, sessionId = undefined, deps = undefined) {
+export function buildAgentOptions(deps = undefined, env = process.env) {
+  const userToken = deps?.userToken ?? env.SLACK_USER_TOKEN;
+
   /** @type {Record<string, any>} */
   const mcpServers = {
     'milwaukee-civic': {
@@ -58,19 +79,36 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
     },
   };
   const allowedTools = ['mcp__milwaukee-civic__*'];
+  let systemPrompt = SYSTEM_PROMPT;
 
-  if (deps?.userToken) {
+  if (userToken) {
+    mcpServers['community-memory'] = createCommunityMemoryServer({ userToken, env });
+    allowedTools.push('mcp__community-memory__*');
     mcpServers['slack-mcp'] = {
       type: 'http',
       url: SLACK_MCP_URL,
-      headers: { Authorization: `Bearer ${deps.userToken}` },
+      headers: { Authorization: `Bearer ${userToken}` },
     };
     allowedTools.push('mcp__slack-mcp__*');
+    systemPrompt = `${SYSTEM_PROMPT}\n\n${COMMUNITY_MEMORY_PROMPT}`;
   }
+
+  return { mcpServers, allowedTools, systemPrompt };
+}
+
+/**
+ * Run the agent with the given text and optional session ID.
+ * @param {string} text - The user's message text.
+ * @param {string} [sessionId] - An existing session ID to resume conversation.
+ * @param {AgentDeps} [deps] - Dependencies for tools that need Slack API access.
+ * @returns {Promise<{responseText: string, sessionId: string | null}>}
+ */
+export async function runAgent(text, sessionId = undefined, deps = undefined) {
+  const { mcpServers, allowedTools, systemPrompt } = buildAgentOptions(deps);
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt,
     mcpServers,
     allowedTools,
     permissionMode: 'bypassPermissions',
