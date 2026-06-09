@@ -24,6 +24,9 @@ export async function searchRts(query, { userToken, fetchFn = fetch }) {
     },
     body,
   });
+  if (!response.ok) {
+    return { ok: false, error: `http_${response.status}`, messages: [] };
+  }
   const result = await response.json();
 
   if (!result.ok) {

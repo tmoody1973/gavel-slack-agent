@@ -4,7 +4,7 @@ import { describe, it, mock } from 'node:test';
 import { searchRts } from '../../agent/community-memory/rts-client.js';
 
 function fakeFetch(payload) {
-  return mock.fn(async () => ({ json: async () => payload }));
+  return mock.fn(async () => ({ ok: true, status: 200, json: async () => payload }));
 }
 
 describe('searchRts', () => {
@@ -47,5 +47,11 @@ describe('searchRts', () => {
     const fetchFn = fakeFetch({ ok: false });
     const result = await searchRts('q', { userToken: 'xoxp-test', fetchFn });
     assert.strictEqual(result.error, 'unknown_error');
+  });
+
+  it('returns ok:false with an http_<status> error on non-2xx responses', async () => {
+    const fetchFn = mock.fn(async () => ({ ok: false, status: 429, json: async () => 'not json' }));
+    const result = await searchRts('q', { userToken: 'xoxp-test', fetchFn });
+    assert.deepStrictEqual(result, { ok: false, error: 'http_429', messages: [] });
   });
 });
