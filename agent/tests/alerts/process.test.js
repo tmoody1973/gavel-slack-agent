@@ -2,26 +2,43 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { processPendingAlerts } from '../../alerts/process.js';
 
-function harness({ pending, subscriptions }) {
+function harness({ pending, subscriptions, person = null, members }) {
   const posted = [];
   const sent = [];
+  const footerPersons = [];
   const deps = {
     client: 'milwaukee',
     listPending: async () => pending,
     listSubscriptions: async () => subscriptions,
-    enrich: async (row) => ({ matter: { fileNumber: `F${row.matterId}` }, event: { inSiteUrl: 'u' }, person: null }),
+    enrich: async (row) => ({ matter: { fileNumber: `F${row.matterId}` }, event: { inSiteUrl: 'u' }, person }),
     generateBilingual: async () => ({
       en: { summary: 'en s', whyItMatters: 'en w' },
       es: { summary: 'es s', whyItMatters: 'es w' },
       addresses: [],
     }),
-    buildFooterText: () => ({ text: 'footer' }),
+    buildFooterText: (_event, footerPerson) => {
+      footerPersons.push(footerPerson);
+      return { text: 'footer' };
+    },
     postCard: async (channel, card) => posted.push({ channel, title: card.text, body: JSON.stringify(card.blocks) }),
     markSent: async (_client, eventItemId) => sent.push(eventItemId),
     logger: { error: () => {} },
   };
-  return { posted, sent, deps };
+  if (members) {
+    deps.listCouncilMembers = async () => members;
+  }
+  return { posted, sent, footerPersons, deps };
 }
+
+const STAMPER = {
+  district: 15,
+  name: 'Russell W. Stamper, II',
+  title: 'District 15 Alderman',
+  imageUrl: 'https://city.milwaukee.gov/x/StamperHeadshot.jpg',
+  email: 'russell.stamper@milwaukee.gov',
+  phone: '414-286-2221',
+  webpage: 'https://city.milwaukee.gov/CommonCouncil/Council-Members/District15',
+};
 
 const row = { eventItemId: 1, matterId: 70036, eventId: 13355, eventBodyName: 'ZONING', title: 'rezoning of X' };
 
@@ -62,6 +79,43 @@ test('a subscription without a language gets the English-only card', async () =>
   const h = harness({ pending: [row], subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }] });
   await processPendingAlerts(h.deps);
   assert.ok(!h.posted[0].body.includes('En español'));
+});
+
+test('a sponsor matching the council directory adds the headshot and suppresses the footer person', async () => {
+  const h = harness({
+    pending: [row],
+    subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }],
+    person: { name: 'ALD. STAMPER', email: undefined, phone: undefined },
+    members: [STAMPER],
+  });
+  await processPendingAlerts(h.deps);
+  assert.ok(h.posted[0].body.includes('StamperHeadshot.jpg'));
+  assert.deepEqual(h.footerPersons, [null]);
+});
+
+test('a sponsor with no directory match keeps the current footer behavior', async () => {
+  const person = { name: 'THE CHAIR', email: undefined, phone: undefined };
+  const h = harness({
+    pending: [row],
+    subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }],
+    person,
+    members: [STAMPER],
+  });
+  await processPendingAlerts(h.deps);
+  assert.ok(!h.posted[0].body.includes('"type":"image"'));
+  assert.deepEqual(h.footerPersons, [person]);
+});
+
+test('works without a listCouncilMembers dep (backward compatible)', async () => {
+  const person = { name: 'ALD. STAMPER', email: undefined, phone: undefined };
+  const h = harness({
+    pending: [row],
+    subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }],
+    person,
+  });
+  await processPendingAlerts(h.deps);
+  assert.ok(!h.posted[0].body.includes('"type":"image"'));
+  assert.deepEqual(h.footerPersons, [person]);
 });
 
 test('an enrichment failure leaves the row pending (not marked sent)', async () => {

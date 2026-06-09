@@ -1,4 +1,5 @@
 import { buildAlertCard } from './card.js';
+import { findMember } from './council.js';
 import { matchSubscriptions } from './match.js';
 
 /**
@@ -33,6 +34,7 @@ export async function processPendingAlerts(deps) {
   } = deps;
   const pending = await listPending(client);
   const subscriptions = await listSubscriptions(client);
+  const councilMembers = deps.listCouncilMembers ? await deps.listCouncilMembers() : [];
   const results = [];
 
   for (const row of pending) {
@@ -40,7 +42,11 @@ export async function processPendingAlerts(deps) {
       const ctx = await enrich(row);
       const matter = { fileNumber: ctx.matter.fileNumber, title: row.title, matterText: '', attachments: [] };
       const summary = await generateBilingual(matter);
-      const footer = buildFooterText(ctx.event, ctx.person);
+
+      // Council directory enrichment (MOO-72): a matched member gets a headshot
+      // block on the card, replacing the footer's plain-text contact line.
+      const member = findMember(ctx.person?.name, councilMembers);
+      const footer = buildFooterText(ctx.event, member ? null : ctx.person);
 
       // Per-channel language (MOO-43): ES channels get the bilingual card,
       // everyone else the EN-only card. Each variant is built at most once.
@@ -48,7 +54,15 @@ export async function processPendingAlerts(deps) {
       const cardByLanguage = new Map();
       const cardFor = (language) => {
         if (!cardByLanguage.has(language)) {
-          const built = buildAlertCard({ row, matter: ctx.matter, event: ctx.event, summary, footer, language });
+          const built = buildAlertCard({
+            row,
+            matter: ctx.matter,
+            event: ctx.event,
+            summary,
+            footer,
+            language,
+            member,
+          });
           cardByLanguage.set(language, built);
         }
         return cardByLanguage.get(language);

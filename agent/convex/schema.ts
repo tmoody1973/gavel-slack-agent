@@ -34,6 +34,24 @@ export default defineSchema({
     .index('by_channel', ['channelId'])
     .index('by_channel_entity', ['channelId', 'entity']),
 
+  // Council-member directory (MOO-72): public city.milwaukee.gov contact data
+  // (headshot, phone, email, webpage) keyed by district + normalized last name,
+  // joined to Legistar sponsor names at alert time. Public officials only.
+  councilMembers: defineTable({
+    client: v.union(v.literal('milwaukee'), v.literal('milwaukeecounty')),
+    district: v.number(),
+    name: v.string(),
+    nameKey: v.string(),
+    title: v.string(),
+    imageUrl: v.string(),
+    email: v.string(),
+    phone: v.string(),
+    webpage: v.string(),
+    updatedAt: v.number(),
+  })
+    .index('by_client_district', ['client', 'district'])
+    .index('by_client_name_key', ['client', 'nameKey']),
+
   // Detection ledger AND alert queue in one (MOO-41). One row per genuinely-new
   // Final agenda item: its presence guarantees idempotency (never re-detected),
   // its alertStatus drives MOO-44's summarize+post. Civic-record keys only —

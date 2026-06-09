@@ -45,6 +45,7 @@ async function main() {
     client: CLIENT,
     listPending: (client) => convex.query(api.detectedItems.listPending, { client }),
     listSubscriptions: (client) => convex.query(api.subscriptions.listSubscriptions, { client }),
+    listCouncilMembers: () => convex.query(api.councilMembers.listMembers, { client: CLIENT }),
     enrich: (row) => enrichForAlert(row, legistar),
     generateBilingual: (matter) => summarizeMatterBilingual(matter, { generate }),
     buildFooterText: (event, person) => buildFooter(event, person),

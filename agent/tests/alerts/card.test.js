@@ -60,6 +60,37 @@ test('card has the footer and the three action buttons carrying the eventItemId'
   assert.ok(actions.elements.every((e) => e.value === '490695'));
 });
 
+test('a matched council member renders a headshot context block with contact links', () => {
+  const member = {
+    district: 12,
+    name: 'José G. Pérez',
+    title: 'District 12 Alderman',
+    imageUrl: 'https://city.milwaukee.gov/x/PerezHeadshot.jpg',
+    email: 'jose.perez@milwaukee.gov',
+    phone: '414-286-3762',
+    webpage: 'https://city.milwaukee.gov/CommonCouncil/Council-Members/District12',
+  };
+  const { blocks } = buildAlertCard({ ...input, member });
+  const memberBlock = blocks.find((b) => b.type === 'context' && b.elements?.some((e) => e.type === 'image'));
+  assert.ok(memberBlock, 'expected a context block with an image element');
+  const image = memberBlock.elements.find((e) => e.type === 'image');
+  assert.equal(image.image_url, member.imageUrl);
+  assert.equal(image.alt_text, 'José G. Pérez');
+  const text = memberBlock.elements.find((e) => e.type === 'mrkdwn').text;
+  assert.match(text, /José G\. Pérez/);
+  assert.match(text, /District 12 Alderman/);
+  assert.match(text, /414-286-3762/);
+  assert.match(text, /mailto:jose\.perez@milwaukee\.gov/);
+  assert.match(text, /Council-Members\/District12/);
+});
+
+test('without a member the card has no image context block (byte-identical fallback)', () => {
+  const withNull = buildAlertCard({ ...input, member: null });
+  const without = buildAlertCard(input);
+  assert.deepEqual(withNull.blocks, without.blocks);
+  assert.ok(!JSON.stringify(without.blocks).includes('"type":"image"'));
+});
+
 test('the <48h warning flag is absent unless row.walkOnFlag is true', () => {
   const without = JSON.stringify(buildAlertCard(input).blocks);
   assert.ok(!without.includes('Added late'));
