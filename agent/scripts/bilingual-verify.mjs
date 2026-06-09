@@ -83,4 +83,6 @@ for (const { event, item } of sampled) {
   }
 }
 
-console.log(`\n${SAMPLE_SIZE} real bilingual cards generated. Hand the ES texts above to a native speaker for the fluency review.`);
+console.log(
+  `\n${SAMPLE_SIZE} real bilingual cards generated. Hand the ES texts above to a native speaker for the fluency review.`,
+);
