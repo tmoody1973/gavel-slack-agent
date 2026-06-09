@@ -42,6 +42,8 @@ For each MOO-xx the issue is the spec and superpowers is the engine.
 
 Honor each issue's **"Out of scope"** — do not expand past the stated criteria (mirrors the global minimal-scope rule).
 
+**Linear sync protocol (non-negotiable, every issue):** the issue's status and comments are the permanent record — keep them current at three moments. (1) **Pickup:** move → In Progress when work starts. (2) **PR open:** move → In Review, attach the PR as a link on the issue, and post a comment with the verification evidence so far (real output pasted, not asserted). (3) **Close:** move → Done only when the issue's Verification checklist has passed against reality, with a final evidence comment (deployed output, test totals, what remains human — e.g. a native-speaker review — stays as an explicit open item and the issue stays In Review until it's done). Surprises discovered mid-build (e.g. an empty prod table, a behavior change for existing users) go in the comment too — the issue is where the next session looks first.
+
 **Parallelism:** Phase 0 roots (MOO-37/38/39/40) are independent — run them as parallel agents in separate worktrees via `superpowers:dispatching-parallel-agents`. Same for independent MCP tools later. Everything else is gated by the issue `blockedBy` graph and stays sequential by design.
 
 **Starting a session:**
