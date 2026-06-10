@@ -4,7 +4,7 @@ const HELP_TEXT = [
   '*Gavel commands*',
   '• `/gavel watch <entity>` — alert this channel when a file number, address, or name appears',
   '• `/gavel status` — show this channel’s committees, keywords, language, and watches',
-  '• `/gavel unwatch` — remove a watch _(coming in Phase 3)_',
+  '• `/gavel unwatch <entity>` — stop watching (names as shown in `/gavel status`)',
   '• `/gavel digest` — weekly digest _(coming in Phase 3)_',
 ].join('\n');
 
@@ -32,6 +32,7 @@ export function parseGavelCommand(text) {
  *   addWatch: (input: {channelId: string, entity: string}) => Promise<unknown>,
  *   getSubscription: (channelId: string) => Promise<object|null>,
  *   listWatches: (channelId: string) => Promise<Array<{entity: string}>>,
+ *   removeWatch: (input: {channelId: string, entity: string}) => Promise<unknown|null>,
  * }} deps
  * @returns {Promise<void>}
  */
@@ -56,7 +57,7 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
     case 'status':
       return runStatus(channelId, deps);
     case 'unwatch':
-      return 'Removing watches is coming in Phase 3. Use `/gavel status` to see what this channel watches.';
+      return runUnwatch({ args, channelId }, deps);
     case 'digest':
       return 'The weekly digest is coming in Phase 3.';
     default:
@@ -71,6 +72,18 @@ async function runWatch({ args, channelId }, deps) {
   }
   await deps.addWatch({ channelId, entity });
   return `👁 Watching *${entity}* — I’ll alert this channel when it shows up in the official record.`;
+}
+
+async function runUnwatch({ args, channelId }, deps) {
+  const entity = args.trim();
+  if (!entity) {
+    return 'Usage: `/gavel unwatch <entity>` — exactly as it appears in `/gavel status`.';
+  }
+  const removed = await deps.removeWatch({ channelId, entity });
+  if (!removed) {
+    return `This channel isn’t watching *${entity}*. Check \`/gavel status\` for the exact name.`;
+  }
+  return `🚫 No longer watching *${entity}*.`;
 }
 
 async function runStatus(channelId, deps) {

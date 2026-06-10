@@ -96,13 +96,11 @@ test('status without a subscription says the channel is not configured', async (
   assert.match(h.calls.responds[0].text, /not.*configured|no subscription/i);
 });
 
-test('unwatch and digest respond as registered stubs', async () => {
-  for (const text of ['unwatch', 'digest']) {
-    const h = harness({ text });
-    await handleGavelCommand(h.args, h.deps);
-    assert.equal(h.calls.responds.length, 1);
-    assert.match(h.calls.responds[0].text, /coming|Phase 3/i);
-  }
+test('digest responds as a registered stub (ships in UX-D)', async () => {
+  const h = harness({ text: 'digest' });
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(h.calls.responds.length, 1);
+  assert.match(h.calls.responds[0].text, /coming|Phase 3/i);
 });
 
 test('help lists the available subcommands', async () => {
@@ -122,4 +120,63 @@ test('a Convex failure responds with an error instead of throwing', async () => 
   await handleGavelCommand(h.args, h.deps);
   assert.equal(h.calls.ack, 1);
   assert.match(h.calls.responds[0].text, /wrong|fail/i);
+});
+
+// ---------- /gavel unwatch (MOO-73) ----------
+
+function unwatchDeps(removeResult) {
+  const removed = [];
+  return {
+    removed,
+    deps: {
+      addWatch: async () => 'watch_id_1',
+      getSubscription: async () => null,
+      listWatches: async () => [],
+      removeWatch: async (input) => {
+        removed.push(input);
+        return removeResult;
+      },
+    },
+  };
+}
+
+test('unwatch removes an existing watch and confirms', async () => {
+  const { removed, deps } = unwatchDeps('some_id');
+  const responses = [];
+  await handleGavelCommand(
+    {
+      command: { text: 'unwatch File #260039', channel_id: 'C1' },
+      ack: async () => {},
+      respond: async (r) => responses.push(r),
+    },
+    deps,
+  );
+  assert.deepEqual(removed, [{ channelId: 'C1', entity: 'File #260039' }]);
+  assert.match(responses[0].text, /No longer watching/);
+});
+
+test('unwatch with no match says so and points at status', async () => {
+  const { deps } = unwatchDeps(null);
+  const responses = [];
+  await handleGavelCommand(
+    {
+      command: { text: 'unwatch Nothing Here', channel_id: 'C1' },
+      ack: async () => {},
+      respond: async (r) => responses.push(r),
+    },
+    deps,
+  );
+  assert.match(responses[0].text, /isn’t watching|not watching/i);
+  assert.match(responses[0].text, /\/gavel status/);
+});
+
+test('unwatch with no args shows usage', async () => {
+  const { removed, deps } = unwatchDeps(null);
+  const responses = [];
+  await handleGavelCommand(
+    { command: { text: 'unwatch', channel_id: 'C1' }, ack: async () => {}, respond: async (r) => responses.push(r) },
+    deps,
+  );
+  assert.equal(removed.length, 0);
+  assert.match(responses[0].text, /Usage: `\/gavel unwatch <entity>`/);
 });
