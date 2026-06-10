@@ -4,6 +4,12 @@ import { mutation, query } from './_generated/server';
 
 const clientValidator = v.union(v.literal('milwaukee'), v.literal('milwaukeecounty'));
 
+/** Every watch across all channels — the App Home's watches section. */
+export const listAllWatches = query({
+  args: {},
+  handler: (ctx) => ctx.db.query('watches').collect(),
+});
+
 /** Register a watch for this channel. Idempotent per channel+entity. */
 export const addWatch = mutation({
   args: { channelId: v.string(), entity: v.string(), client: v.optional(clientValidator) },

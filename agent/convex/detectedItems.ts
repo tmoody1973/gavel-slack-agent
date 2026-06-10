@@ -98,6 +98,17 @@ export const getByEventItem = query({
       .unique(),
 });
 
+/** Detected rows for events on/after a date — the App Home strip's window. */
+export const listUpcoming = query({
+  args: { client: v.optional(clientValidator), fromDate: v.string() },
+  handler: (ctx, { client, fromDate }) =>
+    ctx.db
+      .query('detectedAgendaItems')
+      .withIndex('by_client_item', (q) => q.eq('client', client ?? 'milwaukee'))
+      .filter((q) => q.gte(q.field('eventDate'), fromDate))
+      .collect(),
+});
+
 /** Pending alerts awaiting summarize+post (MOO-44's consumer). */
 export const listPending = query({
   args: { client: v.optional(clientValidator) },
