@@ -1,14 +1,9 @@
-const SUGGESTED_PROMPTS = [
-  { title: "This week's meetings", message: 'What meetings are coming up at Milwaukee city government this week?' },
-  {
-    title: 'Look up a file',
-    message: "What's happening with a Milwaukee legislative file? I'll give you the file number.",
-  },
-  {
-    title: 'Who represents me?',
-    message: 'Who sponsored a matter before the Common Council, and how do I contact them?',
-  },
-  { title: 'En español', message: '¿Qué decisiones está por tomar el gobierno de Milwaukee esta semana?' },
+/** Persona-cut suggested prompts (MOO-75): Denise · Marcos (ES) · Rachel · watch-flavored. */
+export const SUGGESTED_PROMPTS = [
+  { title: 'My neighborhood this week', message: "What's happening near my neighborhood this week?" },
+  { title: 'En español', message: '¿Qué decisiones está por tomar la ciudad esta semana?' },
+  { title: 'Vote record', message: 'Show me the vote record on a file' },
+  { title: "This channel's watches", message: "What's new on the things this channel watches?" },
 ];
 
 /**

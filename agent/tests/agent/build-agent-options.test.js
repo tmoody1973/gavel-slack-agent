@@ -31,4 +31,19 @@ describe('buildAgentOptions', () => {
     const { mcpServers } = buildAgentOptions({ userToken: 'xoxp-deps' }, { SLACK_USER_TOKEN: 'xoxp-env' });
     assert.strictEqual(mcpServers['slack-mcp'].headers.Authorization, 'Bearer xoxp-deps');
   });
+
+  it('registers the receipts server and prompt section when deps carry an accumulator (MOO-75)', () => {
+    const { mcpServers, allowedTools, systemPrompt } = buildAgentOptions({ receipts: [] }, {});
+    assert.ok(mcpServers.receipts);
+    assert.ok(allowedTools.includes('mcp__receipts__*'));
+    assert.ok(systemPrompt.includes('RECEIPTS'));
+    assert.ok(systemPrompt.includes('render_receipt'));
+    assert.ok(systemPrompt.includes('You are Gavel'), 'base prompt must be appended to, not replaced');
+  });
+
+  it('omits the receipts server without an accumulator', () => {
+    const { mcpServers, systemPrompt } = buildAgentOptions(undefined, {});
+    assert.strictEqual(mcpServers.receipts, undefined);
+    assert.ok(!systemPrompt.includes('render_receipt'));
+  });
 });
