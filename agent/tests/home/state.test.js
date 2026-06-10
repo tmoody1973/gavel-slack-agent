@@ -23,7 +23,12 @@ const upcoming = [
     title: 'A rezoning',
     walkOnFlag: true,
   },
-  { eventId: 10, eventItemId: 2, eventBodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE', title: 'Another item' },
+  {
+    eventId: 10,
+    eventItemId: 2,
+    eventBodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE',
+    title: 'Another item',
+  },
   { eventId: 11, eventItemId: 3, eventBodyName: 'LICENSES COMMITTEE', title: 'Liquor license for Punta Cana LLC' },
   { eventId: 12, eventItemId: 4, eventBodyName: 'FINANCE & PERSONNEL COMMITTEE', title: 'Budget note' },
 ];

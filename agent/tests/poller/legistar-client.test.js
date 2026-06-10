@@ -95,7 +95,11 @@ test('getMatterHistory requests the histories endpoint ordered by date', async (
 
 test('fetchActiveBodyNames requests active bodies and returns sorted names', async () => {
   const { fetch, calls } = fakeFetch({
-    bodies: [{ BodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE' }, { BodyName: 'LICENSES COMMITTEE' }, { BodyName: null }],
+    bodies: [
+      { BodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE' },
+      { BodyName: 'LICENSES COMMITTEE' },
+      { BodyName: null },
+    ],
   });
   const client = createLegistarClient({
     fetch,
