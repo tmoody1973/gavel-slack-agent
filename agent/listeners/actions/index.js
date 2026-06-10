@@ -1,9 +1,11 @@
 import { ConvexHttpClient } from 'convex/browser';
 
 import { api } from '../../convex/_generated/api.js';
+import { createHomeDeps } from '../../home/deps.js';
 import { createLegistarClient } from '../../poller/legistar.js';
 import { makeAlertAsk, makeAlertHistory, makeAlertWatch } from './alert-buttons.js';
 import { handleFeedbackButton } from './feedback-buttons.js';
+import { makeCommitteeOptions, makeHomeAddWatch, makeHomeEditChannel, makeHomeWatchRemove } from './home-buttons.js';
 
 /**
  * Register action listeners. Convex/Legistar boundaries are constructed here
@@ -34,6 +36,12 @@ export function register(app) {
   app.action('alert_watch', makeAlertWatch(deps));
   app.action('alert_history', makeAlertHistory(deps));
   app.action('alert_ask', makeAlertAsk(deps));
+
+  const homeDeps = createHomeDeps(app.client);
+  app.action('home_add_watch', makeHomeAddWatch(homeDeps));
+  app.action('home_edit_channel', makeHomeEditChannel(homeDeps));
+  app.action('home_watch_remove', makeHomeWatchRemove(homeDeps));
+  app.options('home_committees', makeCommitteeOptions(homeDeps));
 }
 
 function requireConvex(convex) {

@@ -93,6 +93,26 @@ test('getMatterHistory requests the histories endpoint ordered by date', async (
   assert.ok(calls[0].url.includes('MatterHistoryActionDate'));
 });
 
+test('fetchActiveBodyNames requests active bodies and returns sorted names', async () => {
+  const { fetch, calls } = fakeFetch({
+    bodies: [
+      { BodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE' },
+      { BodyName: 'LICENSES COMMITTEE' },
+      { BodyName: null },
+    ],
+  });
+  const client = createLegistarClient({
+    fetch,
+    client: 'milwaukee',
+    userAgent: 'UA',
+    now: () => '2026-06-08T12:00:00.000Z',
+  });
+  const names = await client.fetchActiveBodyNames();
+  assert.deepEqual(names, ['LICENSES COMMITTEE', 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE']);
+  assert.ok(calls[0].url.includes('/v1/milwaukee/bodies'));
+  assert.ok(calls[0].url.includes('BodyActiveFlag'));
+});
+
 test('throws a clear error on a non-ok response', async () => {
   const fetch = async () => ({ ok: false, status: 503, json: async () => ({}) });
   const client = createLegistarClient({
