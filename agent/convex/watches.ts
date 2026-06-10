@@ -28,6 +28,21 @@ export const addWatch = mutation({
   },
 });
 
+/** Remove one watch by channel + entity. Returns the deleted id, or null. */
+export const removeWatch = mutation({
+  args: { channelId: v.string(), entity: v.string() },
+  handler: async (ctx, { channelId, entity }) => {
+    const trimmed = entity.trim();
+    const existing = await ctx.db
+      .query('watches')
+      .withIndex('by_channel_entity', (q) => q.eq('channelId', channelId).eq('entity', trimmed))
+      .unique();
+    if (!existing) return null;
+    await ctx.db.delete(existing._id);
+    return existing._id;
+  },
+});
+
 /** All watches for one channel (the `/gavel status` read + Phase 3 sweep input). */
 export const listWatches = query({
   args: { channelId: v.string() },

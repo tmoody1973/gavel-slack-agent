@@ -88,6 +88,16 @@ export const markAllSent = mutation({
   },
 });
 
+/** One detected row by its natural key — the alert-card buttons' resolver. */
+export const getByEventItem = query({
+  args: { client: v.optional(clientValidator), eventItemId: v.number() },
+  handler: (ctx, { client, eventItemId }) =>
+    ctx.db
+      .query('detectedAgendaItems')
+      .withIndex('by_client_item', (q) => q.eq('client', client ?? 'milwaukee').eq('eventItemId', eventItemId))
+      .unique(),
+});
+
 /** Pending alerts awaiting summarize+post (MOO-44's consumer). */
 export const listPending = query({
   args: { client: v.optional(clientValidator) },
