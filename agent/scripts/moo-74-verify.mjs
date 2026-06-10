@@ -37,14 +37,18 @@ const expected = {
   lateAdds: relevant.filter((r) => r.walkOnFlag).length,
   watchHits: upcoming.filter((r) => watches.some((w) => r.title.toLowerCase().includes(w.entity.toLowerCase()))).length,
 };
-console.log(`\nReconciliation (raw rows: ${upcoming.length} upcoming, ${subs.length} subscriptions, ${watches.length} watches):`);
+console.log(
+  `\nReconciliation (raw rows: ${upcoming.length} upcoming, ${subs.length} subscriptions, ${watches.length} watches):`,
+);
 console.log(`  expected strip: ${JSON.stringify(expected)}`);
 console.log(`  state strip:    ${JSON.stringify(state.strip)}`);
 console.log(`  match: ${JSON.stringify(expected) === JSON.stringify(state.strip) ? '✅' : '❌ MISMATCH'}`);
 
 // The committee typeahead's source, live
 const names = await deps.listCommitteeNames();
-console.log(`\nCommittee typeahead source: ${names.length} active bodies (e.g. ${names.filter((n) => n.includes('ZONING')).join(' · ')})`);
+console.log(
+  `\nCommittee typeahead source: ${names.length} active bodies (e.g. ${names.filter((n) => n.includes('ZONING')).join(' · ')})`,
+);
 
 // Render the view to prove block validity end-to-end (Slack validates on publish)
 const view = homeView(state);
