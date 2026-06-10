@@ -155,6 +155,15 @@ export function createLegistarClient({
     return raw.map(mapMatterAction);
   }
 
+  async function fetchActiveBodyNames() {
+    const params = new URLSearchParams({ $filter: 'BodyActiveFlag eq 1', $select: 'BodyName' });
+    const raw = await getJson(`bodies?${params.toString()}`);
+    return raw
+      .map((b) => b.BodyName)
+      .filter(Boolean)
+      .sort();
+  }
+
   async function getPerson(personId) {
     return mapPerson(await getJson(`persons/${personId}`));
   }
@@ -166,6 +175,7 @@ export function createLegistarClient({
   return {
     fetchUpcomingFinalEvents,
     fetchEventItems,
+    fetchActiveBodyNames,
     getMatter,
     getMatterSponsors,
     getMatterHistory,
