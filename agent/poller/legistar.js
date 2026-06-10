@@ -163,5 +163,13 @@ export function createLegistarClient({
     return mapEventDetail(await getJson(`events/${eventId}`));
   }
 
-  return { fetchUpcomingFinalEvents, fetchEventItems, getMatter, getMatterSponsors, getMatterHistory, getPerson, getEvent };
+  return {
+    fetchUpcomingFinalEvents,
+    fetchEventItems,
+    getMatter,
+    getMatterSponsors,
+    getMatterHistory,
+    getPerson,
+    getEvent,
+  };
 }
