@@ -25,6 +25,13 @@ test('homeView renders the status strip with all three counts', () => {
   assert.match(all, /2\*+ watch hits/);
 });
 
+test('homeView strip uses singular forms for counts of one', () => {
+  const view = homeView({ ...state, strip: { meetings: 1, lateAdds: 1, watchHits: 1 } });
+  const all = JSON.stringify(view.blocks);
+  assert.match(all, /1\*+ meeting touches your subscriptions/);
+  assert.match(all, /1\*+ watch hit[^s]/);
+});
+
 test('homeView lists watches with a remove overflow carrying channel+entity', () => {
   const view = homeView(state);
   const all = JSON.stringify(view.blocks);

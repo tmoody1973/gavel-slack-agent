@@ -4,6 +4,8 @@ const MAX_CHANNEL_ROWS = 10;
 
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 
+const plural = (count, singular, pluralForm = `${singular}s`) => (count === 1 ? singular : pluralForm);
+
 /**
  * The Hybrid App Home (MOO-74): status strip (Denise) + watches and
  * per-channel config with edit modals (Marcos). Pure over HomeState.
@@ -20,7 +22,7 @@ export function homeView({ strip, watches, channels }) {
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '🏛️ Gavel — your civic week', emoji: true } },
     mrkdwn(
-      `This week: *${strip.meetings}* meetings touch your subscriptions · ⚠️ *${strip.lateAdds}* added late · 👁 *${strip.watchHits}* watch hits`,
+      `This week: *${strip.meetings}* ${plural(strip.meetings, 'meeting touches', 'meetings touch')} your subscriptions · ⚠️ *${strip.lateAdds}* added late · 👁 *${strip.watchHits}* ${plural(strip.watchHits, 'watch hit')}`,
     ),
     { type: 'divider' },
     {
