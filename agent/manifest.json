@@ -26,7 +26,9 @@
     ]
   },
   "oauth_config": {
-    "redirect_urls": ["https://ngrok-free.app/slack/oauth_redirect"],
+    "redirect_urls": [
+      "https://ngrok-free.app/slack/oauth_redirect"
+    ],
     "scopes": {
       "user": [
         "search:read",
@@ -51,6 +53,7 @@
       "bot": [
         "app_mentions:read",
         "channels:history",
+        "channels:read",
         "chat:write",
         "groups:history",
         "im:history",

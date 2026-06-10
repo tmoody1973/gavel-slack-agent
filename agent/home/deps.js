@@ -1,3 +1,4 @@
+import { WebClient } from '@slack/web-api';
 import { ConvexHttpClient } from 'convex/browser';
 
 import { api } from '../convex/_generated/api.js';
@@ -22,6 +23,9 @@ export function createHomeDeps(slackClient) {
   });
   const bodiesCache = { at: 0, names: [] };
   const nameCache = new Map();
+  // The bot token lacks channels:read until the next manifest sync; the user
+  // token (standing RTS dependency) has it — prefer it for name lookups.
+  const nameClient = process.env.SLACK_USER_TOKEN ? new WebClient(process.env.SLACK_USER_TOKEN) : slackClient;
 
   return {
     listSubscriptions: () => requireConvex(convex).query(api.subscriptions.listSubscriptions, {}),
@@ -48,7 +52,7 @@ export function createHomeDeps(slackClient) {
     async getChannelName(channelId) {
       const cached = nameCache.get(channelId);
       if (cached && Date.now() - cached.at < NAME_TTL_MS) return cached.name;
-      const info = await slackClient.conversations.info({ channel: channelId });
+      const info = await nameClient.conversations.info({ channel: channelId });
       const name = info.channel?.name ?? channelId;
       nameCache.set(channelId, { at: Date.now(), name });
       return name;
