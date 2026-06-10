@@ -42,13 +42,17 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
 
     // Run the agent with deps for tool access
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken };
-    const { responseText, sessionId: newSessionId } = await runAgent(cleanedText, existingSessionId ?? undefined, deps);
+    const {
+      responseText,
+      sessionId: newSessionId,
+      receiptBlocks,
+    } = await runAgent(cleanedText, existingSessionId ?? undefined, deps);
 
-    // Stream response in thread with feedback buttons
+    // Stream response in thread; receipts (MOO-75) attach ahead of feedback buttons
     const streamer = sayStream();
     await streamer.append({ markdown_text: responseText });
     const feedbackBlocks = buildFeedbackBlocks();
-    await streamer.stop({ blocks: feedbackBlocks });
+    await streamer.stop({ blocks: [...(receiptBlocks ?? []), ...feedbackBlocks] });
 
     // Store session ID for future context
     if (newSessionId) {

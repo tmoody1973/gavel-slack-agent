@@ -1,6 +1,7 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
 import { createCommunityMemoryServer } from './community-memory/tool.js';
+import { createReceiptsServer } from './receipts/tool.js';
 
 const SYSTEM_PROMPT = `\
 You are Gavel, a civic-transparency assistant for Milwaukee neighborhood associations. \
@@ -48,6 +49,22 @@ instead to find prior discussion.
 - Community messages are queried live and never stored. If nothing is found, say so in \
 one short sentence and move on.`;
 
+const RECEIPTS_PROMPT = `\
+## STRUCTURED RECEIPTS (render_receipt)
+When your answer contains a vote record, a matter's action history, or a sponsor \
+identification, ALSO call the render_receipt tool with the typed data — it attaches a \
+formatted table/card/timeline under your reply when it finishes streaming:
+- vote records → type "votes" (caption + member/vote rows)
+- what happened to a file over time → type "timeline" (the get_matter_history actions)
+- who sponsored it → type "sponsor" (name, title, and the headshot imageUrl if known)
+- a file's identity card → type "matter" (file number, title, status, Legistar link)
+- a civic tool returned information_unavailable → type "unavailable" (kind + the \
+thread's language, "es" if the user wrote in Spanish, plus a Legistar link if you have one)
+Keep your prose lead short — the receipt carries the detail; do NOT repeat the table \
+contents as text. End with a one-line source note (file number + committee). If \
+render_receipt returns an error, fix the payload or just answer in prose — never let a \
+rendering problem stop your answer.`;
+
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
 /**
@@ -92,7 +109,13 @@ export function buildAgentOptions(deps = undefined, env = process.env) {
       headers: { Authorization: `Bearer ${userToken}` },
     };
     allowedTools.push('mcp__slack-mcp__*');
-    systemPrompt = `${SYSTEM_PROMPT}\n\n${COMMUNITY_MEMORY_PROMPT}`;
+    systemPrompt = `${systemPrompt}\n\n${COMMUNITY_MEMORY_PROMPT}`;
+  }
+
+  if (Array.isArray(deps?.receipts)) {
+    mcpServers.receipts = createReceiptsServer({ receipts: deps.receipts });
+    allowedTools.push('mcp__receipts__*');
+    systemPrompt = `${systemPrompt}\n\n${RECEIPTS_PROMPT}`;
   }
 
   return { mcpServers, allowedTools, systemPrompt };
@@ -103,10 +126,13 @@ export function buildAgentOptions(deps = undefined, env = process.env) {
  * @param {string} text - The user's message text.
  * @param {string} [sessionId] - An existing session ID to resume conversation.
  * @param {AgentDeps} [deps] - Dependencies for tools that need Slack API access.
- * @returns {Promise<{responseText: string, sessionId: string | null}>}
+ * @returns {Promise<{responseText: string, sessionId: string | null, receiptBlocks: object[]}>}
  */
 export async function runAgent(text, sessionId = undefined, deps = undefined) {
-  const { mcpServers, allowedTools, systemPrompt } = buildAgentOptions(deps);
+  // Per-run receipt accumulator: render_receipt pushes Block Kit blocks here;
+  // the listeners attach them at stream end (MOO-75).
+  const receipts = [];
+  const { mcpServers, allowedTools, systemPrompt } = buildAgentOptions({ ...(deps ?? {}), receipts });
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
@@ -134,5 +160,5 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
   }
 
   const responseText = responseParts.join('\n');
-  return { responseText, sessionId: newSessionId };
+  return { responseText, sessionId: newSessionId, receiptBlocks: receipts };
 }
