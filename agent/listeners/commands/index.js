@@ -20,6 +20,8 @@ export function register(app) {
     addWatch: ({ channelId, entity }) => requireConvex(convex).mutation(api.watches.addWatch, { channelId, entity }),
     getSubscription: (channelId) => requireConvex(convex).query(api.subscriptions.getSubscription, { channelId }),
     listWatches: (channelId) => requireConvex(convex).query(api.watches.listWatches, { channelId }),
+    removeWatch: ({ channelId, entity }) =>
+      requireConvex(convex).mutation(api.watches.removeWatch, { channelId, entity }),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createLegistarClient } from '../../poller/legistar.js';
+import { createLegistarClient, mapMatterAction } from '../../poller/legistar.js';
 
 function fakeFetch(routes) {
   const calls = [];
@@ -51,6 +51,46 @@ test('fetchEventItems hits /events/{id}/eventitems with Attachments=1, mapped', 
   assert.equal(items[0].eventItemId, 9);
   assert.ok(calls[0].url.includes('/v1/milwaukee/events/1/eventitems'));
   assert.ok(calls[0].url.includes('Attachments=1'));
+});
+
+test('mapMatterAction maps the live MatterHistory field names', () => {
+  const mapped = mapMatterAction({
+    MatterHistoryActionDate: '2026-06-01T00:00:00',
+    MatterHistoryActionName: 'ADOPTED',
+    MatterHistoryActionBodyName: 'HISTORIC PRESERVATION COMMISSION',
+    MatterHistoryPassedFlagName: 'Pass',
+  });
+  assert.deepEqual(mapped, {
+    date: '2026-06-01T00:00:00',
+    action: 'ADOPTED',
+    body: 'HISTORIC PRESERVATION COMMISSION',
+    result: 'Pass',
+  });
+});
+
+test('mapMatterAction turns null result/body into undefined', () => {
+  const mapped = mapMatterAction({
+    MatterHistoryActionDate: '2026-05-01T12:53:00',
+    MatterHistoryActionName: 'ASSIGNED TO',
+    MatterHistoryActionBodyName: null,
+    MatterHistoryPassedFlagName: null,
+  });
+  assert.equal(mapped.result, undefined);
+  assert.equal(mapped.body, undefined);
+});
+
+test('getMatterHistory requests the histories endpoint ordered by date', async () => {
+  const { fetch, calls } = fakeFetch({ histories: [] });
+  const client = createLegistarClient({
+    fetch,
+    client: 'milwaukee',
+    userAgent: 'UA',
+    now: () => '2026-06-08T12:00:00.000Z',
+  });
+  const actions = await client.getMatterHistory(73861);
+  assert.deepEqual(actions, []);
+  assert.ok(calls[0].url.includes('/v1/milwaukee/matters/73861/histories'));
+  assert.ok(calls[0].url.includes('MatterHistoryActionDate'));
 });
 
 test('throws a clear error on a non-ok response', async () => {

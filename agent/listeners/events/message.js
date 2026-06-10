@@ -1,5 +1,5 @@
 import { runAgent } from '../../agent/index.js';
-import { sessionStore } from '../../thread-context/index.js';
+import { primeStore, sessionStore } from '../../thread-context/index.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
 /**
@@ -28,9 +28,12 @@ export async function handleMessage({ client, context, event, logger, say, saySt
   if (isDm) {
     // DMs are always handled
   } else if (isThreadReply) {
-    // Channel thread replies are handled only if the bot is already engaged
-    const session = sessionStore.getSession(event.channel, /** @type {string} */ (event.thread_ts));
-    if (session === null) return;
+    // Channel thread replies are handled if the bot is already engaged OR the
+    // thread was primed by the Ask Gavel button (MOO-73).
+    const replyThreadTs = /** @type {string} */ (event.thread_ts);
+    const session = sessionStore.getSession(event.channel, replyThreadTs);
+    const prime = primeStore.getSession(event.channel, replyThreadTs);
+    if (session === null && prime === null) return;
   } else {
     // Top-level channel messages are handled by app_mentioned
     return;
@@ -42,8 +45,12 @@ export async function handleMessage({ client, context, event, logger, say, saySt
     const threadTs = event.thread_ts || event.ts;
     const userId = /** @type {string} */ (context.userId);
 
-    // Get session ID for conversation context
+    // Get session ID for conversation context; a prime (Ask Gavel matter
+    // context) is prepended on the first turn only — later turns resume the
+    // SDK session, which already carries it.
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
+    const prime = existingSessionId ? null : primeStore.getSession(channelId, threadTs);
+    const prompt = prime ? `${prime}\n\nUser question: ${text}` : text;
 
     // Set assistant thread status with loading messages
     await setStatus({
@@ -59,7 +66,7 @@ export async function handleMessage({ client, context, event, logger, say, saySt
 
     // Run the agent with deps for tool access
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken };
-    const { responseText, sessionId: newSessionId } = await runAgent(text, existingSessionId ?? undefined, deps);
+    const { responseText, sessionId: newSessionId } = await runAgent(prompt, existingSessionId ?? undefined, deps);
 
     // Stream response in thread with feedback buttons
     const streamer = sayStream();

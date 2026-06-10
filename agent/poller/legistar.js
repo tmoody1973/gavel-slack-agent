@@ -96,6 +96,16 @@ export function mapEventDetail(raw) {
   };
 }
 
+/** Normalize a raw MatterHistory row (field names verified live: matter 73861). */
+export function mapMatterAction(raw) {
+  return {
+    date: raw.MatterHistoryActionDate ?? undefined,
+    action: raw.MatterHistoryActionName ?? '',
+    body: raw.MatterHistoryActionBodyName ?? undefined,
+    result: raw.MatterHistoryPassedFlagName ?? undefined,
+  };
+}
+
 const LEGISTAR_BASE = 'https://webapi.legistar.com/v1';
 
 /**
@@ -139,6 +149,12 @@ export function createLegistarClient({
     return raw.map(mapSponsor).sort((a, b) => a.sequence - b.sequence);
   }
 
+  async function getMatterHistory(matterId) {
+    const params = new URLSearchParams({ $orderby: 'MatterHistoryActionDate' });
+    const raw = await getJson(`matters/${matterId}/histories?${params.toString()}`);
+    return raw.map(mapMatterAction);
+  }
+
   async function getPerson(personId) {
     return mapPerson(await getJson(`persons/${personId}`));
   }
@@ -147,5 +163,13 @@ export function createLegistarClient({
     return mapEventDetail(await getJson(`events/${eventId}`));
   }
 
-  return { fetchUpcomingFinalEvents, fetchEventItems, getMatter, getMatterSponsors, getPerson, getEvent };
+  return {
+    fetchUpcomingFinalEvents,
+    fetchEventItems,
+    getMatter,
+    getMatterSponsors,
+    getMatterHistory,
+    getPerson,
+    getEvent,
+  };
 }
