@@ -520,8 +520,12 @@ export const fetchChunks = internalQuery({
 
 /**
  * Parcel-conditioned vector search: top-k chunks where family = the parcel's
- * family OR scope = "general" (sections that apply to every district). Runs in
- * an action (the only place ctx.vectorSearch is available), then hydrates docs.
+ * family OR family = "general". Both the citywide subchapters (1-4) AND the
+ * dimensional/use table carry family "general", so this single-field OR pulls
+ * district-specific sections + general provisions + the table in one filter
+ * (overlay zones are excluded by design — they apply by location, not base
+ * zoning). Runs in an action (the only place ctx.vectorSearch is available),
+ * then hydrates docs.
  */
 export const search = action({
   args: { embedding: v.array(v.float64()), family: v.string(), limit: v.optional(v.number()) },
@@ -529,7 +533,7 @@ export const search = action({
     const results = await ctx.vectorSearch('zoningChunks', 'by_embedding', {
       vector: embedding,
       limit: limit ?? 8,
-      filter: (q) => q.or(q.eq('family', family), q.eq('scope', 'general')),
+      filter: (q) => q.or(q.eq('family', family), q.eq('family', 'general')),
     });
     const ids = results.map((r) => r._id);
     return ctx.runQuery(internal.zoning.fetchChunks, { ids });
@@ -542,7 +546,7 @@ export const search = action({
 Run: `npx convex dev --once`
 Expected: `✔ Convex functions ready!` (no type errors; `api.zoning.search` / `api.zoning.upsertChunk` now exist).
 
-> If `q.or(q.eq('family', ...), q.eq('scope', 'general'))` is rejected for spanning two fields, fall back to two searches in the action — one `filter: q => q.eq('family', family)` and one `filter: q => q.eq('scope','general')` — then merge by `_id` and slice to `limit`. Note which path you used in the commit.
+> The filter is a same-field OR (`family` twice), which Convex supports directly. `family` must be in the index `filterFields` (it is, from Task 1).
 
 - [ ] **Step 3: Commit**
 
