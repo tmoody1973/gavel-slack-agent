@@ -75,4 +75,25 @@ export default defineSchema({
   })
     .index('by_client_item', ['client', 'eventItemId'])
     .index('by_client_status', ['client', 'alertStatus']),
+
+  // Zoning-code semantic layer (MOO-55). One row per Ch.295 code section (or an
+  // intact district/use table). PUBLIC RECORD ONLY — the city's published zoning
+  // code; no Slack content. `family` groups zoning classes the way the code's own
+  // subchapters do (residential/commercial/...); `scope` separates district-
+  // specific sections from general/definitions that apply everywhere.
+  zoningChunks: defineTable({
+    section: v.string(), // "295-505" or "295-Table"
+    text: v.string(),
+    embedding: v.array(v.float64()), // text-embedding-3-small → 1536
+    family: v.string(), // "residential" | "commercial" | "downtown" | "industrial" | "special" | "overlay" | "general"
+    scope: v.string(), // "district" | "general"
+    parent: v.string(), // "Subchapter 5 — Residential Districts"
+    sourceUrl: v.string(),
+  })
+    .index('by_section', ['section'])
+    .vectorIndex('by_embedding', {
+      vectorField: 'embedding',
+      dimensions: 1536,
+      filterFields: ['family', 'scope'],
+    }),
 });
