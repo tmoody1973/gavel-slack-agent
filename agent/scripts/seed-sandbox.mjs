@@ -157,7 +157,7 @@ async function main() {
   if (DRY_RUN) {
     for (const plan of plans) {
       console.log(`\n--- #${plan.channelName} (${plan.language}) ---`);
-      console.log('subscription:', JSON.stringify({ client: CLIENT, ...plan.subscription }));
+      console.log('subscription:', JSON.stringify(plan.subscription));
       console.log('disclosure:', plan.disclosure);
       for (const post of plan.posts) {
         console.log(`  ${post.thread ? '↳' : '•'} ${post.text}`);
@@ -165,6 +165,13 @@ async function main() {
     }
     console.log(`\n[dry-run] ${plans.length} channels planned; no writes.`);
     return;
+  }
+
+  // The live path posts as the bot — fail fast with a clear message if its token
+  // is absent (dry-run above needs no token, so this check lives here, not upfront).
+  if (!process.env.SLACK_BOT_TOKEN) {
+    console.error('SLACK_BOT_TOKEN missing — needed to post seeded messages.');
+    process.exit(1);
   }
 
   const byName = await resolveChannelIds();
