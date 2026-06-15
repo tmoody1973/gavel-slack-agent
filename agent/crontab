@@ -1,2 +1,6 @@
 # Gavel poller — detect new Final agenda items every 5 minutes (MOO-41).
 */5 * * * * node /app/scripts/poll-once.mjs
+
+# Gavel Sunday Digest — one "Your civic week" card per subscribed channel,
+# Sundays 9am Central (MOO-76).
+CRON_TZ=America/Chicago 0 9 * * 0 node /app/scripts/digest-once.mjs

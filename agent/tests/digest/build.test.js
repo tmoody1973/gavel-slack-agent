@@ -30,7 +30,13 @@ const upcoming = [
     eventDate: '2026-06-20T00:00:00',
     matterId: 101,
   },
-  { eventId: 3, eventItemId: 13, eventBodyName: 'PUBLIC WORKS COMMITTEE', title: 'Paving', eventDate: '2026-06-19T00:00:00' },
+  {
+    eventId: 3,
+    eventItemId: 13,
+    eventBodyName: 'PUBLIC WORKS COMMITTEE',
+    title: 'Paving',
+    eventDate: '2026-06-19T00:00:00',
+  },
   {
     eventId: 4,
     eventItemId: 14,
