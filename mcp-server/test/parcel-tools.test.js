@@ -47,6 +47,19 @@ test('lookup_parcel degrades to information_unavailable when the client throws',
   assert.equal(payload(res).status, 'information_unavailable');
 });
 
+test('check_zoning returns zoning + district on success', async () => {
+  const tools = harness({ checkZoning: async () => ({ address: '2000 S 13TH ST', zoning: 'RT4', district: '12' }) });
+  const res = await tools.get('check_zoning').handler({ address: '2000 S 13th St' });
+  assert.equal(payload(res).zoning, 'RT4');
+  assert.equal(payload(res).district, '12');
+});
+
+test('check_zoning degrades to information_unavailable when the address is not found', async () => {
+  const tools = harness({ checkZoning: async () => null });
+  const res = await tools.get('check_zoning').handler({ address: 'nowhere' });
+  assert.equal(payload(res).status, 'information_unavailable');
+});
+
 test('get_ownership_portfolio attaches a watch hint for the owner', async () => {
   const tools = harness({
     getOwnershipPortfolio: async (owner) => ({ owner, totalParcels: 186, shown: 25, parcels: [] }),

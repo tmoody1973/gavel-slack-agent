@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createParcelClient, mapParcel, mapPermit, sqlEscape } from '../src/parcel.js';
+import { createParcelClient, escapeLike, mapParcel, mapPermit, sqlEscape } from '../src/parcel.js';
 
 test('sqlEscape doubles single quotes (literal-injection guard)', () => {
   assert.equal(sqlEscape("O'BRIEN LLC"), "O''BRIEN LLC");
   assert.equal(sqlEscape("'; DROP--"), "''; DROP--");
+});
+
+test('escapeLike escapes LIKE wildcards and the escape char', () => {
+  assert.equal(escapeLike('50% _ \\x'), '50\\% \\_ \\\\x');
+  assert.equal(escapeLike('PLAIN LLC'), 'PLAIN LLC');
+});
+
+test('mapParcel keeps a $0 assessed value (exempt) but nulls an empty string', () => {
+  assert.equal(mapParcel({ C_A_TOTAL: '0' }).assessedValue, 0);
+  assert.equal(mapParcel({ C_A_TOTAL: '' }).assessedValue, null);
+  assert.equal(mapParcel({}).assessedValue, null);
 });
 
 test('mapParcel pulls the useful MPROP fields', () => {

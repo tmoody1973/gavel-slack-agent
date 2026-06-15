@@ -22,6 +22,15 @@ export function sqlEscape(value) {
   return String(value).replace(/'/g, "''");
 }
 
+/**
+ * Escape LIKE/ILIKE metacharacters (`%` `_` and the `\` escape char) so user
+ * input matches literally — the surrounding `%` wildcards we add stay active.
+ * Postgres treats `\` as the default LIKE escape. Compose with sqlEscape.
+ */
+export function escapeLike(value) {
+  return String(value).replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
 /** Normalize a raw MPROP row to the fields the agent reads. */
 export function mapParcel(raw) {
   const owners = [raw.OWNER_NAME_1, raw.OWNER_NAME_2, raw.OWNER_NAME_3].map((n) => (n ? n.trim() : '')).filter(Boolean);
@@ -32,7 +41,7 @@ export function mapParcel(raw) {
     landUse: raw.LAND_USE_GP || null,
     district: raw.GEO_ALDER || null,
     owner: owners.join(' / ') || null,
-    assessedValue: raw.C_A_TOTAL ? Number(raw.C_A_TOTAL) : null,
+    assessedValue: raw.C_A_TOTAL !== '' && raw.C_A_TOTAL != null ? Number(raw.C_A_TOTAL) : null,
     razeStatus: raw.RAZE_STATUS ? raw.RAZE_STATUS.trim() : null,
     hasOpenViolation: Boolean(raw.BI_VIOL && String(raw.BI_VIOL).trim()),
   };
@@ -93,8 +102,10 @@ export function createParcelClient({ fetch, userAgent, baseUrl = CKAN_BASE }) {
   }
 
   async function getOwnershipPortfolio(ownerName, { limit = PORTFOLIO_DEFAULT_LIMIT, match = 'exact' } = {}) {
-    const owner = sqlEscape(ownerName);
-    const predicate = match === 'contains' ? `"OWNER_NAME_1" ILIKE '%${owner}%'` : `"OWNER_NAME_1" = '${owner}'`;
+    const predicate =
+      match === 'contains'
+        ? `"OWNER_NAME_1" ILIKE '%${sqlEscape(escapeLike(ownerName))}%'`
+        : `"OWNER_NAME_1" = '${sqlEscape(ownerName)}'`;
     const countRows = await runSql(`SELECT COUNT(*) AS n FROM "${MPROP_RESOURCE}" WHERE ${predicate}`);
     const rows = await runSql(
       `SELECT "TAXKEY","HOUSE_NR_LO","SDIR","STREET","STTYPE","ZONING" FROM "${MPROP_RESOURCE}" WHERE ${predicate} ORDER BY "STREET","HOUSE_NR_LO" LIMIT ${Number(limit)}`,
@@ -109,7 +120,7 @@ export function createParcelClient({ fetch, userAgent, baseUrl = CKAN_BASE }) {
 
   async function getPermits(address, { since } = {}) {
     const parts = partsOrThrow(address);
-    const clauses = [`"Address" ILIKE '${sqlEscape(addressPrefix(parts))}%'`];
+    const clauses = [`"Address" ILIKE '${sqlEscape(escapeLike(addressPrefix(parts)))}%'`];
     if (since) clauses.push(`"Date Opened" >= '${sqlEscape(since)}'`);
     const rows = await runSql(
       `SELECT * FROM "${PERMITS_RESOURCE}" WHERE ${clauses.join(' AND ')} ORDER BY "Date Opened" DESC LIMIT ${PERMITS_LIMIT}`,

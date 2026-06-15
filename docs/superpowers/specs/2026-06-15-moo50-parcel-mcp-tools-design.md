@@ -31,7 +31,7 @@ zoning, as four tools on the standalone Milwaukee Civic MCP server (`mcp-server/
 ## Decisions (locked with the user, 2026-06-15)
 
 1. **MPROP queried live** (daily, fast SQL) — no Convex snapshot. Consistent with the live Legistar tools.
-2. **`get_permits` queries buildingpermits live too** and **discloses the monthly refresh date** in
+2. **`get_permits` queries buildingpermits live too** and **discloses the monthly refresh cadence** in
    output — a documented deviation from the acceptance's "served from a Convex snapshot." Same outcome
    (disclosed staleness), simpler, keeps the MCP server **decoupled from Convex**. Linear acceptance
    to be updated on close.
