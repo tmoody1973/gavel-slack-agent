@@ -36,11 +36,24 @@ test('unavailable renders errorReply blocks in the requested language', () => {
   assert.ok(all.includes('milwaukee.legistar.com'));
 });
 
+test('parcel renders the parcel card with owner and a watchlist button', () => {
+  const parcel = { address: '2000 S 13TH ST', owner: 'SHAAN REAL ESTATE INC', zoning: 'RT4', district: '12' };
+  const { blocks } = renderReceiptBlocks({ type: 'parcel', parcel });
+  const all = JSON.stringify(blocks);
+  assert.match(all, /SHAAN REAL ESTATE INC/);
+  assert.match(all, /parcel_watch/);
+  assert.match(all, /parcel_open_map/);
+});
+
 test('a type without its matching payload field returns an error, not a throw', () => {
   const result = renderReceiptBlocks({ type: 'votes' });
   assert.ok(result.error);
   assert.match(result.error, /votes/);
   assert.equal(result.blocks, undefined);
+
+  const parcelMissing = renderReceiptBlocks({ type: 'parcel' });
+  assert.ok(parcelMissing.error);
+  assert.match(parcelMissing.error, /parcel/);
 });
 
 test('appendReceiptBlocks accumulates across calls', () => {

@@ -1,20 +1,21 @@
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 
-import { errorReply, historyTimeline, matterCard, sponsorCard, voteTable } from '../../blockkit/index.js';
+import { errorReply, historyTimeline, matterCard, parcelCard, sponsorCard, voteTable } from '../../blockkit/index.js';
 
 /** 50/message Slack cap − the feedback block − safety margin. */
 export const MAX_RECEIPT_BLOCKS = 40;
 
 const TOOL_DESCRIPTION = `\
 Attach a structured Block Kit receipt under your reply: a vote table, sponsor card, \
-matter card, action timeline, or a designed "information unavailable" notice. Pass the \
-TYPED DATA only — never raw Block Kit JSON. Set "type" and fill the matching field \
-(votes / member / matter / timeline / unavailable). The receipt renders below your prose \
-when your reply finishes streaming, so do not repeat its contents as text.`;
+matter card, parcel card (property owner/zoning + map & watchlist buttons), action \
+timeline, or a designed "information unavailable" notice. Pass the TYPED DATA only — \
+never raw Block Kit JSON. Set "type" and fill the matching field \
+(votes / member / matter / parcel / timeline / unavailable). The receipt renders below \
+your prose when your reply finishes streaming, so do not repeat its contents as text.`;
 
 const SCHEMA = {
-  type: z.enum(['votes', 'sponsor', 'matter', 'timeline', 'unavailable']).describe('Which receipt to render'),
+  type: z.enum(['votes', 'sponsor', 'matter', 'parcel', 'timeline', 'unavailable']).describe('Which receipt to render'),
   votes: z
     .object({
       caption: z.string().describe('e.g. "Vote on File #260039"'),
@@ -38,6 +39,17 @@ const SCHEMA = {
       status: z.string().optional(),
       bodyName: z.string().optional(),
       legistarUrl: z.string().optional(),
+    })
+    .optional(),
+  parcel: z
+    .object({
+      address: z.string(),
+      owner: z.string().nullable().optional(),
+      zoning: z.string().nullable().optional(),
+      district: z.string().nullable().optional(),
+      assessedValue: z.number().nullable().optional(),
+      razeStatus: z.string().nullable().optional(),
+      hasOpenViolation: z.boolean().optional(),
     })
     .optional(),
   timeline: z
@@ -74,6 +86,8 @@ export function renderReceiptBlocks(input) {
       return input.member ? { blocks: [sponsorCard(input.member)] } : missing('member');
     case 'matter':
       return input.matter ? { blocks: matterCard(input.matter) } : missing('matter');
+    case 'parcel':
+      return input.parcel ? { blocks: parcelCard(input.parcel) } : missing('parcel');
     case 'timeline':
       return input.timeline ? { blocks: historyTimeline(input.timeline) } : missing('timeline');
     case 'unavailable': {
