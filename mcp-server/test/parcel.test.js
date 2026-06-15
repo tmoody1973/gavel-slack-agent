@@ -39,7 +39,13 @@ test('mapPermit maps the buildingpermits columns', () => {
     'Construction Total Cost': '12000',
     'Use of Building': 'Tavern',
   });
-  assert.deepEqual(r, { date: '2026-05-01', type: 'Commercial Alteration Permit', status: 'Issued', cost: '12000', use: 'Tavern' });
+  assert.deepEqual(r, {
+    date: '2026-05-01',
+    type: 'Commercial Alteration Permit',
+    status: 'Issued',
+    cost: '12000',
+    use: 'Tavern',
+  });
 });
 
 // Fake fetch: records the decoded SQL it was asked to run, and returns canned
@@ -66,7 +72,17 @@ test('lookupParcel builds an exact MPROP WHERE and returns null on no match', as
 });
 
 test('lookupParcel maps a found row', async () => {
-  const client = fakeClient([{ TAXKEY: '468', HOUSE_NR_LO: '2000', SDIR: 'S', STREET: '13TH', STTYPE: 'ST', ZONING: 'RT4', OWNER_NAME_1: 'SHAAN REAL ESTATE INC' }]);
+  const client = fakeClient([
+    {
+      TAXKEY: '468',
+      HOUSE_NR_LO: '2000',
+      SDIR: 'S',
+      STREET: '13TH',
+      STTYPE: 'ST',
+      ZONING: 'RT4',
+      OWNER_NAME_1: 'SHAAN REAL ESTATE INC',
+    },
+  ]);
   const p = await client.lookupParcel('2000 S 13th St');
   assert.equal(p.owner, 'SHAAN REAL ESTATE INC');
   assert.equal(p.zoning, 'RT4');
@@ -94,7 +110,10 @@ test('getOwnershipPortfolio reports total + capped parcels; contains uses ILIKE'
 
 test('getPermits prefix-matches Address and labels the monthly source', async () => {
   const sql = [];
-  const client = fakeClient([{ 'Date Opened': '2026-05-01', 'Permit Type': 'Commercial Alteration Permit', Status: 'Issued' }], sql);
+  const client = fakeClient(
+    [{ 'Date Opened': '2026-05-01', 'Permit Type': 'Commercial Alteration Permit', Status: 'Issued' }],
+    sql,
+  );
   const out = await client.getPermits('2000 S 13th St', { since: '2024-01-01' });
   assert.match(out.source, /monthly/);
   assert.equal(out.permits[0].type, 'Commercial Alteration Permit');
