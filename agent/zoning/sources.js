@@ -5,8 +5,18 @@ const BASE = 'https://city.milwaukee.gov/ImageLibrary/Groups/ccClerk/Ordinances/
 
 export const CH295_SOURCES = [
   { file: 'CH295-sub1.pdf', parent: 'Subchapter 1 — Introduction', family: 'general', scope: 'general' },
-  { file: 'CH295-sub2.pdf', parent: 'Subchapter 2 — Definitions and Rules of Measurement', family: 'general', scope: 'general' },
-  { file: 'CH295-sub3.pdf', parent: 'Subchapter 3 — Administration, Enforcement and Appeals', family: 'general', scope: 'general' },
+  {
+    file: 'CH295-sub2.pdf',
+    parent: 'Subchapter 2 — Definitions and Rules of Measurement',
+    family: 'general',
+    scope: 'general',
+  },
+  {
+    file: 'CH295-sub3.pdf',
+    parent: 'Subchapter 3 — Administration, Enforcement and Appeals',
+    family: 'general',
+    scope: 'general',
+  },
   { file: 'CH295-sub4.pdf', parent: 'Subchapter 4 — General Provisions', family: 'general', scope: 'general' },
   { file: 'CH295-sub5.pdf', parent: 'Subchapter 5 — Residential Districts', family: 'residential', scope: 'district' },
   { file: 'CH295-sub6.pdf', parent: 'Subchapter 6 — Commercial Districts', family: 'commercial', scope: 'district' },
