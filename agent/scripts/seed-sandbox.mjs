@@ -5,15 +5,17 @@
 // including the bilingual Punta Cana LLC / 2000 S 13th St thread the demo's
 // community-memory search surfaces.
 //
-// You create the public channels and /invite the bot first; this script resolves
-// each by name, upserts its subscription, and seeds the messages.
+// It tries to create any missing public channel + invite the bot, but channel
+// creation needs channels:manage (not on the current org-wide install), so when
+// that fails it warns and you create the channel + /invite @Gavel manually; it
+// then upserts each subscription and seeds the messages.
 //
-//   node scripts/seed-sandbox.mjs            seed for real
-//   SEED_DRY_RUN=1 node scripts/seed-sandbox.mjs   print the plan, no writes
-//   SEED_FORCE=1   node scripts/seed-sandbox.mjs   re-seed even if already seeded
+//   SLACK_TEAM_ID=T... node scripts/seed-sandbox.mjs   seed for real (Grid: team id required)
+//   SEED_DRY_RUN=1 node scripts/seed-sandbox.mjs       print the plan, no writes
+//   SEED_FORCE=1   node scripts/seed-sandbox.mjs       re-seed even if already seeded
 //
-// Idempotency: upsertSubscription is idempotent; message seeding is guarded by
-// the pinned disclosure (a channel that already has it is skipped unless FORCE).
+// Idempotency: upsertSubscription is idempotent; message seeding is skipped for
+// any channel whose history already contains the disclosure message (unless FORCE).
 
 import { WebClient } from '@slack/web-api';
 import { ConvexHttpClient } from 'convex/browser';
@@ -28,6 +30,8 @@ import { assertCorpusInvariants, buildSeedPlan, DISCLOSURE_MARKER, SANDBOX_CHANN
 const CLIENT = process.env.POLL_CLIENT || 'milwaukee';
 const DRY_RUN = process.env.SEED_DRY_RUN === '1';
 const FORCE = process.env.SEED_FORCE === '1';
+// Enterprise Grid requires a workspace team id on conversations.list/create.
+const TEAM_ID = process.env.SLACK_TEAM_ID || undefined;
 
 const url = process.env.CONVEX_URL || process.env.VITE_CONVEX_URL;
 if (!url) {
@@ -36,8 +40,8 @@ if (!url) {
 }
 
 const convex = new ConvexHttpClient(url);
-// Bot token posts + pins (must be a channel member). User token lists channels
-// by name (the App Home already relies on it for the same reason).
+// Bot token posts + reads history (must be a channel member). User token lists
+// channels by name (the App Home already relies on it for the same reason).
 const poster = new WebClient(process.env.SLACK_BOT_TOKEN);
 const lister = new WebClient(process.env.SLACK_USER_TOKEN || process.env.SLACK_BOT_TOKEN);
 
@@ -50,6 +54,7 @@ async function resolveChannelIds() {
       exclude_archived: true,
       limit: 1000,
       cursor,
+      ...(TEAM_ID ? { team_id: TEAM_ID } : {}),
     });
     for (const channel of res.channels ?? []) {
       byName.set(channel.name, channel.id);
@@ -59,15 +64,64 @@ async function resolveChannelIds() {
   return byName;
 }
 
-// Skip message seeding when the channel already carries the pinned disclosure,
-// so a re-run does not double-post. If pins:read is unavailable we cannot verify
-// — proceed but warn (or honor SEED_FORCE).
+/** The bot's own user id — needed to invite it into freshly created channels. */
+async function botUser() {
+  try {
+    return (await poster.auth.test()).user_id;
+  } catch (err) {
+    console.warn(`⚠️  auth.test failed (${err.data?.error || err.message}); cannot auto-invite the bot`);
+    return null;
+  }
+}
+
+/**
+ * Return the channel id, creating the public channel by name if it is missing.
+ * Creation needs channels:manage (not granted on the current org-wide install),
+ * so a failure is not fatal — we warn and let the operator create it manually.
+ * Returns null when the channel neither exists nor could be created.
+ */
+async function ensureChannel(name, byName) {
+  const existing = byName.get(name);
+  if (existing) return existing;
+  try {
+    const res = await lister.conversations.create({
+      name,
+      is_private: false,
+      ...(TEAM_ID ? { team_id: TEAM_ID } : {}),
+    });
+    byName.set(name, res.channel.id);
+    console.log(`  + created #${name}`);
+    return res.channel.id;
+  } catch (err) {
+    console.warn(
+      `  ⚠️  could not create #${name} (${err.data?.error || err.message}); create it manually and /invite @Gavel`,
+    );
+    return null;
+  }
+}
+
+/** Invite the bot so it can post; tolerate it already being a member. */
+async function ensureBotMember(channelId, botUserId) {
+  if (!botUserId) return;
+  try {
+    await lister.conversations.invite({ channel: channelId, users: botUserId });
+  } catch (err) {
+    const code = err.data?.error;
+    if (code !== 'already_in_channel') {
+      console.warn(`  ⚠️  could not invite the bot (${code || err.message}); invite @Gavel manually if posting fails`);
+    }
+  }
+}
+
+// Skip message seeding when the channel already carries the disclosure message,
+// so a re-run does not double-post. Uses conversations.history (the bot has
+// channels:history); if unavailable we proceed but warn (or honor SEED_FORCE).
 async function alreadySeeded(channelId) {
   try {
-    const res = await poster.pins.list({ channel: channelId });
-    return (res.items ?? []).some((item) => item.message?.text?.includes(DISCLOSURE_MARKER));
+    const res = await poster.conversations.history({ channel: channelId, limit: 200 });
+    return (res.messages ?? []).some((message) => message.text?.includes(DISCLOSURE_MARKER));
   } catch (err) {
-    console.warn(`  ⚠️  could not read pins (${err.data?.error || err.message}); cannot verify idempotency`);
+    console.warn(`  ⚠️  could not read history (${err.data?.error || err.message}); cannot verify idempotency`);
     return false;
   }
 }
@@ -114,28 +168,30 @@ async function main() {
   }
 
   const byName = await resolveChannelIds();
+  const botUserId = await botUser();
   let seededChannels = 0;
   let seededMessages = 0;
 
   for (const plan of plans) {
-    const channelId = byName.get(plan.channelName);
-    if (!channelId) {
-      console.warn(`✗ #${plan.channelName}: not found — create it and /invite the bot, then re-run.`);
-      continue;
-    }
+    try {
+      const channelId = await ensureChannel(plan.channelName, byName);
+      if (!channelId) continue;
+      await ensureBotMember(channelId, botUserId);
+      await convex.mutation(api.subscriptions.upsertSubscription, { channelId, ...plan.subscription });
 
-    await convex.mutation(api.subscriptions.upsertSubscription, { channelId, ...plan.subscription });
+      if (!FORCE && (await alreadySeeded(channelId))) {
+        console.log(`= #${plan.channelName}: subscription upserted; already seeded (skip messages).`);
+        seededChannels += 1;
+        continue;
+      }
 
-    if (!FORCE && (await alreadySeeded(channelId))) {
-      console.log(`= #${plan.channelName}: subscription upserted; already seeded (skip messages).`);
+      const posted = await seedMessages(channelId, plan);
       seededChannels += 1;
-      continue;
+      seededMessages += posted;
+      console.log(`✓ #${plan.channelName} (${plan.language}): subscription + ${posted} messages seeded.`);
+    } catch (err) {
+      console.warn(`✗ #${plan.channelName}: ${err.data?.error || err.message}`);
     }
-
-    const posted = await seedMessages(channelId, plan);
-    seededChannels += 1;
-    seededMessages += posted;
-    console.log(`✓ #${plan.channelName} (${plan.language}): subscription + ${posted} messages seeded.`);
   }
 
   console.log(
