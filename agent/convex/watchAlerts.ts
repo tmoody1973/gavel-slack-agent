@@ -11,6 +11,17 @@ const alertKey = v.object({
   refId: v.string(),
 });
 
+// The insert payload — the 4-field key plus the caller-stamped alert time. The
+// sweep stamps alertedAt via an injected clock (so the orchestration is unit-
+// testable); Convex stores that value rather than re-stamping its own.
+const alertRecord = v.object({
+  channelId: v.string(),
+  entity: v.string(),
+  kind: kindValidator,
+  refId: v.string(),
+  alertedAt: v.number(),
+});
+
 /** Every (channel, entity, kind, refId) already alerted — the sweep's dedup input. */
 export const listAlertedKeys = query({
   args: {},
@@ -26,7 +37,7 @@ export const listAlertedKeys = query({
  * Returns the count inserted.
  */
 export const recordAlerts = mutation({
-  args: { alerts: v.array(alertKey) },
+  args: { alerts: v.array(alertRecord) },
   handler: async (ctx, { alerts }) => {
     let inserted = 0;
     for (const a of alerts) {
@@ -37,7 +48,7 @@ export const recordAlerts = mutation({
         )
         .unique();
       if (existing) continue;
-      await ctx.db.insert('watchAlerts', { ...a, alertedAt: Date.now() });
+      await ctx.db.insert('watchAlerts', a);
       inserted += 1;
     }
     return inserted;

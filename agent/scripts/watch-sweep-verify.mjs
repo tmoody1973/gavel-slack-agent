@@ -30,11 +30,29 @@ const CHANNEL = 'CWATCHVERIFY';
 const convex = new ConvexHttpClient(process.env.CONVEX_URL);
 const legistar = createLegistarClient({ fetch, client: CLIENT, userAgent: USER_AGENT });
 
-/** Pick a distinctive multi-word token from a real matter title to watch. */
+/**
+ * Pick a distinctive single word from a real matter title to watch. A single
+ * word is guaranteed to be a contiguous substring of the title (a multi-word
+ * phrase may straddle skipped stopwords, e.g. "Presentation and discussion").
+ */
 function watchTermFrom(title) {
-  const stop = new Set(['the', 'and', 'for', 'from', 'with', 'an', 'of', 'to', 'in', 'on', 'at', 'a']);
-  const words = title.split(/\s+/).filter((w) => /^[A-Za-z]{4,}$/.test(w) && !stop.has(w.toLowerCase()));
-  return words.slice(0, 2).join(' ') || title.slice(0, 12);
+  const stop = new Set(['the', 'and', 'for', 'from', 'with', 'regarding', 'services', 'presentation', 'discussion']);
+  const words = title
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-z]{5,}$/.test(w) && !stop.has(w.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
+  return words[0] || title.split(/\s+/).find((w) => w.length >= 4) || title.slice(0, 12);
+}
+
+/** Remove every ledger row for the throwaway verify channel — clean slate. */
+async function clearChannel() {
+  const keys = await convex.query(api.watchAlerts.listAlertedKeys, {});
+  let removed = 0;
+  for (const k of keys.filter((k) => k.channelId === CHANNEL)) {
+    await convex.mutation(api.watchAlerts.removeAlert, k);
+    removed += 1;
+  }
+  return removed;
 }
 
 async function runOnce(watches, recordingOn) {
@@ -69,13 +87,9 @@ async function main() {
 
   const watches = [{ channelId: CHANNEL, entity: term, client: CLIENT }];
 
-  // Clean any stale ledger row from a prior verify, then run #1 (records hits).
-  await convex.mutation(api.watchAlerts.removeAlert, {
-    channelId: CHANNEL,
-    entity: term,
-    kind: 'matter',
-    refId: String(target.matterId),
-  });
+  // Clean any stale rows from a prior verify, then run #1 (records hits).
+  const cleared = await clearChannel();
+  if (cleared) console.log(`    (cleared ${cleared} stale ledger row(s) from a prior run)`);
   const run1 = await runOnce(watches, true);
   console.log(`\n[2] Sweep run #1 → ${run1.recorded.length} hit(s), ${run1.posted.length} card(s) posted (dry).`);
   if (!run1.recorded.some((r) => r.refId === String(target.matterId))) {
@@ -88,14 +102,9 @@ async function main() {
   console.log(`\n[3] Sweep run #2 → ${run2.recorded.length} fresh hit(s) (expected 0 — dedup ledger).`);
   if (run2.recorded.length !== 0) throw new Error('Idempotency FAILED: run #2 produced fresh hits.');
 
-  // Cleanup.
-  await convex.mutation(api.watchAlerts.removeAlert, {
-    channelId: CHANNEL,
-    entity: term,
-    kind: 'matter',
-    refId: String(target.matterId),
-  });
-  console.log('\n[4] Cleaned up ledger row. ✅ Matters path verified against real Legistar data.');
+  // Cleanup — remove every ledger row this run created (keeps the verify repeatable).
+  const removed = await clearChannel();
+  console.log(`\n[4] Cleaned up ${removed} ledger row(s). ✅ Matters path verified against real Legistar data.`);
 }
 
 main()
