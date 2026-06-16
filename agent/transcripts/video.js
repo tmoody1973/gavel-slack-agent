@@ -56,3 +56,25 @@ export async function clipVideoMoment(opts, { run }) {
   await run('yt-dlp', buildClipArgs(opts));
   return opts.outPath;
 }
+
+/** Map a clip on disk to `files.uploadV2` arguments (filename derived from the path). */
+export function buildUploadParams({ channel, filePath, title, initialComment, filename }) {
+  return {
+    channel_id: channel,
+    file: filePath,
+    filename: filename ?? filePath.split('/').pop(),
+    title,
+    initial_comment: initialComment,
+  };
+}
+
+/**
+ * Upload a clipped moment so it plays inline in a Slack channel. The Slack client
+ * is injected so the call is unit-tested without the network.
+ *
+ * @param {{files:{uploadV2:(args:object)=>Promise<unknown>}}} client
+ * @param {{channel:string, filePath:string, title?:string, initialComment?:string, filename?:string}} opts
+ */
+export async function uploadClipToSlack(client, opts) {
+  return client.files.uploadV2(buildUploadParams(opts));
+}
