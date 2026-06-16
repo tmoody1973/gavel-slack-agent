@@ -1,7 +1,10 @@
-const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest'];
+import { parcelCard } from '../../blockkit/index.js';
+
+const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'parcel'];
 
 const HELP_TEXT = [
   '*Gavel commands*',
+  '• `/gavel parcel <address>` — look up a property (owner, zoning, lot size); bare opens a form',
   '• `/gavel watch <entity>` — alert this channel when a file number, address, or name appears',
   '• `/gavel status` — show this channel’s committees, keywords, language, and watches',
   '• `/gavel unwatch <entity>` — stop watching (names as shown in `/gavel status`)',
@@ -42,12 +45,39 @@ export async function handleGavelCommand({ command, ack, respond, logger }, deps
   const channelId = command.channel_id;
 
   try {
+    if (subcommand === 'parcel') {
+      await runParcel({ args, triggerId: command.trigger_id }, deps, respond);
+      return;
+    }
     const text = await runSubcommand({ subcommand, args, channelId }, deps);
     await respond({ response_type: 'ephemeral', text });
   } catch (err) {
     logger?.error?.(`/gavel ${subcommand} failed: ${err.message}`);
     await respond({ response_type: 'ephemeral', text: ':warning: Something went wrong — please try again.' });
   }
+}
+
+/** `/gavel parcel <address>` → ephemeral property card; bare → open the lookup modal. */
+async function runParcel({ args, triggerId }, deps, respond) {
+  const address = args.trim();
+  if (!address) {
+    await deps.openLookupModal(triggerId);
+    return;
+  }
+  let parcel = null;
+  try {
+    parcel = await deps.lookupParcel(address);
+  } catch {
+    parcel = null; // unparseable address → treat as not found
+  }
+  if (!parcel) {
+    await respond({
+      response_type: 'ephemeral',
+      text: `No Milwaukee parcel found for *${address}* — check the spelling and the N/S/E/W direction.`,
+    });
+    return;
+  }
+  await respond({ response_type: 'ephemeral', text: `🏠 ${parcel.address}`, blocks: parcelCard(parcel) });
 }
 
 async function runSubcommand({ subcommand, args, channelId }, deps) {

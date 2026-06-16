@@ -24,6 +24,16 @@ export function homeView({ strip, watches, channels }) {
     mrkdwn(
       `This week: *${strip.meetings}* ${plural(strip.meetings, 'meeting touches', 'meetings touch')} your subscriptions · ⚠️ *${strip.lateAdds}* added late · 👁 *${strip.watchHits}* ${plural(strip.watchHits, 'watch hit')}`,
     ),
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          action_id: 'home_lookup_parcel',
+          text: { type: 'plain_text', text: '🔎 Look up a property', emoji: true },
+        },
+      ],
+    },
     { type: 'divider' },
     {
       type: 'section',

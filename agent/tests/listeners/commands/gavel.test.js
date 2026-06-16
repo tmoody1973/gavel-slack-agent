@@ -27,10 +27,10 @@ test('empty or unknown input parses as help', () => {
 
 // ---------- handleGavelCommand ----------
 
-function harness({ text, subscription = null, watches = [] }) {
-  const calls = { ack: 0, responds: [], added: [] };
+function harness({ text, subscription = null, watches = [], parcel = null }) {
+  const calls = { ack: 0, responds: [], added: [], opened: [] };
   const args = {
-    command: { text, channel_id: 'C123', user_id: 'U1' },
+    command: { text, channel_id: 'C123', user_id: 'U1', trigger_id: 'TRIG1' },
     ack: async () => {
       calls.ack += 1;
     },
@@ -44,6 +44,8 @@ function harness({ text, subscription = null, watches = [] }) {
     },
     getSubscription: async () => subscription,
     listWatches: async () => watches,
+    lookupParcel: async () => parcel,
+    openLookupModal: async (triggerId) => calls.opened.push(triggerId),
   };
   return { calls, args, deps };
 }
@@ -179,4 +181,33 @@ test('unwatch with no args shows usage', async () => {
   );
   assert.equal(removed.length, 0);
   assert.match(responses[0].text, /Usage: `\/gavel unwatch <entity>`/);
+});
+
+// ---------- /gavel parcel ----------
+
+test('parcel <address> responds with the property card blocks', async () => {
+  const h = harness({
+    text: 'parcel 1108 e chambers st',
+    parcel: { address: '1108 W CHAMBERS ST', zoning: 'RT4', lotArea: 7626 },
+  });
+  await handleGavelCommand(h.args, h.deps);
+  const r = h.calls.responds[0];
+  assert.equal(r.response_type, 'ephemeral');
+  assert.ok(Array.isArray(r.blocks), 'card blocks attached');
+  assert.match(JSON.stringify(r.blocks), /1108 W CHAMBERS ST/);
+  assert.equal(h.calls.opened.length, 0);
+});
+
+test('bare parcel opens the lookup modal (no address)', async () => {
+  const h = harness({ text: 'parcel' });
+  await handleGavelCommand(h.args, h.deps);
+  assert.deepEqual(h.calls.opened, ['TRIG1']);
+  assert.equal(h.calls.responds.length, 0);
+});
+
+test('parcel with an unknown address responds with a not-found nudge, no crash', async () => {
+  const h = harness({ text: 'parcel 9999 nowhere ave', parcel: null });
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(h.calls.responds[0].text, /No Milwaukee parcel found/);
+  assert.match(h.calls.responds[0].text, /N\/S\/E\/W|direction/i);
 });
