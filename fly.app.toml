@@ -10,7 +10,8 @@ primary_region = "ord"
 
 # Single always-on machine. The agent (Node + Claude Agent SDK) spawns the Claude
 # Code CLI for the reasoning loop AND the milwaukee-civic MCP server as subprocesses;
-# 512MB OOM-killed the claude subprocess on real DMs, so it runs at 2GB.
+# the CLI's Node heap alone reached ~1.6GB on real DMs and OOM-killed at 2GB, so it
+# runs on shared-cpu-2x at 4GB.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "2048mb"
+  size = "shared-cpu-2x"
+  memory = "4096mb"
