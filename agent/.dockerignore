@@ -6,5 +6,6 @@ node_modules
 .slack
 .remember
 tests
+data
 README.md
 LICENSE
