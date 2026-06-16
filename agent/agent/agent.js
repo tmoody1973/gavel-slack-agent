@@ -77,6 +77,11 @@ invent code text or section numbers.`;
 
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
+// Pin the agent model. Sonnet 4.6 is the default for fast interactive replies;
+// override with the GAVEL_AGENT_MODEL env var (e.g. claude-opus-4-8) without a
+// code change. Unset, the Agent SDK defaults to the Opus tier (slower).
+const AGENT_MODEL = process.env.GAVEL_AGENT_MODEL || 'claude-sonnet-4-6';
+
 /**
  * @typedef {Object} AgentDeps
  * @property {import('@slack/web-api').WebClient} client
@@ -152,6 +157,7 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
+    model: AGENT_MODEL,
     systemPrompt,
     mcpServers,
     allowedTools,
