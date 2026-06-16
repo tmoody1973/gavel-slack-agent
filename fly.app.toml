@@ -8,8 +8,9 @@ primary_region = "ord"
 [build]
   dockerfile = "Dockerfile.app"
 
-# Single always-on machine. The agent (Node + Claude Agent SDK) also spawns the
-# milwaukee-civic MCP server as a subprocess, so give it headroom over the poller.
+# Single always-on machine. The agent (Node + Claude Agent SDK) spawns the Claude
+# Code CLI for the reasoning loop AND the milwaukee-civic MCP server as subprocesses;
+# 512MB OOM-killed the claude subprocess on real DMs, so it runs at 2GB.
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "512mb"
+  memory = "2048mb"
