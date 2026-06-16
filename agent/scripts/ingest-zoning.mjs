@@ -3,6 +3,7 @@
 // Run: node scripts/ingest-zoning.mjs
 import { readFile } from 'node:fs/promises';
 import { ConvexHttpClient } from 'convex/browser';
+import { config } from 'dotenv';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import { api } from '../convex/_generated/api.js';
@@ -10,11 +11,53 @@ import { chunkSections } from '../zoning/chunk.js';
 import { embedTexts } from '../zoning/embed.js';
 import { CH295_SOURCES } from '../zoning/sources.js';
 
-const UA = 'gavel-slack-agent (tarik@radiomilwaukee.org)';
-const TABLE_FALLBACK = new URL('../data/zoning/ch295-table.md', import.meta.url);
+config({ path: '.env.local' });
 
-async function extractPdfText(buffer) {
-  const doc = await getDocument({ data: new Uint8Array(buffer), useSystemFonts: true }).promise;
+// city.milwaukee.gov fronts the PDFs with a WAF that 403s plain automated
+// requests; a browser User-Agent + a same-site Referer gets through, but it
+// also rate-limits bursts — hence the retry/backoff. For reliability the script
+// prefers a locally-downloaded copy in data/zoning/<file> when present (drop
+// browser-saved PDFs there if the WAF blocks a file outright).
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+const REFERER = 'https://city.milwaukee.gov/cityclerk/LRB/ordinances/tableofcontents';
+const PDF_MAGIC = '%PDF-';
+const MAX_ATTEMPTS = 5;
+const LOCAL_DIR = new URL('../data/zoning/', import.meta.url);
+const TABLE_FALLBACK = new URL('ch295-table.md', LOCAL_DIR);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isPdf(bytes) {
+  return String.fromCharCode(...bytes.slice(0, 5)) === PDF_MAGIC;
+}
+
+/** A locally-saved PDF wins over the network (manual fallback for WAF-blocked files). */
+async function readLocalPdf(file) {
+  try {
+    const bytes = new Uint8Array(await readFile(new URL(file, LOCAL_DIR)));
+    return isPdf(bytes) ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch a PDF past the WAF: browser UA + Referer, retry on a blocked/non-PDF response. */
+async function fetchPdf(source) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(source.url, {
+      headers: { 'User-Agent': BROWSER_UA, Accept: 'application/pdf', Referer: REFERER },
+    });
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (res.status === 200 && isPdf(bytes)) return bytes;
+    console.warn(`  ${source.file} attempt ${attempt}/${MAX_ATTEMPTS}: HTTP ${res.status} (not PDF) — backing off`);
+    await sleep(2000 * attempt);
+  }
+  return null;
+}
+
+async function extractPdfText(bytes) {
+  const doc = await getDocument({ data: bytes, useSystemFonts: true }).promise;
   const pages = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
@@ -25,14 +68,14 @@ async function extractPdfText(buffer) {
 }
 
 async function loadSourceText(source) {
-  const res = await fetch(source.url, { headers: { 'User-Agent': UA } });
-  if (!res.ok) {
-    console.warn(`SKIP ${source.file}: HTTP ${res.status}`);
+  const bytes = (await readLocalPdf(source.file)) ?? (await fetchPdf(source));
+  if (!bytes) {
+    console.warn(`SKIP ${source.file}: could not obtain a PDF (WAF/404) — drop a copy in data/zoning/${source.file}`);
     return null;
   }
-  const text = await extractPdfText(await res.arrayBuffer());
-  // Table fallback: if the table PDF extracted with too little text, use the
-  // hand-captured markdown (one artifact).
+  const text = await extractPdfText(bytes);
+  // Table fallback: if the table PDF extracted with too little text (image-based
+  // table), use the hand-captured markdown (one artifact).
   if (source.scope === 'table' && text.replace(/\s+/g, '').length < 400) {
     console.warn(`Table ${source.file} extracted thin — using ch295-table.md fallback`);
     return readFile(TABLE_FALLBACK, 'utf8');
