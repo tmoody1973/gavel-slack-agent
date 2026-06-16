@@ -60,9 +60,11 @@ export function mapParcel(raw) {
   };
 }
 
-/** Normalize a raw buildingpermits row. */
+/** Normalize a raw buildingpermits row. recordId + address feed the watch sweep. */
 export function mapPermit(raw) {
   return {
+    recordId: raw['Record ID'] ?? null,
+    address: raw.Address ?? null,
     date: raw['Date Opened'] ?? null,
     type: raw['Permit Type'] ?? null,
     status: raw.Status ?? null,

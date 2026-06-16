@@ -61,8 +61,10 @@ test('mapParcel exposes lot/building/unit fields (numeric, or null when empty)',
   assert.equal(empty.numUnits, null);
 });
 
-test('mapPermit maps the buildingpermits columns', () => {
+test('mapPermit maps the buildingpermits columns (incl. recordId + address for the watch sweep)', () => {
   const r = mapPermit({
+    'Record ID': 'COM-ALT-26-00042',
+    Address: '2000 S 13TH ST',
     'Date Opened': '2026-05-01',
     'Permit Type': 'Commercial Alteration Permit',
     Status: 'Issued',
@@ -70,6 +72,8 @@ test('mapPermit maps the buildingpermits columns', () => {
     'Use of Building': 'Tavern',
   });
   assert.deepEqual(r, {
+    recordId: 'COM-ALT-26-00042',
+    address: '2000 S 13TH ST',
     date: '2026-05-01',
     type: 'Commercial Alteration Permit',
     status: 'Issued',
