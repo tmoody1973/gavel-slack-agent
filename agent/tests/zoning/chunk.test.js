@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { chunkSections } from '../../zoning/chunk.js';
 
-const meta = { parent: 'Subchapter 5 — Residential Districts', family: 'residential', scope: 'district', sourceUrl: 'https://city.milwaukee.gov/x/CH295-sub5.pdf' };
+const meta = {
+  parent: 'Subchapter 5 — Residential Districts',
+  family: 'residential',
+  scope: 'district',
+  sourceUrl: 'https://city.milwaukee.gov/x/CH295-sub5.pdf',
+};
 
 const text = [
   '295-501. Purpose. The residential districts are established to...',
@@ -14,7 +19,10 @@ const text = [
 
 test('splits into one chunk per 295-NNN section, carrying the section id', () => {
   const chunks = chunkSections(text, meta);
-  assert.deepEqual(chunks.map((c) => c.section), ['295-501', '295-505', '295-509']);
+  assert.deepEqual(
+    chunks.map((c) => c.section),
+    ['295-501', '295-505', '295-509'],
+  );
 });
 
 test('each chunk carries family, scope, parent, sourceUrl and the section text', () => {
