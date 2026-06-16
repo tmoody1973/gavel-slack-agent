@@ -38,6 +38,23 @@ test('civic glossary covers the planning/zoning terms the PRD names', () => {
   }
 });
 
+test('passes PDF documents through to the Claude boundary (MOO-69)', async () => {
+  const documents = [{ base64: 'QUJD', mediaType: 'application/pdf' }];
+  let seen;
+  await summarizeMatterBilingual(matter, {
+    generate: async ({ documents: docs }) => {
+      seen = docs;
+      return {
+        en: { summary: 'a', whyItMatters: 'b' },
+        es: { summary: 'c', whyItMatters: 'd' },
+        addresses: [],
+      };
+    },
+    documents,
+  });
+  assert.deepEqual(seen, documents, 'documents must reach generate()');
+});
+
 test('throws on a malformed result missing es', async () => {
   await assert.rejects(
     () =>

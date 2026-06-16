@@ -81,6 +81,71 @@ export default defineSchema({
   // code; no Slack content. `family` groups zoning classes the way the code's own
   // subchapters do (residential/commercial/...); `scope` separates district-
   // specific sections from general/definitions that apply everywhere.
+  // Civic-notification ingestion (MOO-69). One row per inbound Milwaukee E-Notify
+  // email (mke-alerts@agentmail.to) — official government broadcasts = PUBLIC
+  // RECORD, so storing + indexing them is the intended "index the public record"
+  // path (never Slack content — the ToS guardrail still holds). Hybrid store:
+  // relational indexes for the dominant temporal/categorical/entity-exact queries,
+  // a full-text search index over subject+body, and an optional vector index for
+  // "find similar" (populated only behind AGENTMAIL_EMBED). Fields are derived by
+  // the deterministic E-Notify template parser (civicmail/extract.js).
+  civicNotifications: defineTable({
+    messageId: v.string(), // RFC822 Message-ID — the dedup key
+    receivedAt: v.string(), // ISO timestamp (sortable for date-range queries)
+    from: v.string(),
+    subject: v.string(),
+    bodyText: v.string(), // HTML-stripped body (agentmail has no extracted_text)
+    searchText: v.string(), // subject + bodyText, the full-text search field
+    category: v.string(), // curated bucket: meetings | neighborhood_services | licenses | newsletter | other
+    categoryRaw: v.optional(v.string()),
+    subType: v.optional(v.string()),
+    district: v.optional(v.string()), // aldermanic (licenses); maps to subscription boundary
+    bid: v.optional(v.string()), // Business Improvement District (Neighborhood Services)
+    addresses: v.array(v.string()),
+    taxkeys: v.array(v.string()),
+    taxkey: v.optional(v.string()), // taxkeys[0], scalar for the by_taxkey parcel lookup
+    recordNumber: v.optional(v.string()), // Accela record (#COM-ALT-26-..., #ENF-...)
+    legistarMeetingId: v.optional(v.string()), // the Legistar fusion/dedup key (meetings)
+    business: v.optional(v.string()),
+    detailUrl: v.optional(v.string()),
+    description: v.optional(v.string()),
+    attachments: v.array(
+      v.object({
+        filename: v.string(),
+        contentType: v.string(),
+        attachmentId: v.string(),
+        size: v.optional(v.number()),
+      }),
+    ),
+    // Cached bilingual summary, written once after processing (re-render is free).
+    summary: v.optional(
+      v.object({
+        en: v.object({ summary: v.string(), whyItMatters: v.string() }),
+        es: v.object({ summary: v.string(), whyItMatters: v.string() }),
+      }),
+    ),
+    embedding: v.optional(v.array(v.float64())), // 1536-dim, only behind AGENTMAIL_EMBED
+    alertStatus: v.union(v.literal('pending'), v.literal('processed')),
+    detectedAt: v.number(),
+  })
+    .index('by_message', ['messageId'])
+    .index('by_received', ['receivedAt'])
+    .index('by_category', ['category'])
+    .index('by_district', ['district'])
+    .index('by_taxkey', ['taxkey'])
+    .index('by_record', ['recordNumber'])
+    .index('by_legistar_meeting', ['legistarMeetingId'])
+    .index('by_status', ['alertStatus'])
+    .searchIndex('search_text', {
+      searchField: 'searchText',
+      filterFields: ['district', 'category'],
+    })
+    .vectorIndex('by_embedding', {
+      vectorField: 'embedding',
+      dimensions: 1536,
+      filterFields: ['category', 'district'],
+    }),
+
   zoningChunks: defineTable({
     section: v.string(), // "295-505" or "295-Table"
     text: v.string(),
