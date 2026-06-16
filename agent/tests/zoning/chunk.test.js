@@ -49,3 +49,24 @@ test('text before the first section is ignored (page headers/footers)', () => {
   assert.equal(chunks.length, 1);
   assert.equal(chunks[0].section, '295-501');
 });
+
+test('parses headings in space-joined pdfjs output and ignores cross-references', () => {
+  // pdfjs joins every text item on a page with spaces — there are NO line breaks
+  // to anchor a heading on, and section numbers also appear as cross-references
+  // inside a section's body. Headings ascend; a non-ascending 295-NNN is a ref.
+  const pdfish =
+    'Zoning 295-501 -771- 4/22/2025 SUBCHAPTER 5 RESIDENTIAL ' +
+    '295-501. Purpose. Protects neighborhood character as provided in 295-501. ' +
+    '295-505. RT4 Two-Family Residential. 1. PERMITTED USES. Two-family dwellings permitted. See also 295-501. ' +
+    '2. DIMENSIONAL STANDARDS. Minimum lot area is 4000 square feet. ' +
+    '295-509. RM Districts. Multi-family dwellings permitted.';
+  const chunks = chunkSections(pdfish, meta);
+  assert.deepEqual(
+    chunks.map((c) => c.section),
+    ['295-501', '295-505', '295-509'],
+  );
+  const rt4 = chunks.find((c) => c.section === '295-505');
+  assert.match(rt4.text, /PERMITTED USES/);
+  assert.match(rt4.text, /4000 square feet/); // sub-paragraphs stay with their section
+  assert.match(rt4.text, /See also 295-501/); // an embedded cross-reference is kept, not split out
+});
