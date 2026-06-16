@@ -47,7 +47,13 @@ export async function runWatchSweep(deps) {
   for (const watch of watches) {
     const matterHits = matters
       .filter((m) => matchMatter(watch.entity, m))
-      .map((m) => ({ channelId: watch.channelId, entity: watch.entity, kind: 'matter', refId: String(m.matterId), matter: m }));
+      .map((m) => ({
+        channelId: watch.channelId,
+        entity: watch.entity,
+        kind: 'matter',
+        refId: String(m.matterId),
+        matter: m,
+      }));
 
     const permitRows = await resolvePermitHits(watch, sinceDate);
     const permitHits = permitRows.map((p) => ({

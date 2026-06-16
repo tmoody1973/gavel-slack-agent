@@ -5,3 +5,8 @@
 # 14:00 UTC Sunday = 9am CDT (summer) / 8am CST (winter). Fixed UTC: supercronic
 # rejects an inline CRON_TZ= token, and a fixed expression can't crash the poller.
 0 14 * * 0 node /app/scripts/digest-once.mjs
+
+# Gavel Watchlist sweep — daily diff of new matters + permits vs watched names (MOO-53).
+# 13:00 UTC = 8am CDT (summer) / 7am CST (winter). Fixed UTC: supercronic rejects
+# an inline CRON_TZ= token (same constraint the digest line documents).
+0 13 * * * node /app/scripts/watch-sweep-once.mjs

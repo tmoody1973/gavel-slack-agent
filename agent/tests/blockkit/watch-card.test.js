@@ -16,7 +16,13 @@ const matterHit = {
 const permitHit = {
   entity: '2000 S 13th St',
   kind: 'permit',
-  permit: { recordId: 'RES-ALT-1', address: '2000 S 13TH ST', type: 'Wrecking Permit', status: 'Issued', date: '2026-06-12 00:00:00' },
+  permit: {
+    recordId: 'RES-ALT-1',
+    address: '2000 S 13TH ST',
+    type: 'Wrecking Permit',
+    status: 'Issued',
+    date: '2026-06-12 00:00:00',
+  },
 };
 
 test('watchCard: EN card names the watched entity and the match', () => {

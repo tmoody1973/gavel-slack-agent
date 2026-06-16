@@ -3,7 +3,13 @@ import { test } from 'node:test';
 import { runWatchSweep } from '../../watch/sweep.js';
 
 const MATTERS = [
-  { matterId: 1, file: '260229', title: 'Sale of 2000 S 13th St to Punta Cana LLC', name: 'Sale', typeName: 'Resolution' },
+  {
+    matterId: 1,
+    file: '260229',
+    title: 'Sale of 2000 S 13th St to Punta Cana LLC',
+    name: 'Sale',
+    typeName: 'Resolution',
+  },
   { matterId: 2, file: '260300', title: 'Unrelated street repaving', name: 'Repaving', typeName: 'Resolution' },
 ];
 
@@ -61,7 +67,9 @@ test('permit hit via resolvePermitHits is posted and recorded', async () => {
   const h = harness({
     watches: [{ channelId: 'C2', entity: '2000 S 13th St', client: 'milwaukee' }],
     permitsByEntity: {
-      '2000 S 13th St': [{ recordId: 'RES-1', address: '2000 S 13TH ST', type: 'Wrecking Permit', status: 'Issued', date: '2026-06-12' }],
+      '2000 S 13th St': [
+        { recordId: 'RES-1', address: '2000 S 13TH ST', type: 'Wrecking Permit', status: 'Issued', date: '2026-06-12' },
+      ],
     },
   });
   await runWatchSweep(h.deps);
