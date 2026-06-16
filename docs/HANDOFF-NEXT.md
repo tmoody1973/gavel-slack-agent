@@ -1,17 +1,24 @@
-# Build Handoff — next: the finish line (MOO-61 / 62 / 63) + ship the open PRs
+# Build Handoff — next: MOO-63 Devpost package + MOO-62 demo video + ship the open PRs
 
-_Clean-context handoff. Written 2026-06-16 after shipping **MOO-53 (watchlist sweep)** to PR #23
-and **MOO-52 (escalation ping)** to PR #24 — both In Review — and rescoping MOO-68._
+_Clean-context handoff. Written 2026-06-16 after shipping **MOO-53 (watchlist sweep, PR #23)**,
+**MOO-52 (escalation ping, PR #24)**, and **MOO-61 (architecture diagram, PR #25)** — all three In
+Review — and rescoping MOO-68._
 
 **Read first, in order:** this doc → `CLAUDE.md` (per-issue loop + Linear sync) → re-auth Linear
-(`linear auth`) → `build MOO-61` (recommended) or help ship the two open PRs.
+(`linear auth`) → `build MOO-63` (recommended — now unblocked by MOO-61) or help ship the 3 open PRs.
 
 ---
 
 ## Where the project stands (2026-06-16)
 
 `main` is at the latest **journal commit**. **gavel-app deployed at v21; gavel-poller runs the
-`*/5` poll + Sunday digest.** Phase 3 monitoring is now feature-complete (pending review/deploy):
+`*/5` poll + Sunday digest.** Phase 3 monitoring is feature-complete and the Phase 5 diagram is done
+(all pending review/merge — **3 open PRs: #23, #24, #25**):
+
+- **MOO-61 (architecture diagram)** — **In Review (PR #25)**, branch
+  `tarikjmoody/moo-61-architecture-diagram-three-memory-model`. Three-memory model in
+  `docs/architecture/` (SVG + 2× PNG + Mermaid + README). Grounded against shipped code (no
+  aspirational boxes), rendered + verified legible. **Unblocks MOO-63.**
 
 - **MOO-52 (escalation ping)** — **In Review (PR #24)**, branch
   `tarikjmoody/moo-52-escalation-ping-matterhistory-committee-council-diff`. A 6-hourly cron
@@ -45,18 +52,21 @@ verified; what remains is an eyeball in real Slack + deploy + merge:
    is in a recent matter, run `node scripts/watch-sweep-once.mjs` once). Then deploy + merge **PR #23** → MOO-53 Done.
 2. **MOO-52 escalation ping** — eyeball a posted escalation card. Then deploy + merge **PR #24** → MOO-52 Done.
 3. **MOO-112 modal** — App Home → "🔎 Look up a property" → `1108 e chambers st` renders; merge **PR #22**.
-4. **MOO-55 ES path** — one Spanish zoning DM → accurate ES answer with EN `§295-NNN` citations.
-5. **MOO-43 ES fluency** — native-speaker review (`cd agent && node scripts/bilingual-verify.mjs`).
+4. **MOO-61 diagram** — eyeball `docs/architecture/three-memory-architecture.svg` reads well for the
+   slide; merge **PR #25** → Done. (Wording/colour tweaks are one-line SVG edits.)
+5. **MOO-55 ES path** — one Spanish zoning DM → accurate ES answer with EN `§295-NNN` citations.
+6. **MOO-43 ES fluency** — native-speaker review (`cd agent && node scripts/bilingual-verify.mjs`).
 
-## ▶ RECOMMENDED NEXT: the finish line (Phase 5, all P0/Urgent)
+## ▶ RECOMMENDED NEXT: MOO-63 — Devpost submission package (now unblocked by MOO-61)
 
-With both Phase 3 detectors in review, the highest-leverage remaining build is the submission package:
+The finish line. **Largely agent-buildable** (impact-led writeup, feature list, tech/sponsor mapping,
+"real vs cached for demo" honesty table — pull from `docs/gavel-project-brief.md` + the three-memory
+diagram). The human-only parts: granting judge sandbox access (to slackhack@salesforce.com) and the
+actual Devpost submit. Then:
 
-- **MOO-61** — architecture diagram (three-memory model). **Fully agent-buildable, no Slack/human
-  gate, no poller risk** — the best next pickup. Render the MCP (structured) + Convex vectors
-  (semantic) + RTS (live) model and the poller spine.
-- **MOO-62** — record the 3-min demo video (hero beats all exist; gate on the open verification above).
-- **MOO-63** — Devpost submission package (Agent for Good; judge sandbox to slackhack@salesforce.com).
+- **MOO-62** — record the 3-min demo video (every hero beat now exists: RTS thread → parcel card →
+  zoning RAG → walk-on/agenda-change → bilingual alert → watch hit → escalation ping). Gate on the
+  open verification above (eyeball the new cards) + deploy.
 
 ## ⚠️ Go-live deploy (both new crons live on the same gavel-poller)
 
@@ -99,5 +109,6 @@ When ready to deploy MOO-53 + MOO-52 together:
 ## Session bookkeeping
 
 Stale worktrees removable once their PRs merge: `moo-110-parcel-card`, `moo-55-zoning-rag`,
-`moo-112-parcel-modal`, `moo-53-watch-sweep`, `moo-52-escalation-ping`. (`moo-76-ux-d` removed.)
-Standing item: **rotate the chat-pasted Slack tokens**. **Deadline: July 13, 2026.**
+`moo-112-parcel-modal`, `moo-53-watch-sweep`, `moo-52-escalation-ping`, `moo-61-arch-diagram`.
+(`moo-76-ux-d` removed.) Standing item: **rotate the chat-pasted Slack tokens**.
+**Deadline: July 13, 2026.**
