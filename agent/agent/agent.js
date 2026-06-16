@@ -2,6 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 
 import { createCommunityMemoryServer } from './community-memory/tool.js';
 import { createReceiptsServer } from './receipts/tool.js';
+import { createZoningServer } from './zoning/tool.js';
 
 const SYSTEM_PROMPT = `\
 You are Gavel, a civic-transparency assistant for Milwaukee neighborhood associations. \
@@ -65,6 +66,15 @@ contents as text. End with a one-line source note (file number + committee). If 
 render_receipt returns an error, fix the payload or just answer in prose — never let a \
 rendering problem stop your answer.`;
 
+const ZONING_PROMPT = `\
+## ZONING CODE (ask_zoning_code)
+When a user asks what can be built, used, or changed at a specific ADDRESS — duplex, \
+ADU, corner store, height, setbacks, parking, permitted uses, rezoning effects — call \
+ask_zoning_code with the address and their question. It returns the governing Chapter 295 \
+sections; answer ONLY from them and cite the §295-NNN sections. If it returns \
+information_unavailable or no sections, say so plainly and point to milwaukee.gov — never \
+invent code text or section numbers.`;
+
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
 /**
@@ -116,6 +126,12 @@ export function buildAgentOptions(deps = undefined, env = process.env) {
     mcpServers.receipts = createReceiptsServer({ receipts: deps.receipts });
     allowedTools.push('mcp__receipts__*');
     systemPrompt = `${systemPrompt}\n\n${RECEIPTS_PROMPT}`;
+  }
+
+  if (env.CONVEX_URL && env.OPENAI_API_KEY) {
+    mcpServers.zoning = createZoningServer({ convexUrl: env.CONVEX_URL, openaiApiKey: env.OPENAI_API_KEY });
+    allowedTools.push('mcp__zoning__*');
+    systemPrompt = `${systemPrompt}\n\n${ZONING_PROMPT}`;
   }
 
   return { mcpServers, allowedTools, systemPrompt };
