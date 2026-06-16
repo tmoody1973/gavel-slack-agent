@@ -2,6 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 
 import { createCommunityMemoryServer } from './community-memory/tool.js';
 import { createReceiptsServer } from './receipts/tool.js';
+import { createTranscriptsServer } from './transcripts/tool.js';
 import { createZoningServer } from './zoning/tool.js';
 
 const SYSTEM_PROMPT = `\
@@ -79,6 +80,17 @@ sections; answer ONLY from them and cite the §295-NNN sections. If it returns \
 information_unavailable or no sections, say so plainly and point to milwaukee.gov — never \
 invent code text or section numbers.`;
 
+const TRANSCRIPTS_PROMPT = `\
+## MEETING TRANSCRIPTS (search_transcripts, get_video_moment)
+When a user asks what was SAID or the reasoning behind a decision — "what did the committee \
+say about X", who argued what, how a debate went — call search_transcripts. It returns real \
+speaker quotes from the public webcast with the agenda item and a ▶ timestamped video link. \
+Quote ONLY what it returns, attribute it to the speaker, and include the link; never invent a \
+quote. Present it as a "🎙️ What they said" section. To point someone at the footage of a \
+specific agenda item, call get_video_moment with its EventItemId and the meeting's EventId \
+(both from get_event_agenda). If either returns information_unavailable, say so plainly — \
+don't fabricate a quote or a link.`;
+
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
 // Pin the agent model. Sonnet 4.6 is the default for fast interactive replies;
@@ -141,6 +153,10 @@ export function buildAgentOptions(deps = undefined, env = process.env) {
     mcpServers.zoning = createZoningServer({ convexUrl: env.CONVEX_URL, openaiApiKey: env.OPENAI_API_KEY });
     allowedTools.push('mcp__zoning__*');
     systemPrompt = `${systemPrompt}\n\n${ZONING_PROMPT}`;
+
+    mcpServers.transcripts = createTranscriptsServer({ convexUrl: env.CONVEX_URL, openaiApiKey: env.OPENAI_API_KEY });
+    allowedTools.push('mcp__transcripts__*');
+    systemPrompt = `${systemPrompt}\n\n${TRANSCRIPTS_PROMPT}`;
   }
 
   return { mcpServers, allowedTools, systemPrompt };
