@@ -13,19 +13,23 @@ const chunkFields = {
   sourceUrl: v.string(),
 };
 
-/** Idempotent ingest: replace any existing chunk with the same section. */
-export const upsertChunk = mutation({
+/** Insert one chunk. A section can span multiple chunks (oversized sections are
+ * split to fit the embedding limit), so this does not dedup by section — the
+ * ingest clears the table first for a clean full re-ingest. */
+export const insertChunk = mutation({
   args: chunkFields,
-  handler: async (ctx, chunk) => {
-    const existing = await ctx.db
-      .query('zoningChunks')
-      .withIndex('by_section', (q) => q.eq('section', chunk.section))
-      .unique();
-    if (existing) {
-      await ctx.db.patch(existing._id, chunk);
-      return existing._id;
+  handler: (ctx, chunk) => ctx.db.insert('zoningChunks', chunk),
+});
+
+/** Wipe every chunk — the ingest calls this once before a fresh load. */
+export const clear = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query('zoningChunks').collect();
+    for (const row of rows) {
+      await ctx.db.delete(row._id);
     }
-    return ctx.db.insert('zoningChunks', chunk);
+    return rows.length;
   },
 });
 

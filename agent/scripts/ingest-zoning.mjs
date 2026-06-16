@@ -89,6 +89,9 @@ async function main() {
   if (!convexUrl || !apiKey) throw new Error('CONVEX_URL and OPENAI_API_KEY are required');
   const convex = new ConvexHttpClient(convexUrl);
 
+  const cleared = await convex.mutation(api.zoning.clear, {});
+  console.log(`Cleared ${cleared} existing chunks.`);
+
   let total = 0;
   for (const source of CH295_SOURCES) {
     const text = await loadSourceText(source);
@@ -108,7 +111,7 @@ async function main() {
       { apiKey },
     );
     for (let i = 0; i < chunks.length; i++) {
-      await convex.mutation(api.zoning.upsertChunk, { ...chunks[i], embedding: vectors[i] });
+      await convex.mutation(api.zoning.insertChunk, { ...chunks[i], embedding: vectors[i] });
     }
     total += chunks.length;
     console.log(`${source.file}: ${chunks.length} chunks`);
