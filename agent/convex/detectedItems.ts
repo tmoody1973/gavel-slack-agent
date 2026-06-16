@@ -109,6 +109,26 @@ export const listUpcoming = query({
       .collect(),
 });
 
+/** Sent detected rows that carry a matterId — the escalation sweep's tracked set. */
+export const listSentWithMatter = query({
+  args: { client: clientValidator },
+  handler: async (ctx, { client }) => {
+    const rows = await ctx.db
+      .query('detectedAgendaItems')
+      .withIndex('by_client_status', (q) => q.eq('client', client).eq('alertStatus', 'sent'))
+      .collect();
+    return rows
+      .filter((r) => r.matterId !== undefined)
+      .map((r) => ({
+        matterId: r.matterId,
+        title: r.title,
+        eventBodyName: r.eventBodyName,
+        detectedAt: r.detectedAt,
+        eventId: r.eventId,
+      }));
+  },
+});
+
 /** Pending alerts awaiting summarize+post (MOO-44's consumer). */
 export const listPending = query({
   args: { client: v.optional(clientValidator) },
