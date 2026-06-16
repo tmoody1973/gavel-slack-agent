@@ -1,20 +1,23 @@
-/** A "295-NNN." token followed by whitespace — a heading OR an inline cross-reference. */
-const SECTION_TOKEN = /(295-\d+)\.\s/g;
+/**
+ * A section heading: "295-NNN." followed by a Title-cased section name, and NOT
+ * the Wisconsin cross-reference form "s. 295-NNN" / "ss. 295-NNN". pdfjs
+ * space-joins page text (newlines only between pages), so headings sit mid-line
+ * and the same number recurs as references — the capital-letter lookahead plus
+ * the "s. " negative lookbehind distinguish a real heading from a citation.
+ */
+const HEADING = /(?<!s\.\s)(295-\d+)\.\s+(?=[A-Z])/g;
+
+/** Max chars per chunk — stays well under text-embedding-3-small's ~8191-token input limit. */
+const MAX_CHARS = 24000;
 
 /**
  * Split extracted Ch.295 text into structure-aware chunks. Table sources
  * (`meta.scope === 'table'`) are kept intact as a single chunk. Otherwise each
  * `295-NNN.` heading starts a new chunk that runs until the next heading, so
- * sub-paragraphs (1. PERMITTED USES, 2. DIMENSIONAL STANDARDS) stay with their
- * section.
- *
- * pdfjs concatenates every text item on a page with spaces and only emits a
- * newline between pages, so headings are NOT at line starts and the same
- * "295-NNN." string also appears as a cross-reference inside a section body.
- * We disambiguate by ordinal: real headings ascend through the document, so a
- * "295-NNN" whose number is not greater than the last accepted heading is a
- * cross-reference and is folded into the current section's body. Text before
- * the first heading (page furniture) is dropped.
+ * sub-paragraphs (1. INTRODUCTION, 2. NUMBER OF SPACES, ...) stay with their
+ * section. A section number is recorded once (first heading-shaped occurrence
+ * wins); later recurrences are cross-references folded into the body. Text
+ * before the first heading (page furniture) is dropped.
  * @param {string} text
  * @param {{parent:string, family:string, scope:string, sourceUrl:string}} meta
  * @returns {Array<{section:string, text:string, parent:string, family:string, scope:string, sourceUrl:string}>}
@@ -24,20 +27,20 @@ export function chunkSections(text, meta) {
   if (meta.scope === 'table') {
     return [{ section: '295-Table', text: collapse(text), ...base }];
   }
+  const seen = new Set();
   const headings = [];
-  let lastNumber = -1;
-  for (const match of text.matchAll(SECTION_TOKEN)) {
-    const number = Number(match[1].slice('295-'.length));
-    if (number > lastNumber) {
-      headings.push({ section: match[1], index: match.index });
-      lastNumber = number;
-    }
+  for (const match of text.matchAll(HEADING)) {
+    if (seen.has(match[1])) continue;
+    seen.add(match[1]);
+    headings.push({ section: match[1], index: match.index });
   }
   const chunks = [];
   for (let i = 0; i < headings.length; i++) {
     const end = i + 1 < headings.length ? headings[i + 1].index : text.length;
     const body = collapse(text.slice(headings[i].index, end));
-    if (body) chunks.push({ section: headings[i].section, text: body, ...base });
+    for (const part of splitOnLimit(body)) {
+      chunks.push({ section: headings[i].section, text: part, ...base });
+    }
   }
   return chunks;
 }
@@ -45,4 +48,26 @@ export function chunkSections(text, meta) {
 /** Collapse runs of whitespace/newlines to single spaces; trim. */
 function collapse(s) {
   return s.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Break a section body that exceeds MAX_CHARS into word-boundary parts so each
+ * embeds within the model's token limit. Parts keep the section id (citations
+ * still resolve); no content is dropped. Empty input yields no parts.
+ */
+function splitOnLimit(body) {
+  if (!body) return [];
+  if (body.length <= MAX_CHARS) return [body];
+  const parts = [];
+  let start = 0;
+  while (start < body.length) {
+    let end = Math.min(start + MAX_CHARS, body.length);
+    if (end < body.length) {
+      const lastSpace = body.lastIndexOf(' ', end);
+      if (lastSpace > start) end = lastSpace;
+    }
+    parts.push(body.slice(start, end).trim());
+    start = end;
+  }
+  return parts.filter(Boolean);
 }

@@ -50,6 +50,21 @@ test('text before the first section is ignored (page headers/footers)', () => {
   assert.equal(chunks[0].section, '295-501');
 });
 
+test('splits an oversized section into multiple chunks under the embedding limit, same section id', () => {
+  const huge = `295-505. RT4 District. ${'word '.repeat(12000)}END`; // ~60k chars
+  const chunks = chunkSections(huge, meta);
+  assert.ok(chunks.length > 1, 'expected the oversized section to split into parts');
+  assert.ok(
+    chunks.every((c) => c.section === '295-505'),
+    'all parts keep the section id for citation',
+  );
+  assert.ok(
+    chunks.every((c) => c.text.length <= 24000),
+    'every part is under the size limit',
+  );
+  assert.match(chunks.at(-1).text, /END/); // no content dropped
+});
+
 test('parses headings in space-joined pdfjs output and ignores cross-references', () => {
   // pdfjs joins every text item on a page with spaces — there are NO line breaks
   // to anchor a heading on, and section numbers also appear as cross-references
