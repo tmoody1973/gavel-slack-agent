@@ -46,6 +46,35 @@ test('parcelCard adds an "Add to watchlist" button carrying the address as its v
   assert.match(JSON.stringify(watch.text), /watchlist/i);
 });
 
+test('parcelCard renders a field grid from the MPROP lot/building/unit fields', () => {
+  const all = JSON.stringify(
+    parcelCard({
+      ...parcel,
+      lotArea: 3628,
+      buildingArea: 4310,
+      numUnits: 5,
+      yearBuilt: 1884,
+      stories: 2,
+      taxkey: '468',
+    }),
+  );
+  assert.match(all, /Lot size/);
+  assert.match(all, /3,628 sq ft/);
+  assert.match(all, /4,310 sq ft/);
+  assert.match(all, /Units/);
+  assert.match(all, /1884 · 2 stories/);
+  assert.match(all, /tax key 468/);
+});
+
+test('parcelCard omits the watch button when includeWatch is false (channel-less surfaces)', () => {
+  const buttons = buttonsOf(parcelCard(parcel, { includeWatch: false }));
+  assert.ok(
+    buttons.find((b) => b.action_id === 'parcel_open_map'),
+    'map button stays',
+  );
+  assert.ok(!buttons.find((b) => b.action_id === 'parcel_watch'), 'watch button dropped');
+});
+
 test('parcelCard surfaces open-violation and raze flags when set', () => {
   const blocks = parcelCard({ ...parcel, hasOpenViolation: true, razeStatus: 'RAZE ORDERED' });
   const all = JSON.stringify(blocks);
