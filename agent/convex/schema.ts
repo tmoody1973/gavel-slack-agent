@@ -34,6 +34,18 @@ export default defineSchema({
     .index('by_channel', ['channelId'])
     .index('by_channel_entity', ['channelId', 'entity']),
 
+  // Watch-sweep idempotency ledger (MOO-53). One row per alert already fired for
+  // a (channel, entity, kind, refId) tuple, so a daily sweep never re-alerts the
+  // same match. Civic-record refs only (matterId / permit Record ID) — never any
+  // Slack message content (the ToS guardrail).
+  watchAlerts: defineTable({
+    channelId: v.string(),
+    entity: v.string(),
+    kind: v.union(v.literal('matter'), v.literal('permit')),
+    refId: v.string(),
+    alertedAt: v.number(),
+  }).index('by_dedup', ['channelId', 'entity', 'kind', 'refId']),
+
   // Council-member directory (MOO-72): public city.milwaukee.gov contact data
   // (headshot, phone, email, webpage) keyed by district + normalized last name,
   // joined to Legistar sponsor names at alert time. Public officials only.
