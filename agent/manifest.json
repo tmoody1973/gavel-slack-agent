@@ -61,7 +61,8 @@
         "reactions:read",
         "users:read",
         "assistant:write",
-        "commands"
+        "commands",
+        "files:write"
       ]
     }
   },
