@@ -56,6 +56,21 @@ test('handles a missing directional and a missing street type', () => {
   assert.deepEqual(normalizeAddress('123 Main'), { houseNr: '123', street: 'MAIN' });
 });
 
+test('strips a trailing ZIP and state so they do not pollute the street name', () => {
+  assert.deepEqual(normalizeAddress('1108 e chambers st 53206'), {
+    houseNr: '1108',
+    sdir: 'E',
+    street: 'CHAMBERS',
+    sttype: 'ST',
+  });
+  assert.deepEqual(normalizeAddress('2000 S 13th St WI 53204'), {
+    houseNr: '2000',
+    sdir: 'S',
+    street: '13TH',
+    sttype: 'ST',
+  });
+});
+
 test('returns null for unparseable input', () => {
   assert.equal(normalizeAddress(''), null);
   assert.equal(normalizeAddress(null), null);

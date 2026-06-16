@@ -2,6 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 
 import { createCommunityMemoryServer } from './community-memory/tool.js';
 import { createReceiptsServer } from './receipts/tool.js';
+import { createZoningServer } from './zoning/tool.js';
 
 const SYSTEM_PROMPT = `\
 You are Gavel, a civic-transparency assistant for Milwaukee neighborhood associations. \
@@ -18,6 +19,10 @@ committees, or votes, you MUST use these tools — never answer civic-data quest
 - get_sponsors — who sponsored a matter, with their contact info
 - get_matter_history / get_votes — what has happened to a file, and how members voted
 If a tool returns "information_unavailable", say so plainly instead of guessing.
+NEVER invent, guess, or construct a URL — only share a link a tool actually returned to you. \
+If an address lookup comes back empty, the usual cause is a wrong N/S/E/W directional or a typo \
+(Milwaukee's grid is easy to get wrong); ask the user to double-check the direction and spelling \
+rather than fabricating a "look it up yourself" link.
 
 ## HOW YOU ANSWER
 - Plain, jargon-free language a busy neighbor can act on — translate the legalese.
@@ -65,7 +70,21 @@ contents as text. End with a one-line source note (file number + committee). If 
 render_receipt returns an error, fix the payload or just answer in prose — never let a \
 rendering problem stop your answer.`;
 
+const ZONING_PROMPT = `\
+## ZONING CODE (ask_zoning_code)
+When a user asks what can be built, used, or changed at a specific ADDRESS — duplex, \
+ADU, corner store, height, setbacks, parking, permitted uses, rezoning effects — call \
+ask_zoning_code with the address and their question. It returns the governing Chapter 295 \
+sections; answer ONLY from them and cite the §295-NNN sections. If it returns \
+information_unavailable or no sections, say so plainly and point to milwaukee.gov — never \
+invent code text or section numbers.`;
+
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
+
+// Pin the agent model. Sonnet 4.6 is the default for fast interactive replies;
+// override with the GAVEL_AGENT_MODEL env var (e.g. claude-opus-4-8) without a
+// code change. Unset, the Agent SDK defaults to the Opus tier (slower).
+const AGENT_MODEL = process.env.GAVEL_AGENT_MODEL || 'claude-sonnet-4-6';
 
 /**
  * @typedef {Object} AgentDeps
@@ -118,6 +137,12 @@ export function buildAgentOptions(deps = undefined, env = process.env) {
     systemPrompt = `${systemPrompt}\n\n${RECEIPTS_PROMPT}`;
   }
 
+  if (env.CONVEX_URL && env.OPENAI_API_KEY) {
+    mcpServers.zoning = createZoningServer({ convexUrl: env.CONVEX_URL, openaiApiKey: env.OPENAI_API_KEY });
+    allowedTools.push('mcp__zoning__*');
+    systemPrompt = `${systemPrompt}\n\n${ZONING_PROMPT}`;
+  }
+
   return { mcpServers, allowedTools, systemPrompt };
 }
 
@@ -136,6 +161,7 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
+    model: AGENT_MODEL,
     systemPrompt,
     mcpServers,
     allowedTools,

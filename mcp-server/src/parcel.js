@@ -31,6 +31,11 @@ export function escapeLike(value) {
   return String(value).replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
 
+/** Parse an MPROP numeric column ("3628.00000", "5") to a Number, or null when empty/absent. */
+function numericOrNull(value) {
+  return value !== '' && value != null ? Number(value) : null;
+}
+
 /** Normalize a raw MPROP row to the fields the agent reads. */
 export function mapParcel(raw) {
   const owners = [raw.OWNER_NAME_1, raw.OWNER_NAME_2, raw.OWNER_NAME_3].map((n) => (n ? n.trim() : '')).filter(Boolean);
@@ -41,7 +46,15 @@ export function mapParcel(raw) {
     landUse: raw.LAND_USE_GP || null,
     district: raw.GEO_ALDER || null,
     owner: owners.join(' / ') || null,
-    assessedValue: raw.C_A_TOTAL !== '' && raw.C_A_TOTAL != null ? Number(raw.C_A_TOTAL) : null,
+    assessedValue: numericOrNull(raw.C_A_TOTAL),
+    // Lot/building/density fields — MPROP carries these; they feed the
+    // "what can be built here?" reasoning (lot area vs. zoning's min-lot-per-unit).
+    // Width/depth/frontage are NOT in MPROP (plat-only); CORNER_LOT is unpopulated.
+    lotArea: numericOrNull(raw.LOT_AREA),
+    buildingArea: numericOrNull(raw.BLDG_AREA),
+    numUnits: numericOrNull(raw.NR_UNITS),
+    yearBuilt: numericOrNull(raw.YR_BUILT),
+    stories: numericOrNull(raw.NR_STORIES),
     razeStatus: raw.RAZE_STATUS ? raw.RAZE_STATUS.trim() : null,
     hasOpenViolation: Boolean(raw.BI_VIOL && String(raw.BI_VIOL).trim()),
   };
@@ -67,11 +80,38 @@ function addressPrefix(parts) {
   return [parts.houseNr, parts.sdir, parts.street, parts.sttype].filter(Boolean).join(' ');
 }
 
-function parcelWhere(parts) {
-  const clauses = [`"HOUSE_NR_LO" = '${sqlEscape(parts.houseNr)}'`, `"STREET" = '${sqlEscape(parts.street)}'`];
-  if (parts.sdir) clauses.push(`"SDIR" = '${sqlEscape(parts.sdir)}'`);
-  if (parts.sttype) clauses.push(`"STTYPE" = '${sqlEscape(parts.sttype)}'`);
-  return clauses.join(' AND ');
+// Match on house number + street only. Directional (SDIR) and street type
+// (STTYPE) are NOT hard filters — residents routinely get Milwaukee's N/S/E/W
+// wrong (e.g. "E Chambers" when it's "W Chambers"), and a wrong directional
+// shouldn't return zero results. They become ranking hints in pickBest instead.
+// `fuzzy` switches the street to a prefix ILIKE to tolerate singular/plural and
+// minor spelling ("Chamber" → "CHAMBERS").
+function candidateWhere(parts, { fuzzy = false } = {}) {
+  const house = `"HOUSE_NR_LO" = '${sqlEscape(parts.houseNr)}'`;
+  const street = fuzzy
+    ? `"STREET" ILIKE '${sqlEscape(escapeLike(parts.street))}%'`
+    : `"STREET" = '${sqlEscape(parts.street)}'`;
+  return `${house} AND ${street}`;
+}
+
+/**
+ * Choose the best parcel among same-house-number candidates: prefer the one
+ * matching the requested directional, then street type; otherwise return the
+ * first (so a wrong/omitted directional still resolves — the mapped `address`
+ * shows the canonical one, e.g. "1108 W CHAMBERS ST").
+ */
+export function pickBest(rows, parts) {
+  if (rows.length <= 1) return rows[0];
+  let pool = rows;
+  if (parts.sdir) {
+    const byDir = pool.filter((r) => (r.SDIR || '') === parts.sdir);
+    if (byDir.length) pool = byDir;
+  }
+  if (parts.sttype) {
+    const byType = pool.filter((r) => (r.STTYPE || '') === parts.sttype);
+    if (byType.length) pool = byType;
+  }
+  return pool[0];
 }
 
 export function createParcelClient({ fetch, userAgent, baseUrl = CKAN_BASE }) {
@@ -92,8 +132,11 @@ export function createParcelClient({ fetch, userAgent, baseUrl = CKAN_BASE }) {
 
   async function lookupParcel(address) {
     const parts = partsOrThrow(address);
-    const rows = await runSql(`SELECT * FROM "${MPROP_RESOURCE}" WHERE ${parcelWhere(parts)} LIMIT 1`);
-    return rows.length ? mapParcel(rows[0]) : null;
+    let rows = await runSql(`SELECT * FROM "${MPROP_RESOURCE}" WHERE ${candidateWhere(parts)} LIMIT 25`);
+    if (rows.length === 0) {
+      rows = await runSql(`SELECT * FROM "${MPROP_RESOURCE}" WHERE ${candidateWhere(parts, { fuzzy: true })} LIMIT 25`);
+    }
+    return rows.length ? mapParcel(pickBest(rows, parts)) : null;
   }
 
   async function checkZoning(address) {
