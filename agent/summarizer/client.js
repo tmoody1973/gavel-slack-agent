@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+import { buildDocumentBlocks } from './documents.js';
 import { SUMMARY_OUTPUT_SCHEMA } from './prompt.js';
 
 // Sonnet per the PRD stack + MOO-42 acceptance criteria: cheap and fast enough
@@ -21,12 +22,17 @@ export function createClaudeGenerate(options = {}) {
   const { apiKey, model = SUMMARY_MODEL, client, schema = SUMMARY_OUTPUT_SCHEMA } = options;
   const anthropic = client ?? new Anthropic(apiKey ? { apiKey } : undefined);
 
-  return async function generate({ system, prompt }) {
+  return async function generate({ system, prompt, documents }) {
+    // PDF attachments (e.g. a hearing agenda) ride through here as native Claude
+    // `document` blocks — the non-deterministic boundary, kept out of the pure
+    // source/prompt builders. When present, the user turn becomes a content array.
+    const { blocks } = buildDocumentBlocks(documents);
+    const content = blocks.length > 0 ? [...blocks, { type: 'text', text: prompt }] : prompt;
     const response = await anthropic.messages.create({
       model,
       max_tokens: 1024,
       system,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content }],
       output_config: { format: { type: 'json_schema', schema } },
     });
 
