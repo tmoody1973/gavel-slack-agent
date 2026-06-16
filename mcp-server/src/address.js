@@ -5,6 +5,10 @@
 
 const DIRECTIONALS = { N: 'N', S: 'S', E: 'E', W: 'W', NORTH: 'N', SOUTH: 'S', EAST: 'E', WEST: 'W' };
 
+// Trailing tokens to drop before parsing — a ZIP ("...CHAMBERS ST 53206") or a
+// state ("... WI 53206") otherwise gets swallowed into the street name.
+const STATE_TOKENS = new Set(['WI', 'WISCONSIN']);
+
 // Spelled-out / common abbreviation → the exact MPROP STTYPE code.
 const STREET_TYPES = {
   STREET: 'ST',
@@ -49,6 +53,10 @@ const STREET_TYPES = {
 export function normalizeAddress(address) {
   if (typeof address !== 'string') return null;
   const tokens = address.toUpperCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim().split(' ');
+
+  while (tokens.length > 1 && (/^\d{5}$/.test(tokens.at(-1)) || STATE_TOKENS.has(tokens.at(-1)))) {
+    tokens.pop();
+  }
 
   const houseNr = tokens.shift();
   if (!houseNr || !/^\d+$/.test(houseNr)) return null;
