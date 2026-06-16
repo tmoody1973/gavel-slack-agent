@@ -1,0 +1,143 @@
+[
+  {
+    "question": "Can I defend providing reduced parking for a multifamily building near a bus stop?",
+    "expectedSectionRefs": ["295-403-2-b-4"],
+    "required": true
+  },
+  {
+    "question": "What parking reduction credits are available for a site close to public transit or a bus rapid transit station?",
+    "expectedSectionRefs": ["295-403-2-b-4"],
+    "required": true
+  },
+  {
+    "question": "How many off-street parking spaces are required for a multi-family dwelling?",
+    "expectedSectionRefs": ["295-403-2-a", "295-403-2"]
+  },
+  {
+    "question": "What are the minimum dimensions of an off-street parking space?",
+    "expectedSectionRefs": ["295-403-3-a", "295-403-3"]
+  },
+  {
+    "question": "How many bicycle parking spaces are required for a new building and when does the requirement apply?",
+    "expectedSectionRefs": ["295-404-1", "295-404"]
+  },
+  {
+    "question": "Where must long-term bicycle parking be located for a residential building with four or more units?",
+    "expectedSectionRefs": ["295-404-2-a", "295-404-2"]
+  },
+  {
+    "question": "What landscaping and screening requirements apply to parking lots?",
+    "expectedSectionRefs": ["295-405"]
+  },
+  {
+    "question": "What lighting standards apply to development sites and parking areas?",
+    "expectedSectionRefs": ["295-409"]
+  },
+  {
+    "question": "What sign standards apply within the zoning code's general provisions?",
+    "expectedSectionRefs": ["295-407"]
+  },
+  {
+    "question": "What happens to a legal nonconforming use when it stops operating?",
+    "expectedSectionRefs": ["295-415"]
+  },
+  {
+    "question": "How does the zoning code define dwelling unit and other key terms?",
+    "expectedSectionRefs": ["295-201"]
+  },
+  {
+    "question": "How does the code define specific land uses like accessory dwelling units or live-work units?",
+    "expectedSectionRefs": ["295-203", "295-201"]
+  },
+  {
+    "question": "How is building height measured under the zoning code?",
+    "expectedSectionRefs": ["295-205"]
+  },
+  {
+    "question": "How do I appeal a zoning decision or request a variance from the board of zoning appeals?",
+    "expectedSectionRefs": ["295-311"]
+  },
+  {
+    "question": "What is the process to amend the zoning map or zoning code text?",
+    "expectedSectionRefs": ["295-307"]
+  },
+  {
+    "question": "When is a temporary use permit required and how do I get one?",
+    "expectedSectionRefs": ["295-305"]
+  },
+  {
+    "question": "What uses are permitted in residential zoning districts?",
+    "expectedSectionRefs": ["295-503"]
+  },
+  {
+    "question": "What design standards govern setbacks, height and lot dimensions in residential districts?",
+    "expectedSectionRefs": ["295-505"]
+  },
+  {
+    "question": "What uses are allowed in commercial zoning districts?",
+    "expectedSectionRefs": ["295-603"]
+  },
+  {
+    "question": "What design standards apply to buildings in commercial districts?",
+    "expectedSectionRefs": ["295-605"]
+  },
+  {
+    "question": "What design standards apply to development in downtown districts?",
+    "expectedSectionRefs": ["295-705"]
+  },
+  {
+    "question": "What uses are permitted in industrial districts?",
+    "expectedSectionRefs": ["295-803"]
+  },
+  {
+    "question": "What is a planned development district and how is one established?",
+    "expectedSectionRefs": ["295-907"]
+  },
+  {
+    "question": "What is the purpose of the neighborhood conservation overlay zone?",
+    "expectedSectionRefs": ["295-1003"]
+  },
+  {
+    "question": "What standards apply to development in the floodway overlay zone?",
+    "expectedSectionRefs": ["295-1121"]
+  },
+  {
+    "question": "What are the requirements for freestanding signs or billboards?",
+    "expectedSectionRefs": ["244-7"]
+  },
+  {
+    "question": "When do I need a permit to erect a sign?",
+    "expectedSectionRefs": ["244-2"]
+  },
+  {
+    "question": "What projections and encroachments into the public right-of-way are permissible?",
+    "expectedSectionRefs": ["245-4", "295-411"]
+  },
+  {
+    "question": "What rules apply to awnings and canopies extending over the sidewalk?",
+    "expectedSectionRefs": ["245-7", "245-6"]
+  },
+  {
+    "question": "What are the minimum front, side, and rear setbacks for the LB2 zoning district?",
+    "expectedSectionRefs": ["295-605-2"],
+    "required": true
+  },
+  {
+    "question": "What is the maximum building height for the LB2 zoning district?",
+    "expectedSectionRefs": ["295-605-2"],
+    "required": true
+  },
+  {
+    "question": "What is the maximum floor area ratio (FAR) for the LB2 zoning district?",
+    "expectedSectionRefs": ["295-605-2"],
+    "required": true
+  },
+  {
+    "question": "What is the permitted floor area or FAR in downtown district C9B?",
+    "expectedSectionRefs": ["295-705-1"]
+  },
+  {
+    "question": "What are the building height limits in the IM industrial district?",
+    "expectedSectionRefs": ["295-805-2"]
+  }
+]
