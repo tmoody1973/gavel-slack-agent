@@ -7,3 +7,4 @@ export { matterCard } from './matter-card.js';
 export { parcelCard } from './parcel-card.js';
 export { sponsorCard } from './sponsor-card.js';
 export { voteTable } from './vote-table.js';
+export { watchCard } from './watch-card.js';
