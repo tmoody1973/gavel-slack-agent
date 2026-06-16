@@ -5,3 +5,7 @@
 # 14:00 UTC Sunday = 9am CDT (summer) / 8am CST (winter). Fixed UTC: supercronic
 # rejects an inline CRON_TZ= token, and a fixed expression can't crash the poller.
 0 14 * * 0 node /app/scripts/digest-once.mjs
+
+# Gavel Escalation ping — committee→Council transition for tracked matters (MOO-52).
+# Every 6h: catches a committee recommendation well before the next Council vote.
+0 */6 * * * node /app/scripts/escalation-once.mjs

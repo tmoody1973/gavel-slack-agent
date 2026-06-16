@@ -76,6 +76,19 @@ export default defineSchema({
     .index('by_client_item', ['client', 'eventItemId'])
     .index('by_client_status', ['client', 'alertStatus']),
 
+  // Escalation ledger (MOO-52). One row per matter we've pinged as "headed to
+  // the full Council", so the committee→Council transition fires exactly once.
+  // Civic-record keys only — no Slack content.
+  matterEscalations: defineTable({
+    client: v.union(v.literal('milwaukee'), v.literal('milwaukeecounty')),
+    matterId: v.number(),
+    fileNumber: v.optional(v.string()),
+    committee: v.optional(v.string()),
+    recommendedDate: v.optional(v.string()),
+    channelsPinged: v.number(),
+    escalatedAt: v.number(),
+  }).index('by_client_matter', ['client', 'matterId']),
+
   // Zoning-code semantic layer (MOO-55). One row per Ch.295 code section (or an
   // intact district/use table). PUBLIC RECORD ONLY — the city's published zoning
   // code; no Slack content. `family` groups zoning classes the way the code's own

@@ -2,8 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mapEventDetail, mapMatter, mapPerson, mapSponsor } from '../../poller/legistar.js';
 
-test('mapMatter picks the file number', () => {
-  assert.deepEqual(mapMatter({ MatterId: 1, MatterFile: '241554', MatterName: '' }), { fileNumber: '241554' });
+test('mapMatter picks the file number (+ guid/title/status for escalation)', () => {
+  assert.deepEqual(mapMatter({ MatterId: 1, MatterFile: '241554', MatterName: '' }), {
+    fileNumber: '241554',
+    guid: undefined,
+    title: undefined,
+    statusName: undefined,
+  });
 });
 
 test('mapSponsor picks primary sponsor name + person id', () => {
