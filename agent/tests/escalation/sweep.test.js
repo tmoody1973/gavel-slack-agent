@@ -19,7 +19,12 @@ function harness({ tracked, escalatedIds = [], historyByMatter, subs }) {
       listEscalatedMatterIds: async () => escalatedIds,
       listSubscriptions: async () => subs,
       getMatterHistory: async (id) => historyByMatter[id] ?? [],
-      getMatterMeta: async (id) => ({ fileNumber: `F${id}`, guid: `G${id}`, title: `Title ${id}`, statusName: 'In Committee' }),
+      getMatterMeta: async (id) => ({
+        fileNumber: `F${id}`,
+        guid: `G${id}`,
+        title: `Title ${id}`,
+        statusName: 'In Committee',
+      }),
       matterUrl: (id, guid) => `https://legistar/${id}?GUID=${guid}`,
       buildCard: (info, language) => ({ text: `card:${info.fileNumber}:${language}`, blocks: [{ info, language }] }),
       postCard: async (channel, card) => posted.push({ channel, card }),
@@ -94,6 +99,34 @@ test('detectedSince filters out stale tracked matters', async () => {
   const summary = await runEscalationSweep(h.deps);
   assert.equal(summary.trackedCount, 0);
   assert.equal(h.posted.length, 0);
+});
+
+test('recommendedAfter: a stale (old) recommendation is skipped', async () => {
+  const h = harness({
+    tracked: [{ matterId: 1, title: 'Old rec', eventBodyName: 'ZONING COMMITTEE', detectedAt: 10 }],
+    historyByMatter: {
+      1: [{ date: '2023-06-26', body: 'ZONING COMMITTEE', action: 'RECOMMENDED FOR  ADOPTION', result: 'Pass' }],
+    },
+    subs: [sub('C1', ['ZONING COMMITTEE'])],
+  });
+  h.deps.recommendedAfter = '2026-06-01';
+  const summary = await runEscalationSweep(h.deps);
+  assert.equal(summary.detected, 0);
+  assert.equal(h.posted.length, 0);
+  assert.equal(h.recorded.length, 0);
+});
+
+test('recommendedAfter: a fresh recommendation still fires', async () => {
+  const h = harness({
+    tracked: [{ matterId: 1, title: 'Fresh rec', eventBodyName: 'ZONING COMMITTEE', detectedAt: 10 }],
+    historyByMatter: {
+      1: [{ date: '2026-06-16', body: 'ZONING COMMITTEE', action: 'RECOMMENDED FOR  ADOPTION', result: 'Pass' }],
+    },
+    subs: [sub('C1', ['ZONING COMMITTEE'])],
+  });
+  h.deps.recommendedAfter = '2026-06-01';
+  const summary = await runEscalationSweep(h.deps);
+  assert.equal(summary.pinged, 1);
 });
 
 test('ES channel gets the ES card variant', async () => {

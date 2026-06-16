@@ -3,7 +3,12 @@ import { test } from 'node:test';
 import { mapMatter, matterDetailUrl } from '../../poller/legistar.js';
 
 test('mapMatter: surfaces guid/title/status alongside fileNumber', () => {
-  const m = mapMatter({ MatterFile: '250086', MatterGuid: 'ABC-123', MatterTitle: 'A street name', MatterStatusName: 'Passed' });
+  const m = mapMatter({
+    MatterFile: '250086',
+    MatterGuid: 'ABC-123',
+    MatterTitle: 'A street name',
+    MatterStatusName: 'Passed',
+  });
   assert.equal(m.fileNumber, '250086');
   assert.equal(m.guid, 'ABC-123');
   assert.equal(m.title, 'A street name');

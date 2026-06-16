@@ -24,12 +24,10 @@ const USER_AGENT =
 const legistar = createLegistarClient({ fetch, client: CLIENT, userAgent: USER_AGENT });
 const base = `https://webapi.legistar.com/v1/${CLIENT}`;
 
+// Scan recently-modified matters for one genuinely AWAITING the Council vote
+// (committee recommended, no Council disposition yet — detectEscalation != null).
 async function findRecommendedMatter() {
-  const q = new URLSearchParams({
-    $filter: "MatterStatusName eq 'Passed' and MatterTypeName eq 'Resolution'",
-    $orderby: 'MatterPassedDate desc',
-    $top: '5',
-  });
+  const q = new URLSearchParams({ $orderby: 'MatterLastModifiedUtc desc', $top: '40' });
   const matters = await (
     await fetch(`${base}/matters?${q}`, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } })
   ).json();
@@ -37,7 +35,7 @@ async function findRecommendedMatter() {
     const esc = detectEscalation(await legistar.getMatterHistory(m.MatterId));
     if (esc) return { matterId: m.MatterId, file: m.MatterFile, committee: esc.committee, date: esc.date };
   }
-  throw new Error('No recently-passed matter with a committee recommendation found.');
+  throw new Error('No matter currently awaiting a Council vote found in the recent set (timing-dependent).');
 }
 
 async function runOnce(tracked, escalatedIds) {

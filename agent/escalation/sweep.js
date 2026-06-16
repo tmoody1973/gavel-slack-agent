@@ -11,6 +11,7 @@ export async function runEscalationSweep(deps) {
   const {
     client,
     detectedSince,
+    recommendedAfter,
     now,
     listTrackedMatters,
     listEscalatedMatterIds,
@@ -42,6 +43,9 @@ export async function runEscalationSweep(deps) {
     try {
       const esc = detectEscalation(await getMatterHistory(matterId));
       if (!esc) continue;
+      // A timely heads-up only: a recommendation older than the window means the
+      // matter stalled (or its vote long passed) — not an upcoming Council vote.
+      if (recommendedAfter && esc.date && esc.date.slice(0, 10) < recommendedAfter) continue;
       detected += 1;
 
       const meta = await getMatterMeta(matterId);

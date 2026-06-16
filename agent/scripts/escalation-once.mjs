@@ -6,6 +6,9 @@
 // channels that got the original alert that it's headed to the full Council.
 //
 // ESCALATION_LOOKBACK_DAYS  how far back to consider tracked matters (default 90)
+// ESCALATION_REC_MAX_AGE_DAYS  ignore committee recommendations older than this —
+//                              a stale rec means the matter stalled, not an
+//                              upcoming vote (default 21)
 // ESCALATION_DRY_RUN=1      print pings instead of posting (and skip recording)
 
 import { WebClient } from '@slack/web-api';
@@ -22,6 +25,7 @@ import { createLegistarClient, matterDetailUrl } from '../poller/index.js';
 
 const CLIENT = process.env.POLL_CLIENT || 'milwaukee';
 const LOOKBACK = Number(process.env.ESCALATION_LOOKBACK_DAYS || '90');
+const REC_MAX_AGE = Number(process.env.ESCALATION_REC_MAX_AGE_DAYS || '21');
 const DRY_RUN = process.env.ESCALATION_DRY_RUN === '1';
 const USER_AGENT =
   'GavelCivicAgent/0.1 (+https://github.com/tmoody1973/gavel-slack-agent; contact tarik@radiomilwaukee.org)';
@@ -36,14 +40,20 @@ const convex = new ConvexHttpClient(url);
 const legistar = createLegistarClient({ fetch, client: CLIENT, userAgent: USER_AGENT });
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN || process.env.SLACK_USER_TOKEN);
 
+function isoDaysAgo(days) {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 async function main() {
   const detectedSince = Date.now() - LOOKBACK * 24 * 60 * 60 * 1000;
+  const recommendedAfter = isoDaysAgo(REC_MAX_AGE);
   const subscriptions = await convex.query(api.subscriptions.listSubscriptions, { client: CLIENT });
   const langByChannel = new Map(subscriptions.map((s) => [s.channelId, s.language || 'en']));
 
   const summary = await runEscalationSweep({
     client: CLIENT,
     detectedSince,
+    recommendedAfter,
     now: () => Date.now(),
     listTrackedMatters: (client) => convex.query(api.detectedItems.listSentWithMatter, { client }),
     listEscalatedMatterIds: (client) => convex.query(api.escalations.listEscalatedMatterIds, { client }),
