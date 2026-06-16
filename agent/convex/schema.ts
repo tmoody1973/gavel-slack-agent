@@ -96,4 +96,31 @@ export default defineSchema({
       dimensions: 1536,
       filterFields: ['family', 'scope'],
     }),
+
+  // Meeting-transcript semantic layer (MOO-113). One row per 30-60s speaker-turn
+  // window of a committee webcast, sliced to its agenda item by EventItemVideoIndex.
+  // PUBLIC RECORD ONLY — the city's public Granicus webcast; never Slack content.
+  // Every chunk carries the metadata a "receipt" needs: speaker, agenda item,
+  // matter, and the timestamp that builds a deep link back into the video.
+  transcriptChunks: defineTable({
+    eventId: v.number(),
+    eventDate: v.string(),
+    eventBodyName: v.optional(v.string()), // committee, for filtering
+    eventMedia: v.optional(v.number()), // Granicus clip id → deep link / clip
+    eventItemId: v.number(),
+    agendaNumber: v.optional(v.string()),
+    matterId: v.optional(v.number()),
+    text: v.string(),
+    speakers: v.array(v.number()), // Deepgram speaker labels in the window
+    startTime: v.number(), // seconds into the webcast
+    endTime: v.number(),
+    embedding: v.array(v.float64()), // text-embedding-3-small → 1536
+  })
+    .index('by_event', ['eventId'])
+    .index('by_event_item', ['eventId', 'eventItemId'])
+    .vectorIndex('by_embedding', {
+      vectorField: 'embedding',
+      dimensions: 1536,
+      filterFields: ['eventId', 'eventBodyName'],
+    }),
 });
