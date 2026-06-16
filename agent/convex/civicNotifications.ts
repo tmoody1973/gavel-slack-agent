@@ -155,6 +155,15 @@ export const getByLegistarMeeting = query({
       .collect(),
 });
 
+/** Resolve a set of ids (e.g. vector-search hits) back to their rows, in order. */
+export const getByIds = query({
+  args: { ids: v.array(v.id('civicNotifications')) },
+  handler: async (ctx, { ids }) => {
+    const rows = await Promise.all(ids.map((id) => ctx.db.get(id)));
+    return rows.filter((row) => row !== null);
+  },
+});
+
 /** Full-text search over subject+body, optionally narrowed by district/category. */
 export const searchText = query({
   args: {
