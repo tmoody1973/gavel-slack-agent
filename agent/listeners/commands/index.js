@@ -1,5 +1,7 @@
 import { ConvexHttpClient } from 'convex/browser';
 
+import { createParcelClient } from '../../../mcp-server/src/parcel.js';
+import { parcelLookupModal } from '../../blockkit/index.js';
 import { api } from '../../convex/_generated/api.js';
 import { handleGavelCommand } from './gavel.js';
 
@@ -15,6 +17,10 @@ export function register(app) {
     app.logger?.warn?.('CONVEX_URL is not set — /gavel commands will report errors instead of reading config.');
   }
   const convex = convexUrl ? new ConvexHttpClient(convexUrl) : null;
+  const parcel = createParcelClient({
+    fetch: globalThis.fetch,
+    userAgent: 'gavel-slack-agent (tarik@radiomilwaukee.org)',
+  });
 
   const deps = {
     addWatch: ({ channelId, entity }) => requireConvex(convex).mutation(api.watches.addWatch, { channelId, entity }),
@@ -22,6 +28,8 @@ export function register(app) {
     listWatches: (channelId) => requireConvex(convex).query(api.watches.listWatches, { channelId }),
     removeWatch: ({ channelId, entity }) =>
       requireConvex(convex).mutation(api.watches.removeWatch, { channelId, entity }),
+    lookupParcel: (address) => parcel.lookupParcel(address),
+    openLookupModal: (triggerId) => app.client.views.open({ trigger_id: triggerId, view: parcelLookupModal() }),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

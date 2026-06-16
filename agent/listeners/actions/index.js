@@ -7,6 +7,7 @@ import { makeAlertAsk, makeAlertHistory, makeAlertWatch } from './alert-buttons.
 import { handleFeedbackButton } from './feedback-buttons.js';
 import { makeCommitteeOptions, makeHomeAddWatch, makeHomeEditChannel, makeHomeWatchRemove } from './home-buttons.js';
 import { makeParcelWatch } from './parcel-buttons.js';
+import { makeOpenParcelLookup, makeParcelLookupAgain } from './parcel-lookup.js';
 
 /**
  * Register action listeners. Convex/Legistar boundaries are constructed here
@@ -40,6 +41,8 @@ export function register(app) {
 
   app.action('parcel_watch', makeParcelWatch(deps));
   app.action('parcel_open_map', async ({ ack }) => ack());
+  app.action('home_lookup_parcel', makeOpenParcelLookup());
+  app.action('parcel_lookup_again', makeParcelLookupAgain());
 
   const homeDeps = createHomeDeps(app.client);
   app.action('home_add_watch', makeHomeAddWatch(homeDeps));

@@ -5,5 +5,6 @@ export { addWatchModal, channelConfigModal } from './home-modals.js';
 export { homeView } from './home-view.js';
 export { matterCard } from './matter-card.js';
 export { parcelCard } from './parcel-card.js';
+export { parcelLookupModal, propertyResultModal } from './parcel-lookup-modal.js';
 export { sponsorCard } from './sponsor-card.js';
 export { voteTable } from './vote-table.js';
