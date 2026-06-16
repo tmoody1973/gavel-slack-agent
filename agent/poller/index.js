@@ -6,6 +6,7 @@ export {
   createLegistarClient,
   mapEvent,
   mapEventItem,
+  matterDetailUrl,
   toDetectedItem,
 } from './legistar.js';
 export { runPoll } from './poll.js';

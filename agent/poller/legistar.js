@@ -69,9 +69,19 @@ export function toDetectedItem(client, event, item) {
   return row;
 }
 
-/** Normalize a raw Legistar matter to the card's file number. */
+/** Normalize a raw Legistar matter — file number + the fields escalation needs. */
 export function mapMatter(raw) {
-  return { fileNumber: raw.MatterFile };
+  return {
+    fileNumber: raw.MatterFile,
+    guid: raw.MatterGuid ?? undefined,
+    title: raw.MatterTitle ?? undefined,
+    statusName: raw.MatterStatusName ?? undefined,
+  };
+}
+
+/** Clickable Legistar legislation-detail URL for a matter (needs the GUID). */
+export function matterDetailUrl(matterId, guid) {
+  return guid ? `https://milwaukee.legistar.com/LegislationDetail.aspx?ID=${matterId}&GUID=${guid}` : undefined;
 }
 
 /** Normalize a raw sponsor row (the alderperson behind a matter). */
