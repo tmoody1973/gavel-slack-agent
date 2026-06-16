@@ -24,5 +24,11 @@ export const CH295_SOURCES = [
   { file: 'CH295-sub8.pdf', parent: 'Subchapter 8 — Industrial Districts', family: 'industrial', scope: 'district' },
   { file: 'CH295-sub9.pdf', parent: 'Subchapter 9 — Special Districts', family: 'special', scope: 'district' },
   { file: 'CH295-sub10.pdf', parent: 'Subchapter 10 — Overlay Zones', family: 'overlay', scope: 'district' },
+  {
+    file: 'CH295-sub11.pdf',
+    parent: 'Subchapter 11 — Floodplain Overlay Zones',
+    family: 'overlay',
+    scope: 'district',
+  },
   { file: 'CH295table.pdf', parent: 'Chapter 295 — Zoning Table', family: 'general', scope: 'table' },
 ].map((s) => ({ ...s, url: `${BASE}/${s.file}` }));
