@@ -42,6 +42,25 @@ test('mapParcel pulls the useful MPROP fields', () => {
   assert.equal(p.hasOpenViolation, false);
 });
 
+test('mapParcel exposes lot/building/unit fields (numeric, or null when empty)', () => {
+  const p = mapParcel({
+    LOT_AREA: '3628.00000',
+    BLDG_AREA: '4310.00000',
+    NR_UNITS: '5',
+    YR_BUILT: '1884',
+    NR_STORIES: '2.0',
+  });
+  assert.equal(p.lotArea, 3628);
+  assert.equal(p.buildingArea, 4310);
+  assert.equal(p.numUnits, 5);
+  assert.equal(p.yearBuilt, 1884);
+  assert.equal(p.stories, 2);
+
+  const empty = mapParcel({ LOT_AREA: '', NR_UNITS: undefined });
+  assert.equal(empty.lotArea, null);
+  assert.equal(empty.numUnits, null);
+});
+
 test('mapPermit maps the buildingpermits columns', () => {
   const r = mapPermit({
     'Date Opened': '2026-05-01',

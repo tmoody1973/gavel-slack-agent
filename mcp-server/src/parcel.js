@@ -31,6 +31,11 @@ export function escapeLike(value) {
   return String(value).replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
 
+/** Parse an MPROP numeric column ("3628.00000", "5") to a Number, or null when empty/absent. */
+function numericOrNull(value) {
+  return value !== '' && value != null ? Number(value) : null;
+}
+
 /** Normalize a raw MPROP row to the fields the agent reads. */
 export function mapParcel(raw) {
   const owners = [raw.OWNER_NAME_1, raw.OWNER_NAME_2, raw.OWNER_NAME_3].map((n) => (n ? n.trim() : '')).filter(Boolean);
@@ -41,7 +46,15 @@ export function mapParcel(raw) {
     landUse: raw.LAND_USE_GP || null,
     district: raw.GEO_ALDER || null,
     owner: owners.join(' / ') || null,
-    assessedValue: raw.C_A_TOTAL !== '' && raw.C_A_TOTAL != null ? Number(raw.C_A_TOTAL) : null,
+    assessedValue: numericOrNull(raw.C_A_TOTAL),
+    // Lot/building/density fields — MPROP carries these; they feed the
+    // "what can be built here?" reasoning (lot area vs. zoning's min-lot-per-unit).
+    // Width/depth/frontage are NOT in MPROP (plat-only); CORNER_LOT is unpopulated.
+    lotArea: numericOrNull(raw.LOT_AREA),
+    buildingArea: numericOrNull(raw.BLDG_AREA),
+    numUnits: numericOrNull(raw.NR_UNITS),
+    yearBuilt: numericOrNull(raw.YR_BUILT),
+    stories: numericOrNull(raw.NR_STORIES),
     razeStatus: raw.RAZE_STATUS ? raw.RAZE_STATUS.trim() : null,
     hasOpenViolation: Boolean(raw.BI_VIOL && String(raw.BI_VIOL).trim()),
   };
