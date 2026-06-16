@@ -1,5 +1,6 @@
 export { digestCard } from './digest-card.js';
 export { errorReply } from './error-reply.js';
+export { escalationCard } from './escalation-card.js';
 export { historyTimeline } from './history-timeline.js';
 export { addWatchModal, channelConfigModal } from './home-modals.js';
 export { homeView } from './home-view.js';
