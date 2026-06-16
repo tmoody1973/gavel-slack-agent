@@ -74,6 +74,30 @@ export function mapMatter(raw) {
   return { fileNumber: raw.MatterFile };
 }
 
+/**
+ * Build the `/matters` OData query for matters introduced in the last N days,
+ * newest-first. The watchlist sweep matches watched entities against these.
+ */
+export function buildMattersQuery(nowIso, lookbackDays = 7) {
+  const since = addDaysIso(nowIso, -lookbackDays).slice(0, 10);
+  const filter = `MatterIntroDate ge datetime'${since}'`;
+  const params = new URLSearchParams({ $filter: filter, $orderby: 'MatterIntroDate desc', $top: '1000' });
+  return `matters?${params.toString()}`;
+}
+
+/** Normalize a raw Legistar matter to the fields the watch sweep matches on. */
+export function mapMatterSummary(raw) {
+  return {
+    matterId: raw.MatterId,
+    file: raw.MatterFile ?? '',
+    title: raw.MatterTitle ?? '',
+    name: raw.MatterName ?? '',
+    introDate: raw.MatterIntroDate ?? undefined,
+    bodyName: raw.MatterBodyName ?? undefined,
+    typeName: raw.MatterTypeName ?? undefined,
+  };
+}
+
 /** Normalize a raw sponsor row (the alderperson behind a matter). */
 export function mapSponsor(raw) {
   return { name: raw.MatterSponsorName, personId: raw.MatterSponsorNameId, sequence: raw.MatterSponsorSequence };
@@ -140,6 +164,11 @@ export function createLegistarClient({
     return raw.map(mapEventItem);
   }
 
+  async function fetchRecentMatters(lookbackDays = 7) {
+    const raw = await getJson(buildMattersQuery(now(), lookbackDays));
+    return raw.map(mapMatterSummary);
+  }
+
   async function getMatter(matterId) {
     return mapMatter(await getJson(`matters/${matterId}`));
   }
@@ -176,6 +205,7 @@ export function createLegistarClient({
     fetchUpcomingFinalEvents,
     fetchEventItems,
     fetchActiveBodyNames,
+    fetchRecentMatters,
     getMatter,
     getMatterSponsors,
     getMatterHistory,
