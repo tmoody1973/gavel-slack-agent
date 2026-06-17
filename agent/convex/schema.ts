@@ -161,4 +161,56 @@ export default defineSchema({
       dimensions: 1536,
       filterFields: ['family', 'scope'],
     }),
+
+  // Meeting-transcript semantic layer (MOO-113). One row per 30-60s speaker-turn
+  // window of a committee webcast, sliced to its agenda item by EventItemVideoIndex.
+  // PUBLIC RECORD ONLY — the city's public Granicus webcast; never Slack content.
+  // Every chunk carries the metadata a "receipt" needs: speaker, agenda item,
+  // matter, and the timestamp that builds a deep link back into the video.
+  transcriptChunks: defineTable({
+    eventId: v.number(),
+    eventDate: v.string(),
+    eventBodyName: v.optional(v.string()), // committee, for filtering
+    eventMedia: v.optional(v.number()), // Granicus clip id → deep link / clip
+    eventItemId: v.number(),
+    agendaNumber: v.optional(v.string()),
+    matterId: v.optional(v.number()),
+    text: v.string(),
+    speakers: v.array(v.number()), // Deepgram speaker labels in the window
+    startTime: v.number(), // seconds into the webcast
+    endTime: v.number(),
+    embedding: v.array(v.float64()), // text-embedding-3-small → 1536
+  })
+    .index('by_event', ['eventId'])
+    .index('by_event_item', ['eventId', 'eventItemId'])
+    .vectorIndex('by_embedding', {
+      vectorField: 'embedding',
+      dimensions: 1536,
+      filterFields: ['eventId', 'eventBodyName'],
+    }),
+
+  // Minutes / vote-record layer (MOO-113 task D): the structured "what was DECIDED"
+  // companion to transcriptChunks' "what was SAID". One row per acted-on agenda item,
+  // from Legistar's post-meeting fields + the official minutes PDF. PUBLIC RECORD ONLY.
+  // Milwaukee committee votes are voice votes — seconder/tally are usually absent, so
+  // the outcome is actionName + passedFlag + mover. Keyed for the matter/event join.
+  matterOutcomes: defineTable({
+    eventItemId: v.number(),
+    eventId: v.number(),
+    matterId: v.optional(v.number()),
+    matterFile: v.optional(v.string()), // Legistar file number, e.g. "260176"
+    agendaNumber: v.optional(v.string()),
+    actionName: v.string(), // "RECOMMENDED FOR ADOPTION"
+    actionText: v.optional(v.string()), // the full motion sentence
+    passedFlag: v.optional(v.string()), // "Pass" | "Fail"
+    mover: v.optional(v.string()),
+    seconder: v.optional(v.string()),
+    tally: v.optional(v.string()), // roll-call count when present (voice votes: absent)
+    eventDate: v.optional(v.string()),
+    minutesFile: v.optional(v.string()), // the meeting's official minutes PDF
+    recordedAt: v.number(),
+  })
+    .index('by_event', ['eventId'])
+    .index('by_event_item', ['eventId', 'eventItemId'])
+    .index('by_matter', ['matterId']),
 });
