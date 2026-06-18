@@ -1,8 +1,28 @@
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { confirmModal, homeFirstRun, nudgeCard, roleModal } from '../../blockkit/onboarding.js';
+import { confirmModal, homeFirstRun, memberWelcomeCard, nudgeCard, roleModal } from '../../blockkit/onboarding.js';
 import { defaultsForRole } from '../../onboarding/defaults.js';
+
+describe('memberWelcomeCard', () => {
+  it('renders the welcome + Ask Gavel / What can you do buttons carrying the language', () => {
+    const card = memberWelcomeCard('en');
+    const json = JSON.stringify(card);
+    assert.match(json, /watch Milwaukee city hall for your block/);
+    const actions = card.blocks.find((b) => b.type === 'actions');
+    assert.deepStrictEqual(
+      actions.elements.map((e) => e.action_id),
+      ['member_ask_gavel', 'member_what_can_you_do'],
+    );
+    for (const e of actions.elements) assert.equal(e.value, 'en');
+  });
+
+  it('localizes to Spanish', () => {
+    const json = JSON.stringify(memberWelcomeCard('es'));
+    assert.match(json, /Vigilo el ayuntamiento de Milwaukee/);
+    assert.match(json, /Pregúntale a Gavel/);
+  });
+});
 
 describe('nudgeCard', () => {
   it('renders the intro + a Set up Gavel button that opens the role modal', () => {

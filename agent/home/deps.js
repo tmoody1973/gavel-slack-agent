@@ -38,6 +38,8 @@ export function createHomeDeps(slackClient) {
     addWatch: (input) => requireConvex(convex).mutation(api.watches.addWatch, input),
     removeWatch: (input) => requireConvex(convex).mutation(api.watches.removeWatch, input),
     upsertSubscription: (input) => requireConvex(convex).mutation(api.subscriptions.upsertSubscription, input),
+    markWelcomePosted: (channelId) =>
+      requireConvex(convex).mutation(api.subscriptions.markWelcomePosted, { channelId }),
 
     /** Active Legistar body names, cached an hour — the typeahead's source. */
     async listCommitteeNames() {

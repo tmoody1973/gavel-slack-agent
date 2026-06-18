@@ -91,6 +91,34 @@ export function confirmModal(role, defaults, language, channelId = null) {
 }
 
 /**
+ * Member welcome (MOO-119 FD-C) — the 5-second orientation every resident sees the
+ * first time Gavel posts in their channel. Bilingual per the channel language; the
+ * "What can you do?" action surfaces a transcript example (the third memory). Each
+ * button carries the language in its value so the threaded reply stays in-language.
+ */
+export function memberWelcomeCard(language) {
+  const t = copyFor(language);
+  return {
+    blocks: [
+      { type: 'section', text: mrkdwn(t.memberWelcome) },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            style: 'primary',
+            text: plain(t.memberAsk),
+            action_id: 'member_ask_gavel',
+            value: language,
+          },
+          { type: 'button', text: plain(t.memberWhatCanYouDo), action_id: 'member_what_can_you_do', value: language },
+        ],
+      },
+    ],
+  };
+}
+
+/**
  * App Home before any setup — warm intro + Set up button (the fallback path).
  * The configured-state hub is the richer MOO-74 `homeView`, which now carries the
  * "Set up another channel" onboarding button; there is intentionally no separate
