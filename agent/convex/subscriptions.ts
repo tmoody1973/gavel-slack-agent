@@ -20,6 +20,12 @@ export const upsertSubscription = mutation({
     keywords: v.optional(v.array(v.string())),
     language: v.optional(languageValidator),
     boundary: v.optional(boundaryValidator),
+    // Front Door onboarding fields (MOO-118) — normalizeSubscription passes them
+    // through, so the spread-persist below carries them into the row unchanged.
+    role: v.optional(v.union(v.literal('association'), v.literal('organizer'), v.literal('reporter'))),
+    configured: v.optional(v.boolean()),
+    onboardedAt: v.optional(v.number()),
+    welcomePostedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const sub = normalizeSubscription(args);

@@ -50,6 +50,12 @@ test('homeView has a ＋ Watch button and an Edit button per channel', () => {
   assert.ok(all.includes('rezoning'));
 });
 
+test('the configured hub offers a Set up another channel onboarding button', () => {
+  const all = JSON.stringify(homeView(state).blocks);
+  assert.ok(all.includes('onboarding_open_role'));
+  assert.match(all, /Set up another channel/);
+});
+
 test('homeView renders the setup CTA when there are no subscribed channels', () => {
   const view = homeView({ strip: { meetings: 0, lateAdds: 0, watchHits: 0 }, watches: [], channels: [] });
   const all = JSON.stringify(view.blocks);

@@ -112,6 +112,28 @@ test('help lists the available subcommands', async () => {
   }
 });
 
+test('a bare /gavel in an unconfigured channel surfaces the Set up Gavel nudge', async () => {
+  const h = harness({ text: '' }); // subscription defaults to null (unconfigured)
+  await handleGavelCommand(h.args, h.deps);
+  const response = h.calls.responds[0];
+  assert.match(JSON.stringify(response.blocks), /onboarding_open_role/);
+  assert.match(JSON.stringify(response.blocks), /Set up Gavel/);
+});
+
+test('the first-touch nudge honors an unconfigured channel’s existing language', async () => {
+  const h = harness({ text: '', subscription: { language: 'es' } }); // not configured
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /Configurar Gavel/);
+});
+
+test('a bare /gavel in a configured channel shows plain help, no nudge blocks', async () => {
+  const h = harness({ text: '', subscription: { configured: true, committees: [], keywords: [], language: 'en' } });
+  await handleGavelCommand(h.args, h.deps);
+  const response = h.calls.responds[0];
+  assert.equal(response.blocks, undefined);
+  assert.match(response.text, /Gavel commands/);
+});
+
 test('a Convex failure responds with an error instead of throwing', async () => {
   const h = harness({ text: 'watch X' });
   h.deps.addWatch = async () => {

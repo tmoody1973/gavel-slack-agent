@@ -16,6 +16,12 @@ export default defineSchema({
     // Geo filter placeholder — present so the poller can read it later; actual
     // geo-matching is Phase 3 (out of scope here).
     boundary: v.optional(v.object({ type: v.literal('district'), value: v.string() })),
+    // Front Door onboarding state (MOO-118 FD-B). All optional so existing rows
+    // (poller-written, pre-onboarding) stay valid; absence = "not yet onboarded".
+    configured: v.optional(v.boolean()),
+    role: v.optional(v.union(v.literal('association'), v.literal('organizer'), v.literal('reporter'))),
+    onboardedAt: v.optional(v.number()),
+    welcomePostedAt: v.optional(v.number()), // reserved for FD-C member-welcome dedup
     createdAt: v.number(),
     updatedAt: v.number(),
   })

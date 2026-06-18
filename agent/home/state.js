@@ -35,6 +35,10 @@ export async function buildHomeState(deps) {
 
   return {
     strip: { meetings, lateAdds, watchHits },
+    // Onboarding-completed channels (configured === true). The Home routes to the
+    // first-run intro only when there are no subscriptions at all — a poller-written
+    // subscription without `configured` still belongs in the hub, not first-run.
+    configuredCount: subscriptions.filter((s) => s.configured).length,
     watches: watches.map((w) => ({ channelId: w.channelId, channelName: names.get(w.channelId), entity: w.entity })),
     channels: subscriptions.map((s) => ({
       channelId: s.channelId,
@@ -42,6 +46,8 @@ export async function buildHomeState(deps) {
       committees: s.committees ?? [],
       keywords: s.keywords ?? [],
       language: s.language ?? 'en',
+      role: s.role ?? null,
+      configured: s.configured ?? false,
     })),
   };
 }

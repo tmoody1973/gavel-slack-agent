@@ -1,15 +1,19 @@
 import { homeView } from '../blockkit/index.js';
+import { homeFirstRun } from '../blockkit/onboarding.js';
 import { buildHomeState } from './state.js';
 
 /**
- * Build + publish the Hybrid App Home for one user. Every failure degrades:
+ * Build + publish the Hybrid App Home for one user. A workspace with no
+ * subscriptions yet gets the first-run onboarding view (warm intro + Set up
+ * button); once any channel is subscribed, the rich hub. Every failure degrades:
  * state assembly fails → static fallback view; publish fails → log only.
  * Re-used by app_home_opened and by every mutation handler (re-publish).
  */
 export async function publishHome({ client, userId }, deps, logger) {
   let view;
   try {
-    view = homeView(await buildHomeState(deps));
+    const state = await buildHomeState(deps);
+    view = state.channels.length > 0 ? homeView(state) : homeFirstRun('en');
   } catch (e) {
     logger.error(`App Home state failed, falling back to static view: ${e}`);
     view = staticFallbackView();
