@@ -27,6 +27,7 @@ export const REQUIRED_KEYS = [
   'growPrompt',
   'growHow',
   'growChecklist',
+  'growAreasIntro',
 ];
 
 export const COPY = {
@@ -52,6 +53,8 @@ export const COPY = {
     growHow: 'How →',
     growChecklist:
       "1) Create a #gavel-watchlist channel · 2) /invite @Gavel · 3) Done — I'll route every watch hit there.",
+    growAreasIntro:
+      'Cover more than one neighborhood? Give each its own channel so alerts stay local: 1) Create a channel per area (e.g. #civic-riverwest, #civic-bayview) · 2) /invite @Gavel · 3) Run `/gavel` in each to set its committees + language. I propose; you create.',
   },
   es: {
     nudgeIntro: '👋 Soy Gavel — vigilo el ayuntamiento de Milwaukee para que tus vecinos no tengan que hacerlo.',
@@ -75,6 +78,8 @@ export const COPY = {
     growHow: 'Cómo →',
     growChecklist:
       '1) Crea un canal #gavel-watchlist · 2) /invite @Gavel · 3) Listo — enviaré cada aviso de seguimiento ahí.',
+    growAreasIntro:
+      '¿Cubres más de un barrio? Dale a cada uno su propio canal para que las alertas sigan siendo locales: 1) Crea un canal por zona (p. ej. #civic-riverwest, #civic-bayview) · 2) /invite @Gavel · 3) Ejecuta `/gavel` en cada uno para fijar sus comités e idioma. Yo propongo; tú creas.',
   },
 };
 

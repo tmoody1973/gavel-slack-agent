@@ -1,3 +1,4 @@
+import { growAreasBlocks } from '../../blockkit/grow.js';
 import { confirmModal, roleModal } from '../../blockkit/onboarding.js';
 import { publishHome } from '../../home/publish.js';
 import { copyFor } from '../../onboarding/copy.js';
@@ -91,6 +92,14 @@ export function makeGoLiveSubmit(deps) {
       });
       await publishHome({ client, userId: body.user.id }, deps, logger);
       await postLiveConfirmation({ client, channelId, userId: body.user.id, language: defaults.language, logger });
+      // FD-D: organizers cover multiple neighborhoods — propose per-area channels.
+      if (role === 'organizer') {
+        await client.chat.postMessage({
+          channel: channelId,
+          text: 'Covering more than one neighborhood?',
+          blocks: growAreasBlocks(defaults.language),
+        });
+      }
     } catch (error) {
       logger.error(`onboarding go-live submit failed: ${error}`);
     }
