@@ -45,10 +45,14 @@ export async function handleGavelCommand({ command, ack, respond, logger }, deps
 
   try {
     // First touch: a bare `/gavel` in a channel that hasn't finished onboarding
-    // surfaces the Set up Gavel nudge (with the command list kept below it).
-    if (subcommand === 'help' && !isConfigured(await deps.getSubscription(channelId))) {
-      await respond(nudgeResponse('en', HELP_TEXT));
-      return;
+    // surfaces the Set up Gavel nudge (with the command list kept below it). Honor
+    // an existing channel-language preference when one is already on record.
+    if (subcommand === 'help') {
+      const subscription = await deps.getSubscription(channelId);
+      if (!isConfigured(subscription)) {
+        await respond(nudgeResponse(subscription?.language ?? 'en', HELP_TEXT));
+        return;
+      }
     }
     const text = await runSubcommand({ subcommand, args, channelId }, deps);
     await respond({ response_type: 'ephemeral', text });

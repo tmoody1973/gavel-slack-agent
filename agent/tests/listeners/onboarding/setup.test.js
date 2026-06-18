@@ -76,6 +76,19 @@ describe('makeOpenConfirmModal', () => {
     assert.equal(meta.role, 'organizer');
     assert.equal(meta.channelId, 'C1');
   });
+
+  it('silently swallows a forged unknown role — logs, never pushes a view', async () => {
+    const pushed = [];
+    const client = { views: { push: async (a) => pushed.push(a) } };
+    await makeOpenConfirmModal(homeDeps())({
+      ack: async () => {},
+      body: { trigger_id: 'T', view: { private_metadata: JSON.stringify({ channelId: 'C1' }) } },
+      action: { value: 'mayor' },
+      client,
+      logger,
+    });
+    assert.equal(pushed.length, 0);
+  });
 });
 
 describe('makeGoLiveSubmit', () => {
@@ -140,6 +153,28 @@ describe('makeGoLiveSubmit', () => {
       logger,
     });
     assert.equal(upsert.channelId, 'C2');
+  });
+
+  it('acks with a validation error (never crashes) on malformed private_metadata', async () => {
+    let acked;
+    let wrote = false;
+    const deps = homeDeps({
+      upsertSubscription: async () => {
+        wrote = true;
+      },
+    });
+    await makeGoLiveSubmit(deps)({
+      ack: async (arg) => {
+        acked = arg;
+      },
+      body: { user: { id: 'U1' } },
+      view: { private_metadata: 'not-json', state: { values: {} } },
+      client: {},
+      logger,
+    });
+    assert.equal(acked.response_action, 'errors');
+    assert.ok(acked.errors.onboarding_channel);
+    assert.equal(wrote, false);
   });
 
   it('returns a validation error (never writes) when no channel can be resolved', async () => {

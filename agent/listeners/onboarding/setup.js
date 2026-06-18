@@ -14,7 +14,13 @@ function channelFromButton(body) {
   return body?.channel?.id ?? null;
 }
 
-/** Button "Set up Gavel" → open View 1 (role question), carrying channel context. */
+/**
+ * Button "Set up Gavel" → open View 1 (role question), carrying channel context.
+ * The role modal is rendered in English: language is a per-role default that isn't
+ * known until the user picks a role on this very screen, so the confirm modal (the
+ * first language-bearing surface) switches to the role's language. The earlier
+ * `/gavel` nudge already honors an existing channel's language.
+ */
 export function makeOpenRoleModal(_deps) {
   return async ({ ack, body, client, logger }) => {
     await ack();
@@ -47,7 +53,20 @@ export function makeOpenConfirmModal(_deps) {
 /** "Go live" submit → upsert the channel config, republish Home, post confirmation. */
 export function makeGoLiveSubmit(deps) {
   return async ({ ack, body, view, client, logger }) => {
-    const { role, defaults, channelId: metaChannelId } = JSON.parse(view.private_metadata);
+    // Parse defensively: a missing/truncated private_metadata must still ack (a
+    // bare throw here would leave Slack hanging with no response_action).
+    let role;
+    let defaults;
+    let metaChannelId;
+    try {
+      ({ role, defaults, channelId: metaChannelId } = JSON.parse(view.private_metadata));
+    } catch {
+      await ack({
+        response_action: 'errors',
+        errors: { onboarding_channel: 'Setup session expired — please start again from /gavel.' },
+      });
+      return;
+    }
     const channelId =
       view.state?.values?.onboarding_channel?.onboarding_channel_select?.selected_conversation ?? metaChannelId ?? null;
 

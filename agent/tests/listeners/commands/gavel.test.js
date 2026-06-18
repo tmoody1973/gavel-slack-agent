@@ -120,6 +120,12 @@ test('a bare /gavel in an unconfigured channel surfaces the Set up Gavel nudge',
   assert.match(JSON.stringify(response.blocks), /Set up Gavel/);
 });
 
+test('the first-touch nudge honors an unconfigured channel’s existing language', async () => {
+  const h = harness({ text: '', subscription: { language: 'es' } }); // not configured
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /Configurar Gavel/);
+});
+
 test('a bare /gavel in a configured channel shows plain help, no nudge blocks', async () => {
   const h = harness({ text: '', subscription: { configured: true, committees: [], keywords: [], language: 'en' } });
   await handleGavelCommand(h.args, h.deps);

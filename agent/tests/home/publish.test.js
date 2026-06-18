@@ -24,6 +24,20 @@ test('publishHome publishes the hybrid view for the user', async () => {
   assert.match(JSON.stringify(published[0].view), /your civic week/);
 });
 
+test('publishHome renders the first-run onboarding view when no channels are subscribed', async () => {
+  const { published, client, logger } = fakes();
+  const deps = {
+    listSubscriptions: async () => [],
+    listAllWatches: async () => [],
+    listUpcoming: async () => [],
+    getChannelName: async () => 'general',
+  };
+  await publishHome({ client, userId: 'U1' }, deps, logger);
+  const view = JSON.stringify(published[0].view);
+  assert.match(view, /Set up Gavel/); // homeFirstRun marker
+  assert.doesNotMatch(view, /your civic week/); // not the hub
+});
+
 test('a state failure falls back to the static view — never a blank Home', async () => {
   const { published, client, deps, logger } = fakes({ failState: true });
   await publishHome({ client, userId: 'U1' }, deps, logger);
