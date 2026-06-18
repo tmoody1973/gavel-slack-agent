@@ -1,3 +1,5 @@
+import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
+
 const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest'];
 
 const HELP_TEXT = [
@@ -42,6 +44,12 @@ export async function handleGavelCommand({ command, ack, respond, logger }, deps
   const channelId = command.channel_id;
 
   try {
+    // First touch: a bare `/gavel` in a channel that hasn't finished onboarding
+    // surfaces the Set up Gavel nudge (with the command list kept below it).
+    if (subcommand === 'help' && !isConfigured(await deps.getSubscription(channelId))) {
+      await respond(nudgeResponse('en', HELP_TEXT));
+      return;
+    }
     const text = await runSubcommand({ subcommand, args, channelId }, deps);
     await respond({ response_type: 'ephemeral', text });
   } catch (err) {
