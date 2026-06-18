@@ -10,15 +10,15 @@ flowchart TB
     S4["💬 Assistant threads<br/>ask Gavel · EN/ES"]
   end
 
-  POLLER["⏱ Poller — gavel-poller · Fly.io · supercronic<br/>*/5 poll→detect→summarize→alert · 0 */6 escalation<br/>0 13 watch sweep · 0 14 Sun digest · walk-on detector"]
+  POLLER["⏱ Ingestion → alerts<br/>gavel-poller · Fly.io · supercronic: */5 poll→detect→summarize<br/>0 */6 escalation · 0 13 watch sweep · 0 14 Sun digest · walk-on detector<br/>📨 AgentMail E-Notify (webhook) → civicNotifications"]
 
   AGENT["🧠 Gavel Agent — gavel-app · Slack Bolt (Socket Mode)<br/><b>Claude Sonnet 4.6</b> — summarize · agent loop · tool routing<br/>Generates EN + ES natively (no translation API)"]
 
-  STATE["🗄 Convex — app state + cache<br/>subscriptions · watches · watchAlerts · matterEscalations<br/>detectedAgendaItems · councilMembers · cached lookups<br/><i>civic-record keys only — never Slack message content</i>"]
+  STATE["🗄 Convex — app state + cache<br/>subscriptions · watches · watchAlerts · matterEscalations<br/>detectedAgendaItems · matterOutcomes · civicNotifications<br/>councilMembers · cached lookups<br/><i>civic-record keys only — never Slack message content</i>"]
 
   M1["①  STRUCTURED CIVIC DATA  🟢 public · live<br/><b>Milwaukee Civic MCP server</b> (custom, open-source) ★<br/>Legistar Web API (OData) + Milwaukee CKAN datastore<br/>get_matter · get_matter_history · search_matters · get_sponsors<br/>get_upcoming_events · lookup_parcel · get_permits<br/>get_ownership_portfolio · check_zoning<br/><b>LIVE · AUTHORITATIVE · NOT STORED</b>"]
 
-  M2["②  SEMANTIC CIVIC MEMORY  🟢 public · indexed<br/><b>Convex vector database</b><br/>namespace zoning_code — Zoning Code Ch. 295<br/>116 chunks · OpenAI text-embedding-3-small<br/>ask_zoning_code → §295-NNN citations<br/><b>INDEXED · PUBLIC RECORD ONLY</b><br/><i>transcripts namespace — roadmap (Phase 4)</i>"]
+  M2["②  SEMANTIC CIVIC MEMORY  🟢 public · indexed<br/><b>Convex vector database — two namespaces</b><br/>zoning_code — Zoning Code Ch. 295 · 116 chunks · ask_zoning_code → §295-NNN<br/>transcripts — diarized committee webcasts (Deepgram Nova-3)<br/>search_transcripts · get_video_moment → speaker quote + ▶ timestamped clip<br/>OpenAI text-embedding-3-small · ffmpeg/yt-dlp clips<br/><b>INDEXED · PUBLIC RECORD ONLY</b>"]
 
   M3["③  LIVE COMMUNITY MEMORY  🔵 private · live only<br/><b>Slack Real-Time Search API</b> ★<br/>assistant.search.context — the workspace's own history<br/>EN + ES merged → search_community_memory<br/><b>LIVE · NEVER STORED / COPIED / INDEXED</b>"]
 

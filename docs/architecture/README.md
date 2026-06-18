@@ -27,16 +27,20 @@ The diagram was drawn *against the build*, not the PRD vision. Verification trai
 | Gavel Agent · Claude Sonnet 4.6 · Bolt (Socket Mode) | `agent/app.js`, `agent/agent/agent.js` (model pinned `claude-sonnet-4-6`) |
 | Poller crons (`*/5`, `0 */6`, `0 13`, `0 14 Sun`) | `agent/crontab`, `agent/scripts/poll-once.mjs` · `escalation-once.mjs` (MOO-52) · `watch-sweep-once.mjs` (MOO-53) · `digest-once.mjs` (MOO-76) |
 | Walk-on / agenda-change detector | `agent/poller/flags.js` (MOO-51) |
+| AgentMail E-Notify ingestion (webhook) | `agent/civicmail/` → `civicNotifications` table; official Milwaukee E-Notify emails parsed + indexed (MOO-69) |
 | ① **Structured Civic Data — MCP server** | `mcp-server/src/` — `tools.js` (Legistar: `get_matter`, `get_matter_history`, `search_matters`, `get_sponsors`, `get_upcoming_events`, `get_event_agenda`), `parcel-tools.js` (CKAN: `lookup_parcel`, `get_permits`, `get_ownership_portfolio`, `check_zoning`) |
-| ② **Semantic Civic Memory — Convex vectors** | `agent/convex/schema.ts` → `zoningChunks` vector index (namespace `zoning_code`); `ask_zoning_code` tool (MOO-55). 116 chunks, OpenAI `text-embedding-3-small`. |
+| ② **Semantic Civic Memory — Convex vectors (two namespaces)** | `agent/convex/schema.ts` → `zoningChunks` (`zoning_code`, MOO-55, 116 chunks) + `transcriptChunks` (`transcripts`, MOO-113); tools `ask_zoning_code`, `search_transcripts`, `get_video_moment` (`agent/agent/transcripts/`). OpenAI `text-embedding-3-small`. |
+| Transcript / video / minutes pipeline | `agent/transcripts/` — `chunk.js`, `deepgram.js` (Nova-3), `video.js` (deep link + `files.uploadV2` clips), `outcomes.js`; `scripts/transcript-ingest.mjs` · `transcript-clip-demo.mjs` · `minutes-ingest.mjs`; `matterOutcomes` table (MOO-113) |
 | ③ **Live Community Memory — RTS** | `agent/agent/community-memory/` — `rts-client.js` (`assistant.search.context`), `search.js` (EN+ES merge), `tool.js` (`search_community_memory`) (MOO-49) |
-| Convex app state + cache | `agent/convex/schema.ts` → `subscriptions`, `watches`, `watchAlerts`, `matterEscalations`, `detectedAgendaItems`, `councilMembers` |
+| Convex app state + cache | `agent/convex/schema.ts` → `subscriptions`, `watches`, `watchAlerts`, `matterEscalations`, `detectedAgendaItems`, `matterOutcomes`, `civicNotifications`, `councilMembers` |
 | Bilingual EN/ES alert cards · Block Kit | `agent/blockkit/`, `agent/alerts/card.js`, glossary in the summarizer prompt (MOO-43) |
 | Compliance line (index public / query private live) | The central design claim — see root `CLAUDE.md` "the hard compliance rule that shapes the architecture"; enforced by RTS never persisting Slack content. |
 
-**Deliberately shown as roadmap, not built:** the `transcripts` vector namespace and the video/
-audio tier (Deepgram, ffmpeg/yt-dlp) — Phase 4, no code in the repo yet, so they're a footnote on
-memory ②, not a box.
+**Now built (MOO-113), promoted from footnote to a real box on memory ②:** the `transcripts`
+vector namespace + the video tier — Deepgram Nova-3 diarization, `search_transcripts` /
+`get_video_moment`, ffmpeg/yt-dlp inline clips via `files.uploadV2`, and the `matterOutcomes`
+vote-record layer ("what was decided"). **Still out of scope** (per PRD): the tier-3 Block Kit
+video block, and live/real-time transcription (batch only).
 
 ## Sponsor-tech callouts (challenge required techs)
 

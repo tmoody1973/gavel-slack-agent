@@ -67,13 +67,14 @@
   <!-- ===== Poller ===== -->
   <g>
     <rect x="44" y="224" width="372" height="196" rx="14" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-    <text x="64" y="250" class="ct">⏱ Poller</text>
+    <text x="64" y="250" class="ct">⏱ Ingestion → alerts</text>
     <text x="64" y="270" class="cs">gavel-poller · Fly.io · supercronic cron</text>
-    <text x="64" y="300" class="bd">*/5  Legistar poll → detect → summarize → alert</text>
-    <text x="64" y="324" class="bd">0 */6  Escalation ping · MatterHistory diff</text>
-    <text x="64" y="348" class="bd">0 13  Watchlist sweep · matters + permits</text>
-    <text x="64" y="372" class="bd">0 14 Sun  Sunday digest</text>
-    <text x="64" y="396" class="bd">Walk-on / agenda-change detector</text>
+    <text x="64" y="298" class="bd">*/5 Legistar poll → detect → summarize → alert</text>
+    <text x="64" y="320" class="bd">0 */6 escalate · 0 13 watch · 0 14 Sun digest</text>
+    <text x="64" y="342" class="bd">Walk-on / agenda-change detector</text>
+    <line x1="64" y1="357" x2="392" y2="357" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="64" y="378" class="cs">📨 AgentMail E-Notify · webhook</text>
+    <text x="64" y="398" class="bd">city E-Notify emails → civicNotifications</text>
   </g>
 
   <!-- ===== Agent core ===== -->
@@ -93,11 +94,12 @@
     <rect x="1152" y="224" width="404" height="196" rx="14" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
     <text x="1174" y="250" class="ct">🗄 Convex</text>
     <text x="1174" y="270" class="cs">application state + cached snapshots</text>
-    <text x="1174" y="300" class="bd">subscriptions · watches · watchAlerts</text>
-    <text x="1174" y="324" class="bd">matterEscalations · detectedAgendaItems</text>
-    <text x="1174" y="348" class="bd">councilMembers · cached lookup tables</text>
-    <text x="1174" y="384" class="foot">Config + civic-record keys only —</text>
-    <text x="1174" y="400" class="foot">never any Slack message content.</text>
+    <text x="1174" y="298" class="bd">subscriptions · watches · watchAlerts</text>
+    <text x="1174" y="320" class="bd">matterEscalations · detectedAgendaItems</text>
+    <text x="1174" y="342" class="bd">matterOutcomes · civicNotifications</text>
+    <text x="1174" y="364" class="bd">councilMembers · cached lookup tables</text>
+    <text x="1174" y="388" class="foot">Config + civic-record keys only —</text>
+    <text x="1174" y="402" class="foot">never any Slack message content.</text>
   </g>
 
   <!-- agent <-> state -->
@@ -137,17 +139,16 @@
     <rect x="556" y="452" width="492" height="46" rx="14" fill="#16a34a"/>
     <rect x="556" y="476" width="492" height="22" fill="#16a34a"/>
     <text x="578" y="482" fill="#ffffff" font-size="18" font-weight="800">②  Semantic Civic Memory</text>
-    <text x="578" y="524" class="cs">Convex vector database</text>
-    <text x="578" y="552" class="bd">namespace <tspan font-weight="700">zoning_code</tspan></text>
-    <text x="578" y="576" class="bd">Milwaukee Zoning Code <tspan font-weight="700">Chapter 295</tspan></text>
-    <text x="578" y="600" class="bd">116 chunks · OpenAI text-embedding-3-small</text>
-    <text x="578" y="624" class="bd">§295-NNN section citations on every answer</text>
-    <text x="578" y="654" class="mono">ask_zoning_code(question, address?)</text>
-    <text x="578" y="690" class="bd">“What could they build on this RT4 lot?”</text>
-    <text x="578" y="708" class="bd">→ grounded, cited, bilingual</text>
-    <rect x="578" y="724" width="248" height="26" rx="13" fill="#dcfce7"/>
-    <text x="592" y="741" class="tag" fill="#166534">INDEXED · PUBLIC RECORD ONLY</text>
-    <text x="578" y="780" class="foot">transcripts namespace — roadmap (Phase 4)</text>
+    <text x="578" y="522" class="cs">Convex vector DB · two public-record namespaces</text>
+    <text x="578" y="550" class="bd">▸ <tspan font-weight="700">zoning_code</tspan> — Zoning Code Ch. 295 · 116 chunks</text>
+    <text x="578" y="568" class="mono">ask_zoning_code → cited §295-NNN answers</text>
+    <text x="578" y="598" class="bd">▸ <tspan font-weight="700">transcripts</tspan> — diarized committee webcasts</text>
+    <text x="578" y="616" class="bd">speaker-turn chunks · agenda-item + timestamp meta</text>
+    <text x="578" y="634" class="mono">search_transcripts · get_video_moment</text>
+    <text x="578" y="652" class="bd">→ speaker quote + ▶ timestamped Granicus clip</text>
+    <rect x="578" y="694" width="248" height="26" rx="13" fill="#dcfce7"/>
+    <text x="592" y="711" class="tag" fill="#166534">INDEXED · PUBLIC RECORD ONLY</text>
+    <text x="578" y="742" class="foot">Deepgram Nova-3 · OpenAI text-embedding-3-small · ffmpeg/yt-dlp clips</text>
   </g>
 
   <!-- ===== ③ Live Community Memory (RTS) ===== -->
@@ -180,7 +181,7 @@
     <rect x="44" y="852" width="1512" height="150" rx="16" fill="none" stroke="#cbd5e1"/>
     <text x="72" y="892" font-size="17" font-weight="800" fill="#0f172a">COMPLIANCE BY DESIGN — the load-bearing claim</text>
     <text x="72" y="924" font-size="16" fill="#166534" font-weight="700">Indexes the PUBLIC record</text>
-    <text x="72" y="948" class="bd">zoning code &amp; agendas → Convex; civic APIs → MCP, live.</text>
+    <text x="72" y="948" class="bd">zoning, agendas &amp; meeting transcripts → Convex; civic APIs → MCP, live.</text>
     <text x="72" y="970" class="bd">Public data is fair to cache, embed, and re-serve.</text>
     <text x="828" y="924" font-size="16" fill="#1e3a8a" font-weight="700">Queries the PRIVATE record live</text>
     <text x="828" y="948" class="bd">Slack messages → RTS at question time — never stored,</text>
