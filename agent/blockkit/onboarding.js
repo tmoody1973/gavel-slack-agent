@@ -31,7 +31,14 @@ export function nudgeCard(language) {
 /** View 1 — one question, three role buttons (each pushes the confirm view). */
 export function roleModal(language) {
   const t = copyFor(language);
-  const roleButton = (value, text) => ({ type: 'button', text: plain(text), action_id: 'onboarding_pick_role', value });
+  // action_id must be unique within a view (Slack rejects duplicates), so suffix
+  // it with the role; the handler is registered by prefix and reads `value`.
+  const roleButton = (value, text) => ({
+    type: 'button',
+    text: plain(text),
+    action_id: `onboarding_pick_role_${value}`,
+    value,
+  });
   return {
     type: 'modal',
     callback_id: 'onboarding_role_modal',

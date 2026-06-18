@@ -16,7 +16,7 @@ import { makeAskGavel, makeMemberJoined, makeWhatCanYouDo } from './welcome.js';
 export function register(app) {
   const deps = createHomeDeps(app.client);
   app.action('onboarding_open_role', makeOpenRoleModal(deps));
-  app.action('onboarding_pick_role', makeOpenConfirmModal(deps));
+  app.action(/^onboarding_pick_role_/, makeOpenConfirmModal(deps));
   app.view('onboarding_confirm_modal', makeGoLiveSubmit(deps));
 
   app.event('member_joined_channel', makeMemberJoined(deps));

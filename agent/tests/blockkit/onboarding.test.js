@@ -40,14 +40,18 @@ describe('nudgeCard', () => {
 });
 
 describe('roleModal', () => {
-  it('is a modal with the three role buttons wired to onboarding_pick_role', () => {
+  it('is a modal whose three role buttons carry the role and a UNIQUE action_id', () => {
     const view = roleModal('en');
     assert.equal(view.type, 'modal');
     assert.equal(view.callback_id, 'onboarding_role_modal');
     const actions = view.blocks.find((b) => b.type === 'actions');
     const values = actions.elements.map((e) => e.value);
     assert.deepStrictEqual(values, ['association', 'organizer', 'reporter']);
-    for (const e of actions.elements) assert.equal(e.action_id, 'onboarding_pick_role');
+    const ids = actions.elements.map((e) => e.action_id);
+    // Slack rejects a view with duplicate action_ids — they must be distinct...
+    assert.equal(new Set(ids).size, 3, 'action_ids must be unique within the view');
+    // ...and the prefix is what the handler registers against.
+    for (const e of actions.elements) assert.match(e.action_id, /^onboarding_pick_role_/);
   });
 });
 
