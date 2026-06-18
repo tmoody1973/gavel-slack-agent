@@ -3,6 +3,7 @@ import { confirmModal, roleModal } from '../../blockkit/onboarding.js';
 import { publishHome } from '../../home/publish.js';
 import { copyFor } from '../../onboarding/copy.js';
 import { defaultsForRole } from '../../onboarding/defaults.js';
+import { committeesAndKeywordsForTopics } from '../../onboarding/topics.js';
 
 // The 2-taps-to-live setup flow (MOO-118 FD-B). Three thin I/O handlers over the
 // pure builders + the role→defaults engine: open the role modal, push the
@@ -80,11 +81,16 @@ export function makeGoLiveSubmit(deps) {
     }
     await ack();
 
+    // MOO-121: the citizen picks plain-language topic chips; Go-live writes the union
+    // of their committees + keywords. Fall back to the role defaults only when the
+    // chips block is absent (an older modal), so the write is always meaningful.
+    const { committees, keywords } = subscriptionFromTopics(view, defaults);
+
     try {
       await deps.upsertSubscription({
         channelId,
-        committees: defaults.committees,
-        keywords: defaults.keywords,
+        committees,
+        keywords,
         language: defaults.language,
         role,
         configured: true,
@@ -118,6 +124,23 @@ async function postLiveConfirmation({ client, channelId, userId, language, logge
       text: `${t.liveConfirmation}\n(Add me with \`/invite @Gavel\` in that channel so I can post there.)`,
     });
   }
+}
+
+/**
+ * The committees/keywords to write on Go-live. The topic chips are the source of
+ * truth when present (map the selected keys → their union); the role defaults are
+ * the fallback when the chips block didn't render (an older confirm modal).
+ *
+ * @param {{ state?: { values?: object } }} view
+ * @param {{ committees: string[], keywords: string[] }} defaults
+ * @returns {{ committees: string[], keywords: string[] }}
+ */
+function subscriptionFromTopics(view, defaults) {
+  const selected = view.state?.values?.onboarding_topics_block?.onboarding_topics?.selected_options;
+  if (!Array.isArray(selected)) {
+    return { committees: defaults.committees, keywords: defaults.keywords };
+  }
+  return committeesAndKeywordsForTopics(selected.map((option) => option.value));
 }
 
 function readChannelId(metadata) {
