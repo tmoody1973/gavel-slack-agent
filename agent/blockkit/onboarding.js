@@ -53,9 +53,12 @@ export function roleModal(language) {
 /**
  * View 2 — confirm. Pre-filled summary of defaultsForRole(role); primary submit
  * is "Go live" (tap 2). The full config travels in private_metadata so the submit
- * handler writes exactly what was shown (idempotent, no re-derivation drift).
+ * handler writes exactly what was shown (idempotent, no re-derivation drift). The
+ * target channel is a conversations_select, pre-filled when the nudge fired inside
+ * a channel and a picker when setup is launched from the App Home — so both entry
+ * points reach a working write.
  */
-export function confirmModal(role, defaults, language) {
+export function confirmModal(role, defaults, language, channelId = null) {
   const t = copyFor(language);
   const summary = [
     `*${t.confirmHeading}*`,
@@ -65,16 +68,24 @@ export function confirmModal(role, defaults, language) {
   ]
     .filter(Boolean)
     .join('\n');
+  const channelSelect = {
+    type: 'conversations_select',
+    action_id: 'onboarding_channel_select',
+    default_to_current_conversation: true,
+    filter: { include: ['public', 'private'], exclude_bot_users: true },
+  };
+  if (channelId) channelSelect.initial_conversation = channelId;
   return {
     type: 'modal',
     callback_id: 'onboarding_confirm_modal',
-    private_metadata: JSON.stringify({ role, defaults }),
+    private_metadata: JSON.stringify({ role, defaults, channelId }),
     title: plain('Set up Gavel'),
     submit: plain(t.confirmGoLive),
     close: plain(t.confirmCustomize),
     blocks: [
       { type: 'context', elements: [mrkdwn(ROLE_LABEL[role] ?? role)] },
       { type: 'section', text: mrkdwn(summary) },
+      { type: 'input', block_id: 'onboarding_channel', label: plain('Channel'), element: channelSelect },
     ],
   };
 }

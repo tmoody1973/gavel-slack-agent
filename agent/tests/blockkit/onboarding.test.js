@@ -43,6 +43,21 @@ describe('confirmModal', () => {
     const meta = JSON.parse(view.private_metadata);
     assert.equal(meta.role, 'association');
     assert.deepStrictEqual(meta.defaults, defaults);
+    assert.equal(meta.channelId, null);
+  });
+
+  it('pre-fills the channel picker when launched from inside a channel', () => {
+    const view = confirmModal('reporter', defaultsForRole('reporter'), 'en', 'C0B8KS5VCCC');
+    const input = view.blocks.find((b) => b.type === 'input' && b.block_id === 'onboarding_channel');
+    assert.equal(input.element.action_id, 'onboarding_channel_select');
+    assert.equal(input.element.initial_conversation, 'C0B8KS5VCCC');
+    assert.equal(JSON.parse(view.private_metadata).channelId, 'C0B8KS5VCCC');
+  });
+
+  it('omits the pre-fill (shows a picker) when there is no channel context', () => {
+    const view = confirmModal('reporter', defaultsForRole('reporter'), 'en');
+    const input = view.blocks.find((b) => b.type === 'input' && b.block_id === 'onboarding_channel');
+    assert.ok(!('initial_conversation' in input.element), 'no pre-fill when channel unknown');
   });
   it('Spanish role shows the Activar submit label', () => {
     const view = confirmModal('organizer', defaultsForRole('organizer'), 'es');
