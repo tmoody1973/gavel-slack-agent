@@ -64,6 +64,20 @@ test('watch <entity> writes a watch for this channel and confirms it', async () 
   assert.match(h.calls.responds[0].text, /[Ww]atching/);
 });
 
+test('the first watch on a channel proposes a #gavel-watchlist (How → checklist)', async () => {
+  const h = harness({ text: 'watch Punta Cana LLC', watches: [{ entity: 'Punta Cana LLC' }] });
+  await handleGavelCommand(h.args, h.deps);
+  const response = h.calls.responds[0];
+  assert.match(JSON.stringify(response.blocks), /grow_watchlist_how/);
+  assert.match(JSON.stringify(response.blocks), /#gavel-watchlist/);
+});
+
+test('a later watch (channel already has watches) stays plain — no growth prompt', async () => {
+  const h = harness({ text: 'watch Another LLC', watches: [{ entity: 'A' }, { entity: 'Another LLC' }] });
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(h.calls.responds[0].blocks, undefined);
+});
+
 test('watch with no entity explains usage instead of writing', async () => {
   const h = harness({ text: 'watch' });
   await handleGavelCommand(h.args, h.deps);

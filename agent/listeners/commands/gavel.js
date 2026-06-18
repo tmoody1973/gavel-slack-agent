@@ -1,3 +1,4 @@
+import { growWatchlistPrompt } from '../../blockkit/grow.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
 const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest'];
@@ -54,8 +55,9 @@ export async function handleGavelCommand({ command, ack, respond, logger }, deps
         return;
       }
     }
-    const text = await runSubcommand({ subcommand, args, channelId }, deps);
-    await respond({ response_type: 'ephemeral', text });
+    const result = await runSubcommand({ subcommand, args, channelId }, deps);
+    const message = typeof result === 'string' ? { text: result } : result;
+    await respond({ response_type: 'ephemeral', ...message });
   } catch (err) {
     logger?.error?.(`/gavel ${subcommand} failed: ${err.message}`);
     await respond({ response_type: 'ephemeral', text: ':warning: Something went wrong — please try again.' });
@@ -83,7 +85,17 @@ async function runWatch({ args, channelId }, deps) {
     return 'Usage: `/gavel watch <entity>` — e.g. `/gavel watch 2000 S 13th St` or `/gavel watch File #260229`.';
   }
   await deps.addWatch({ channelId, entity });
-  return `👁 Watching *${entity}* — I’ll alert this channel when it shows up in the official record.`;
+  const text = `👁 Watching *${entity}* — I’ll alert this channel when it shows up in the official record.`;
+
+  // FD-D adaptive growth: the *first* watch on a channel proposes a dedicated
+  // #gavel-watchlist (a nudge + How → checklist). Subsequent watches stay plain.
+  const watches = await deps.listWatches(channelId);
+  if (watches.length === 1) {
+    const subscription = await deps.getSubscription(channelId);
+    const prompt = growWatchlistPrompt(subscription?.language ?? 'en');
+    return { text, blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }, ...prompt.blocks] };
+  }
+  return text;
 }
 
 async function runUnwatch({ args, channelId }, deps) {

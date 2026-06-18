@@ -134,6 +134,30 @@ describe('makeGoLiveSubmit', () => {
     assert.ok(calls.published, 'Home republished after the write');
   });
 
+  it('an organizer also gets the per-area growth proposal posted (FD-D)', async () => {
+    const posts = [];
+    const deps = homeDeps();
+    const client = {
+      chat: { postMessage: async (args) => posts.push(args) },
+      views: { publish: async () => {} },
+    };
+    const organizerMeta = JSON.stringify({
+      role: 'organizer',
+      defaults: { committees: ['LICENSES COMMITTEE'], keywords: ['permit'], language: 'es' },
+      channelId: 'C1',
+    });
+    await makeGoLiveSubmit(deps)({
+      ack: async () => {},
+      body: { user: { id: 'U1' } },
+      view: { private_metadata: organizerMeta, state: { values: {} } },
+      client,
+      logger,
+    });
+    // first post = live confirmation, second = the per-area proposal
+    assert.equal(posts.length, 2);
+    assert.match(JSON.stringify(posts[1].blocks), /#civic-/);
+  });
+
   it('prefers the picker-selected channel over the metadata channel', async () => {
     let upsert;
     const deps = homeDeps({

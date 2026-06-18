@@ -56,6 +56,12 @@ test('the configured hub offers a Set up another channel onboarding button', () 
   assert.match(all, /Set up another channel/);
 });
 
+test('the configured hub offers the multi-neighborhood growth button (FD-D)', () => {
+  const all = JSON.stringify(homeView(state).blocks);
+  assert.ok(all.includes('grow_areas'));
+  assert.match(all, /multiple neighborhoods/);
+});
+
 test('homeView renders the setup CTA when there are no subscribed channels', () => {
   const view = homeView({ strip: { meetings: 0, lateAdds: 0, watchHits: 0 }, watches: [], channels: [] });
   const all = JSON.stringify(view.blocks);

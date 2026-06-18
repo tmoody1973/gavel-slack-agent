@@ -47,6 +47,11 @@ export function homeView({ strip, watches, channels }) {
           action_id: 'onboarding_open_role',
           text: { type: 'plain_text', text: '＋ Set up another channel', emoji: true },
         },
+        {
+          type: 'button',
+          action_id: 'grow_areas',
+          text: { type: 'plain_text', text: '🏘 I cover multiple neighborhoods', emoji: true },
+        },
       ],
     },
     {
