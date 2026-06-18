@@ -55,4 +55,26 @@ describe('normalizeSubscription', () => {
     assert.deepStrictEqual(withBoundary.boundary, { type: 'district', value: '12' });
     assert.ok(!('boundary' in normalizeSubscription(base)), 'boundary should be omitted when not provided');
   });
+
+  it('passes through onboarding fields when present and omits them when absent', () => {
+    const withOnboarding = normalizeSubscription({
+      channelId: 'C1',
+      committees: ['LICENSES COMMITTEE'],
+      language: 'es',
+      role: 'organizer',
+      configured: true,
+      onboardedAt: 1718000000000,
+    });
+    assert.equal(withOnboarding.role, 'organizer');
+    assert.equal(withOnboarding.configured, true);
+    assert.equal(withOnboarding.onboardedAt, 1718000000000);
+
+    const bare = normalizeSubscription({ channelId: 'C1', committees: ['LICENSES COMMITTEE'] });
+    assert.ok(!('role' in bare), 'role omitted when absent');
+    assert.ok(!('configured' in bare), 'configured omitted when absent');
+  });
+
+  it('rejects an unrecognized role rather than writing garbage', () => {
+    assert.throws(() => normalizeSubscription({ channelId: 'C1', role: 'mayor' }), /role/);
+  });
 });

@@ -5,6 +5,7 @@
 
 export const CLIENTS = ['milwaukee', 'milwaukeecounty'];
 export const LANGUAGES = ['en', 'es'];
+export const ROLES = ['association', 'organizer', 'reporter'];
 const DEFAULT_CLIENT = 'milwaukee';
 const DEFAULT_LANGUAGE = 'en';
 
@@ -16,9 +17,13 @@ const DEFAULT_LANGUAGE = 'en';
  * @property {string[]} [keywords]
  * @property {string} [language]
  * @property {{ type: string, value: string }} [boundary]
+ * @property {'association'|'organizer'|'reporter'} [role]  — onboarding: channel role bucket
+ * @property {boolean} [configured]                          — onboarding: setup wizard completed
+ * @property {number} [onboardedAt]                          — onboarding: epoch ms when onboarding finished
+ * @property {number} [welcomePostedAt]                      — onboarding: epoch ms when welcome card was posted
  *
  * @param {SubscriptionInput} input
- * @returns {{ channelId: string, client: string, committees: string[], keywords: string[], language: string, boundary?: { type: 'district', value: string } }}
+ * @returns {{ channelId: string, client: string, committees: string[], keywords: string[], language: string, boundary?: { type: 'district', value: string }, role?: 'association'|'organizer'|'reporter', configured?: boolean, onboardedAt?: number, welcomePostedAt?: number }}
  */
 export function normalizeSubscription(input) {
   const channelId = (input?.channelId ?? '').trim();
@@ -45,6 +50,16 @@ export function normalizeSubscription(input) {
   if (boundary) {
     result.boundary = boundary;
   }
+
+  if (input.role !== undefined) {
+    if (!ROLES.includes(input.role)) {
+      throw new Error(`normalizeSubscription: unrecognized role "${input.role}" (expected ${ROLES.join(', ')})`);
+    }
+    result.role = input.role;
+  }
+  if (input.configured !== undefined) result.configured = Boolean(input.configured);
+  if (typeof input.onboardedAt === 'number') result.onboardedAt = input.onboardedAt;
+  if (typeof input.welcomePostedAt === 'number') result.welcomePostedAt = input.welcomePostedAt;
 
   return result;
 }
