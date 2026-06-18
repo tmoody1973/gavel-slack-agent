@@ -79,7 +79,12 @@ export function confirmModal(role, defaults, language) {
   };
 }
 
-/** App Home before any setup — warm intro + Set up button (the fallback path). */
+/**
+ * App Home before any setup — warm intro + Set up button (the fallback path).
+ * The configured-state hub is the richer MOO-74 `homeView`, which now carries the
+ * "Set up another channel" onboarding button; there is intentionally no separate
+ * configured builder here (one hub, no duplication).
+ */
 export function homeFirstRun(language) {
   const t = copyFor(language);
   return {
@@ -90,29 +95,6 @@ export function homeFirstRun(language) {
       {
         type: 'actions',
         elements: [{ type: 'button', style: 'primary', text: plain(t.nudgeButton), action_id: 'onboarding_open_role' }],
-      },
-    ],
-  };
-}
-
-/** App Home once at least one channel is configured — status strip + re-entry. */
-export function homeConfigured(state) {
-  const rows = (state.channels ?? []).map((channel) => ({
-    type: 'section',
-    text: mrkdwn(
-      `✅ *#${channel.channelName}* · ${channel.committees.join(', ') || '_no committees_'} · ${
-        channel.language === 'es' ? 'Español' : 'English'
-      }`,
-    ),
-  }));
-  return {
-    type: 'home',
-    blocks: [
-      { type: 'header', text: plain("Gavel — you're set up 🏛️") },
-      ...rows,
-      {
-        type: 'actions',
-        elements: [{ type: 'button', text: plain('Set up another channel'), action_id: 'onboarding_open_role' }],
       },
     ],
   };

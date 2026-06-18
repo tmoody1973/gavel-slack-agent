@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { confirmModal, homeConfigured, homeFirstRun, nudgeCard, roleModal } from '../../blockkit/onboarding.js';
+import { confirmModal, homeFirstRun, nudgeCard, roleModal } from '../../blockkit/onboarding.js';
 import { defaultsForRole } from '../../onboarding/defaults.js';
 
 describe('nudgeCard', () => {
@@ -57,19 +57,5 @@ describe('homeFirstRun', () => {
     const json = JSON.stringify(view);
     assert.match(json, /onboarding_open_role/);
     assert.match(json, /Set up Gavel/);
-  });
-});
-
-describe('homeConfigured', () => {
-  it('renders a status strip from configured channels', () => {
-    const view = homeConfigured({
-      channels: [
-        { channelName: 'civic-alerts', committees: ['LICENSES COMMITTEE'], language: 'es', role: 'organizer' },
-      ],
-    });
-    assert.equal(view.type, 'home');
-    const json = JSON.stringify(view);
-    assert.match(json, /civic-alerts/);
-    assert.match(json, /Español|Spanish/);
   });
 });

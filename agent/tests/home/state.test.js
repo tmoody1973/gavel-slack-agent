@@ -69,4 +69,28 @@ test('a failed channel-name lookup degrades to the raw id', async () => {
 test('no subscriptions yields the empty state regardless of other data', async () => {
   const state = await buildHomeState(deps({ listSubscriptions: async () => [] }));
   assert.deepEqual(state.channels, []);
+  assert.equal(state.configuredCount, 0);
+});
+
+test('reports configuredCount and surfaces per-channel role/configured', async () => {
+  const state = await buildHomeState(
+    deps({
+      listSubscriptions: async () => [
+        {
+          channelId: 'C1',
+          committees: ['LICENSES COMMITTEE'],
+          keywords: [],
+          language: 'en',
+          configured: true,
+          role: 'reporter',
+        },
+        { channelId: 'C2', committees: [], keywords: ['liquor'], language: 'en' },
+      ],
+    }),
+  );
+  assert.equal(state.configuredCount, 1);
+  assert.equal(state.channels[0].role, 'reporter');
+  assert.equal(state.channels[0].configured, true);
+  assert.equal(state.channels[1].configured, false);
+  assert.equal(state.channels[1].role, null);
 });

@@ -40,6 +40,16 @@ export function homeView({ strip, watches, channels }) {
     mrkdwn('*⚙️ Channel alerts*'),
     ...channels.slice(0, MAX_CHANNEL_ROWS).flatMap(channelBlocks),
     {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          action_id: 'onboarding_open_role',
+          text: { type: 'plain_text', text: '＋ Set up another channel', emoji: true },
+        },
+      ],
+    },
+    {
       type: 'context',
       elements: [
         {
