@@ -73,6 +73,7 @@
         "app_home_opened",
         "app_mention",
         "assistant_thread_started",
+        "member_joined_channel",
         "message.channels",
         "message.groups",
         "message.im"

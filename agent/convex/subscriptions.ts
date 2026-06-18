@@ -81,6 +81,29 @@ export const setLanguage = mutation({
   },
 });
 
+/**
+ * Member-welcome dedup (MOO-119 FD-C). Atomically claims the one-and-only welcome
+ * post for a configured channel: returns { posted: true, language } the first time
+ * and { posted: false, reason } forever after (or when the channel isn't a
+ * configured civic channel). Because Convex mutations are transactional, concurrent
+ * joins can't both win — exactly one caller gets posted:true.
+ */
+export const markWelcomePosted = mutation({
+  args: { channelId: v.string() },
+  handler: async (ctx, { channelId }) => {
+    const existing = await ctx.db
+      .query('subscriptions')
+      .withIndex('by_channel', (q) => q.eq('channelId', channelId))
+      .unique();
+    if (!existing) return { posted: false, reason: 'no_subscription' };
+    if (!existing.configured) return { posted: false, reason: 'not_configured' };
+    if (existing.welcomePostedAt) return { posted: false, reason: 'already_posted' };
+    const now = Date.now();
+    await ctx.db.patch(existing._id, { welcomePostedAt: now, updatedAt: now });
+    return { posted: true, language: existing.language };
+  },
+});
+
 /** Remove a channel's subscription. Returns the deleted id, or null if none. */
 export const removeSubscription = mutation({
   args: { channelId: v.string() },

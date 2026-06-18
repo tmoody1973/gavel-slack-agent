@@ -31,7 +31,14 @@ export function nudgeCard(language) {
 /** View 1 — one question, three role buttons (each pushes the confirm view). */
 export function roleModal(language) {
   const t = copyFor(language);
-  const roleButton = (value, text) => ({ type: 'button', text: plain(text), action_id: 'onboarding_pick_role', value });
+  // action_id must be unique within a view (Slack rejects duplicates), so suffix
+  // it with the role; the handler is registered by prefix and reads `value`.
+  const roleButton = (value, text) => ({
+    type: 'button',
+    text: plain(text),
+    action_id: `onboarding_pick_role_${value}`,
+    value,
+  });
   return {
     type: 'modal',
     callback_id: 'onboarding_role_modal',
@@ -86,6 +93,34 @@ export function confirmModal(role, defaults, language, channelId = null) {
       { type: 'context', elements: [mrkdwn(ROLE_LABEL[role] ?? role)] },
       { type: 'section', text: mrkdwn(summary) },
       { type: 'input', block_id: 'onboarding_channel', label: plain('Channel'), element: channelSelect },
+    ],
+  };
+}
+
+/**
+ * Member welcome (MOO-119 FD-C) — the 5-second orientation every resident sees the
+ * first time Gavel posts in their channel. Bilingual per the channel language; the
+ * "What can you do?" action surfaces a transcript example (the third memory). Each
+ * button carries the language in its value so the threaded reply stays in-language.
+ */
+export function memberWelcomeCard(language) {
+  const t = copyFor(language);
+  return {
+    blocks: [
+      { type: 'section', text: mrkdwn(t.memberWelcome) },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            style: 'primary',
+            text: plain(t.memberAsk),
+            action_id: 'member_ask_gavel',
+            value: language,
+          },
+          { type: 'button', text: plain(t.memberWhatCanYouDo), action_id: 'member_what_can_you_do', value: language },
+        ],
+      },
     ],
   };
 }
