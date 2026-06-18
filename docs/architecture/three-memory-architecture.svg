@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1040" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .h1   { font-size: 34px; font-weight: 800; fill: #0f172a; }
+      .h1b  { font-size: 34px; font-weight: 800; fill: #4f46e5; }
+      .sub  { font-size: 16px; fill: #475569; }
+      .sect { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; fill: #64748b; }
+      .ct   { font-size: 19px; font-weight: 800; fill: #0f172a; }
+      .cs   { font-size: 13.5px; font-weight: 600; fill: #475569; }
+      .bd   { font-size: 13.5px; fill: #334155; }
+      .mono { font-size: 12px; fill: #0f766e; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
+      .monob{ font-size: 12px; fill: #1d4ed8; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
+      .tag  { font-size: 11.5px; font-weight: 800; letter-spacing: 0.6px; }
+      .leg  { font-size: 13px; fill: #334155; font-weight: 600; }
+      .chip { font-size: 13.5px; font-weight: 700; fill: #1e293b; }
+      .star { font-size: 12px; font-weight: 800; fill: #b45309; }
+      .foot { font-size: 11.5px; fill: #94a3b8; font-style: italic; }
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrG" markerWidth="11" markerHeight="11" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#4f46e5"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1040" fill="#f8fafc"/>
+
+  <!-- ===== Title ===== -->
+  <text x="44" y="52" class="h1">Gavel <tspan class="h1b">· Three-Memory Architecture</tspan></text>
+  <text x="45" y="80" class="sub">One Slack agent orchestrating three retrieval modalities over Milwaukee civic data — fusing the official record with the community’s own memory.</text>
+
+  <!-- ===== Legend ===== -->
+  <g transform="translate(1180,30)">
+    <rect x="0" y="0" width="376" height="62" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="14" y="14" width="14" height="14" rx="3" fill="#16a34a"/>
+    <text x="36" y="26" class="leg">Public record — safe to index / cache</text>
+    <rect x="14" y="36" width="14" height="14" rx="3" fill="#2563eb"/>
+    <text x="36" y="48" class="leg">Private record (Slack) — live only, never stored</text>
+  </g>
+
+  <!-- ===== Slack surfaces band ===== -->
+  <g>
+    <rect x="44" y="104" width="1512" height="96" rx="14" fill="#eef2f6" stroke="#cbd5e1"/>
+    <text x="64" y="128" class="sect">SLACK WORKSPACE · WHAT NEIGHBORS SEE</text>
+    <rect x="1058" y="113" width="480" height="24" rx="12" fill="#fef9c3" stroke="#eab308"/>
+    <text x="1072" y="129" class="star">★ Slack Platform · Bolt agent · Block Kit · App Home · Assistant threads (Slack AI)</text>
+    <g transform="translate(64,142)">
+      <rect x="0"    y="0" width="350" height="44" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+      <text x="16" y="27" class="chip">📣 Proactive alert cards · Block Kit · EN/ES</text>
+      <rect x="372"  y="0" width="300" height="44" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+      <text x="388" y="27" class="chip">⌨️ Slash commands · /gavel …</text>
+      <rect x="690"  y="0" width="270" height="44" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+      <text x="706" y="27" class="chip">🏠 App Home · subscriptions, watches</text>
+      <rect x="978"  y="0" width="380" height="44" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+      <text x="994" y="27" class="chip">💬 Assistant threads · ask Gavel · EN/ES</text>
+    </g>
+  </g>
+
+  <!-- surfaces <-> agent arrows -->
+  <line x1="300" y1="224" x2="300" y2="202" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="312" y="216" class="foot">proactive push</text>
+  <line x1="700" y1="200" x2="700" y2="222" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="760" y1="224" x2="760" y2="202" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="772" y="216" class="foot">ask / reply</text>
+
+  <!-- ===== Poller ===== -->
+  <g>
+    <rect x="44" y="224" width="372" height="196" rx="14" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="64" y="250" class="ct">⏱ Ingestion → alerts</text>
+    <text x="64" y="270" class="cs">gavel-poller · Fly.io · supercronic cron</text>
+    <text x="64" y="298" class="bd">*/5 Legistar poll → detect → summarize → alert</text>
+    <text x="64" y="320" class="bd">0 */6 escalate · 0 13 watch · 0 14 Sun digest</text>
+    <text x="64" y="342" class="bd">Walk-on / agenda-change detector</text>
+    <line x1="64" y1="357" x2="392" y2="357" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="64" y="378" class="cs">📨 AgentMail E-Notify · webhook</text>
+    <text x="64" y="398" class="bd">city E-Notify emails → civicNotifications</text>
+  </g>
+
+  <!-- ===== Agent core ===== -->
+  <g>
+    <rect x="440" y="224" width="688" height="196" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+    <text x="464" y="252" class="ct">🧠 Gavel Agent</text>
+    <text x="464" y="272" class="cs">gavel-app · Slack Bolt (Socket Mode) · Claude Agent SDK</text>
+    <rect x="464" y="288" width="640" height="40" rx="9" fill="#ffffff" stroke="#c7d2fe"/>
+    <text x="480" y="313" class="bd"><tspan font-weight="800" fill="#4f46e5">Claude Sonnet 4.6</tspan>  ·  summarize · agent loop · tool routing</text>
+    <text x="464" y="350" class="bd">Generates plain-English <tspan font-weight="700">EN + ES natively</tspan> — no translation API, a curated civic glossary in-prompt.</text>
+    <text x="464" y="374" class="bd">Routes every question to the right memory ↓ and composes one bilingual answer.</text>
+    <text x="464" y="402" class="foot">External: Anthropic Claude · OpenAI embeddings · Census Geocoder · Fly.io</text>
+  </g>
+
+  <!-- ===== Convex app state ===== -->
+  <g>
+    <rect x="1152" y="224" width="404" height="196" rx="14" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="1174" y="250" class="ct">🗄 Convex</text>
+    <text x="1174" y="270" class="cs">application state + cached snapshots</text>
+    <text x="1174" y="298" class="bd">subscriptions · watches · watchAlerts</text>
+    <text x="1174" y="320" class="bd">matterEscalations · detectedAgendaItems</text>
+    <text x="1174" y="342" class="bd">matterOutcomes · civicNotifications</text>
+    <text x="1174" y="364" class="bd">councilMembers · cached lookup tables</text>
+    <text x="1174" y="388" class="foot">Config + civic-record keys only —</text>
+    <text x="1174" y="402" class="foot">never any Slack message content.</text>
+  </g>
+
+  <!-- agent <-> state -->
+  <line x1="1128" y1="322" x2="1150" y2="322" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="1150" y1="300" x2="1128" y2="300" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- agent -> three memories -->
+  <line x1="290" y1="420" x2="290" y2="450" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#arrG)"/>
+  <line x1="800" y1="420" x2="800" y2="450" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#arrG)"/>
+  <line x1="1316" y1="420" x2="1316" y2="450" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#arrG)"/>
+  <text x="650" y="442" class="sect">THE THREE MEMORIES — ONE ORCHESTRATOR</text>
+
+  <!-- ===== ① Structured Civic Data (MCP) ===== -->
+  <g>
+    <rect x="44" y="452" width="492" height="372" rx="14" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+    <rect x="44" y="452" width="492" height="46" rx="14" fill="#16a34a"/>
+    <rect x="44" y="476" width="492" height="22" fill="#16a34a"/>
+    <text x="66" y="482" fill="#ffffff" font-size="18" font-weight="800">①  Structured Civic Data</text>
+    <text x="66" y="524" class="cs">Milwaukee Civic MCP server — custom, open-source</text>
+    <text x="66" y="552" class="bd"><tspan font-weight="700">Legistar Web API (OData)</tspan> — agendas, matters,</text>
+    <text x="66" y="570" class="bd">sponsors, MatterHistory, full text</text>
+    <text x="66" y="596" class="bd"><tspan font-weight="700">Milwaukee CKAN datastore</tspan> — MPROP parcels /</text>
+    <text x="66" y="614" class="bd">owners, building permits</text>
+    <text x="66" y="646" class="mono">get_matter · get_matter_history · search_matters</text>
+    <text x="66" y="664" class="mono">get_sponsors · get_upcoming_events</text>
+    <text x="66" y="682" class="mono">lookup_parcel · get_permits</text>
+    <text x="66" y="700" class="mono">get_ownership_portfolio · check_zoning</text>
+    <rect x="66" y="724" width="270" height="26" rx="13" fill="#dcfce7"/>
+    <text x="80" y="741" class="tag" fill="#166534">LIVE · AUTHORITATIVE · NOT STORED</text>
+    <rect x="66" y="762" width="180" height="28" rx="14" fill="#fef9c3" stroke="#eab308"/>
+    <text x="80" y="780" class="star">★ Required: Custom MCP server</text>
+  </g>
+
+  <!-- ===== ② Semantic Civic Memory (Convex vectors) ===== -->
+  <g>
+    <rect x="556" y="452" width="492" height="372" rx="14" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+    <rect x="556" y="452" width="492" height="46" rx="14" fill="#16a34a"/>
+    <rect x="556" y="476" width="492" height="22" fill="#16a34a"/>
+    <text x="578" y="482" fill="#ffffff" font-size="18" font-weight="800">②  Semantic Civic Memory</text>
+    <text x="578" y="522" class="cs">Convex vector DB · two public-record namespaces</text>
+    <text x="578" y="550" class="bd">▸ <tspan font-weight="700">zoning_code</tspan> — Zoning Code Ch. 295 · 116 chunks</text>
+    <text x="578" y="568" class="mono">ask_zoning_code → cited §295-NNN answers</text>
+    <text x="578" y="598" class="bd">▸ <tspan font-weight="700">transcripts</tspan> — diarized committee webcasts</text>
+    <text x="578" y="616" class="bd">speaker-turn chunks · agenda-item + timestamp meta</text>
+    <text x="578" y="634" class="mono">search_transcripts · get_video_moment</text>
+    <text x="578" y="652" class="bd">→ speaker quote + ▶ timestamped Granicus clip</text>
+    <rect x="578" y="694" width="248" height="26" rx="13" fill="#dcfce7"/>
+    <text x="592" y="711" class="tag" fill="#166534">INDEXED · PUBLIC RECORD ONLY</text>
+    <text x="578" y="742" class="foot">Deepgram Nova-3 · OpenAI text-embedding-3-small · ffmpeg/yt-dlp clips</text>
+  </g>
+
+  <!-- ===== ③ Live Community Memory (RTS) ===== -->
+  <g>
+    <rect x="1068" y="452" width="488" height="372" rx="14" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+    <rect x="1068" y="452" width="488" height="46" rx="14" fill="#2563eb"/>
+    <rect x="1068" y="476" width="488" height="22" fill="#2563eb"/>
+    <text x="1090" y="482" fill="#ffffff" font-size="18" font-weight="800">③  Live Community Memory</text>
+    <text x="1090" y="524" class="cs">Slack Real-Time Search API</text>
+    <text x="1090" y="552" class="bd"><tspan font-weight="700">assistant.search.context</tspan> — queried live over</text>
+    <text x="1090" y="570" class="bd">the workspace’s own discussion history</text>
+    <text x="1090" y="596" class="bd">EN + ES queries issued in parallel and</text>
+    <text x="1090" y="614" class="bd">merged; dedup by channel:ts, newest-first</text>
+    <text x="1090" y="646" class="monob">search_community_memory(query)</text>
+    <text x="1090" y="682" class="bd">Fuses “what the city filed” with</text>
+    <text x="1090" y="700" class="bd">“what neighbors already said.”</text>
+    <rect x="1090" y="724" width="330" height="26" rx="13" fill="#dbeafe"/>
+    <text x="1104" y="741" class="tag" fill="#1e3a8a">LIVE · NEVER STORED / COPIED / INDEXED</text>
+    <rect x="1090" y="762" width="166" height="28" rx="14" fill="#fef9c3" stroke="#eab308"/>
+    <text x="1104" y="780" class="star">★ Required: Slack RTS API</text>
+  </g>
+
+  <!-- ===== Compliance banner ===== -->
+  <g>
+    <rect x="44" y="852" width="1512" height="150" rx="16" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="44" y="852" width="756" height="150" rx="16" fill="#f0fdf4"/>
+    <rect x="780" y="852" width="20" height="150" fill="#f0fdf4"/>
+    <rect x="800" y="852" width="756" height="150" fill="#eff6ff"/>
+    <rect x="1540" y="852" width="16" height="150" rx="16" fill="#eff6ff"/>
+    <rect x="44" y="852" width="1512" height="150" rx="16" fill="none" stroke="#cbd5e1"/>
+    <text x="72" y="892" font-size="17" font-weight="800" fill="#0f172a">COMPLIANCE BY DESIGN — the load-bearing claim</text>
+    <text x="72" y="924" font-size="16" fill="#166534" font-weight="700">Indexes the PUBLIC record</text>
+    <text x="72" y="948" class="bd">zoning, agendas &amp; meeting transcripts → Convex; civic APIs → MCP, live.</text>
+    <text x="72" y="970" class="bd">Public data is fair to cache, embed, and re-serve.</text>
+    <text x="828" y="924" font-size="16" fill="#1e3a8a" font-weight="700">Queries the PRIVATE record live</text>
+    <text x="828" y="948" class="bd">Slack messages → RTS at question time — never stored,</text>
+    <text x="828" y="970" class="bd">copied, or indexed. (mem0 was deliberately rejected.)</text>
+    <text x="72" y="992" class="foot">The ToS-safe fusion of official civic memory + community memory — the architecture’s central design claim.</text>
+  </g>
+</svg>
