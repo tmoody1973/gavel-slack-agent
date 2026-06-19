@@ -28,6 +28,8 @@ export const REQUIRED_KEYS = [
   'growHow',
   'growChecklist',
   'growAreasIntro',
+  'sampleIntro',
+  'sampleNone',
 ];
 
 export const COPY = {
@@ -55,6 +57,8 @@ export const COPY = {
       "1) Create a #gavel-watchlist channel · 2) /invite @Gavel · 3) Done — I'll route every watch hit there.",
     growAreasIntro:
       'Cover more than one neighborhood? Give each its own channel so alerts stay local: 1) Create a channel per area (e.g. #civic-riverwest, #civic-bayview) · 2) /invite @Gavel · 3) Run `/gavel` in each to set its committees + language. I propose; you create.',
+    sampleIntro: "Here's a live example from this week — alerts like this arrive automatically, no watching required:",
+    sampleNone: "Nothing on the agenda for your topics this week — I'll alert you here the moment something lands.",
   },
   es: {
     nudgeIntro: '👋 Soy Gavel — vigilo el ayuntamiento de Milwaukee para que tus vecinos no tengan que hacerlo.',
@@ -80,6 +84,9 @@ export const COPY = {
       '1) Crea un canal #gavel-watchlist · 2) /invite @Gavel · 3) Listo — enviaré cada aviso de seguimiento ahí.',
     growAreasIntro:
       '¿Cubres más de un barrio? Dale a cada uno su propio canal para que las alertas sigan siendo locales: 1) Crea un canal por zona (p. ej. #civic-riverwest, #civic-bayview) · 2) /invite @Gavel · 3) Ejecuta `/gavel` en cada uno para fijar sus comités e idioma. Yo propongo; tú creas.',
+    sampleIntro:
+      'Aquí tienes un ejemplo real de esta semana — las alertas como esta llegan automáticamente, no hace falta seguir nada:',
+    sampleNone: 'No hay nada en la agenda para tus temas esta semana — te avisaré aquí en cuanto aparezca algo.',
   },
 };
 

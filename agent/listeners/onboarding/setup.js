@@ -1,5 +1,7 @@
+import { pickSampleItem } from '../../alerts/sample.js';
 import { growAreasBlocks } from '../../blockkit/grow.js';
 import { confirmModal, roleModal } from '../../blockkit/onboarding.js';
+import { sampleAlertCard } from '../../blockkit/sample-alert.js';
 import { publishHome } from '../../home/publish.js';
 import { copyFor } from '../../onboarding/copy.js';
 import { defaultsForRole } from '../../onboarding/defaults.js';
@@ -85,6 +87,9 @@ export function makeGoLiveSubmit(deps) {
     // of their committees + keywords. Fall back to the role defaults only when the
     // chips block is absent (an older modal), so the write is always meaningful.
     const { committees, keywords } = subscriptionFromTopics(view, defaults);
+    // MOO-122: the sample alert teaches a brand-new channel by example — gate on
+    // first-configure (no prior subscription) so a re-run doesn't repost it.
+    const firstConfigure = await isFirstConfigure(deps, channelId);
 
     try {
       await deps.upsertSubscription({
@@ -98,6 +103,12 @@ export function makeGoLiveSubmit(deps) {
       });
       await publishHome({ client, userId: body.user.id }, deps, logger);
       await postLiveConfirmation({ client, channelId, userId: body.user.id, language: defaults.language, logger });
+      // MOO-122: "show, don't tell" — right after the confirmation, post one real
+      // matching upcoming item (or a graceful one-liner) so the citizen sees what an
+      // alert looks like and learns the 👁 Watch affordance.
+      if (firstConfigure) {
+        await postSampleAlert({ client, channelId, committees, keywords, language: defaults.language, deps, logger });
+      }
       // FD-D: organizers cover multiple neighborhoods — propose per-area channels.
       if (role === 'organizer') {
         await client.chat.postMessage({
@@ -110,6 +121,42 @@ export function makeGoLiveSubmit(deps) {
       logger.error(`onboarding go-live submit failed: ${error}`);
     }
   };
+}
+
+/**
+ * True only when this Go-live is the channel's first configure (no prior
+ * subscription row). The gate keeps the sample alert from reposting when a user
+ * re-runs setup to change topics. Defensive: a missing dep or read error → false
+ * (skip the sample) so it can never block or duplicate the live confirmation.
+ */
+async function isFirstConfigure(deps, channelId) {
+  if (typeof deps.getSubscription !== 'function') return false;
+  try {
+    return !(await deps.getSubscription(channelId));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Post the "show, don't tell" sample: the soonest real upcoming item that matches
+ * the new config, as a card with a working 👁 Watch button — or a graceful one-liner
+ * when nothing matches. Wrapped so a failure never breaks Go-live (the confirmation
+ * is already sent).
+ */
+async function postSampleAlert({ client, channelId, committees, keywords, language, deps, logger }) {
+  try {
+    const upcoming = typeof deps.listUpcoming === 'function' ? await deps.listUpcoming() : [];
+    const item = pickSampleItem(upcoming, { channelId, committees, keywords });
+    if (item) {
+      const card = sampleAlertCard(item, language);
+      await client.chat.postMessage({ channel: channelId, text: card.text, blocks: card.blocks });
+    } else {
+      await client.chat.postMessage({ channel: channelId, text: copyFor(language).sampleNone });
+    }
+  } catch (error) {
+    logger.error(`onboarding sample alert failed: ${error}`);
+  }
 }
 
 /** Post the "you're live" line in the channel; DM the installer if posting is blocked. */
