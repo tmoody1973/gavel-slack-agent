@@ -1,4 +1,5 @@
 import { copyFor } from '../onboarding/copy.js';
+import { topicChoices, topicsFor } from '../onboarding/topics.js';
 
 // Pure Block Kit builders for the Front Door (MOO-118 FD-B · spec §2). Each takes
 // a language (or assembled Home state) and returns Block Kit JSON — no I/O, no
@@ -67,14 +68,17 @@ export function roleModal(language) {
  */
 export function confirmModal(role, defaults, language, channelId = null) {
   const t = copyFor(language);
-  const summary = [
-    `*${t.confirmHeading}*`,
-    `🏛 ${defaults.committees.join(', ')}`,
-    defaults.keywords.length ? `🔑 ${defaults.keywords.join(', ')}` : null,
-    `🌐 ${defaults.language === 'es' ? 'Español' : 'English'}`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  // MOO-121: the citizen-facing selector is plain-language topic chips, pre-checked
+  // from the role defaults (reverse-mapped) so the 2-tap "just press Go live" floor
+  // holds. Raw committee names are hidden here — they live under the Home "Advanced"
+  // channel-config modal. The full defaults still travel in private_metadata as the
+  // write-through fallback when the chips block is somehow absent.
+  const topicOptions = topicChoices(language).map((choice) => ({ text: plain(choice.label), value: choice.key }));
+  const onTopics = topicsFor(defaults.committees, defaults.keywords);
+  const initialTopics = topicOptions.filter((option) => onTopics.includes(option.value));
+  const topicsElement = { type: 'checkboxes', action_id: 'onboarding_topics', options: topicOptions };
+  if (initialTopics.length) topicsElement.initial_options = initialTopics;
+
   const channelSelect = {
     type: 'conversations_select',
     action_id: 'onboarding_channel_select',
@@ -91,7 +95,8 @@ export function confirmModal(role, defaults, language, channelId = null) {
     close: plain(t.confirmCustomize),
     blocks: [
       { type: 'context', elements: [mrkdwn(ROLE_LABEL[role] ?? role)] },
-      { type: 'section', text: mrkdwn(summary) },
+      { type: 'input', block_id: 'onboarding_topics_block', label: plain(t.confirmHeading), element: topicsElement },
+      { type: 'context', elements: [mrkdwn(`🌐 ${defaults.language === 'es' ? 'Español' : 'English'}`)] },
       { type: 'input', block_id: 'onboarding_channel', label: plain('Channel'), element: channelSelect },
     ],
   };

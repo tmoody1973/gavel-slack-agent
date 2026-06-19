@@ -89,6 +89,52 @@ describe('confirmModal', () => {
   });
 });
 
+describe('confirmModal topic chips (MOO-121)', () => {
+  const findTopics = (view) => view.blocks.find((b) => b.type === 'input' && b.block_id === 'onboarding_topics_block');
+
+  it('renders plain-language topic chips as a checkboxes input with a unique action_id', () => {
+    const view = confirmModal('association', defaultsForRole('association'), 'en');
+    const block = findTopics(view);
+    assert.ok(block, 'confirm modal carries a topics input block');
+    assert.equal(block.element.type, 'checkboxes');
+    assert.equal(block.element.action_id, 'onboarding_topics');
+    const values = block.element.options.map((o) => o.value);
+    assert.deepStrictEqual(values, ['housing', 'licenses', 'streets', 'parks', 'safety', 'budget']);
+    // every chip is plain English language, not a committee EventBodyName
+    assert.match(JSON.stringify(block.element.options), /Housing & development/);
+    assert.doesNotMatch(JSON.stringify(block.element.options), /COMMITTEE/);
+    // action_ids unique across the whole view (the FD-B duplicate-id bug)
+    const ids = JSON.stringify(view).match(/"action_id":"[^"]+"/g) ?? [];
+    assert.equal(new Set(ids).size, ids.length, 'all action_ids unique within the view');
+  });
+
+  it('pre-checks the chips that map from the role defaults', () => {
+    // association defaults → ZONING/LICENSES/CED ⇒ housing + licenses topics on
+    const view = confirmModal('association', defaultsForRole('association'), 'en');
+    const initial = findTopics(view).element.initial_options.map((o) => o.value);
+    assert.deepStrictEqual(initial.sort(), ['housing', 'licenses']);
+  });
+
+  it('reporter defaults pre-check housing + licenses + streets', () => {
+    const view = confirmModal('reporter', defaultsForRole('reporter'), 'en');
+    const initial = findTopics(view).element.initial_options.map((o) => o.value);
+    assert.deepStrictEqual(initial.sort(), ['housing', 'licenses', 'streets']);
+  });
+
+  it('localizes chip labels to Spanish while keeping committees out of the visible chips', () => {
+    const view = confirmModal('organizer', defaultsForRole('organizer'), 'es');
+    const labels = JSON.stringify(findTopics(view).element.options);
+    assert.match(labels, /Vivienda y desarrollo/);
+    assert.match(labels, /Bares y licencias/);
+  });
+
+  it('still threads the full defaults through private_metadata for the write-through fallback', () => {
+    const defaults = defaultsForRole('association');
+    const view = confirmModal('association', defaults, 'en');
+    assert.deepStrictEqual(JSON.parse(view.private_metadata).defaults, defaults);
+  });
+});
+
 describe('homeFirstRun', () => {
   it('is a home view with a Set up button (the fallback path)', () => {
     const view = homeFirstRun('en');

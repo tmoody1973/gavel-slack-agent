@@ -13,6 +13,12 @@ export const COMMITTEES = {
   CED: 'COMMUNITY & ECONOMIC DEVELOPMENT COMMITTEE',
   CITY_PLAN: 'CITY PLAN COMMISSION',
   PUBLIC_WORKS: 'PUBLIC WORKS COMMITTEE',
+  // Added for the topic-chip map (MOO-121). Verified live against Legistar
+  // /bodies — these are the active standing committees (the bare "PUBLIC SAFETY
+  // COMMITTEE" is dead, 0 events in 2026). Intentionally NOT in CORE_COMMITTEES:
+  // they expand topic coverage without changing any role's defaults.
+  FINANCE_PERSONNEL: 'FINANCE & PERSONNEL COMMITTEE',
+  PUBLIC_SAFETY_HEALTH: 'PUBLIC SAFETY AND HEALTH COMMITTEE',
 };
 
 // The civic bodies Gavel actively covers. Milwaukee has ~169 active bodies and no

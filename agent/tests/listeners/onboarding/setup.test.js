@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
 import { makeGoLiveSubmit, makeOpenConfirmModal, makeOpenRoleModal } from '../../../listeners/onboarding/setup.js';
+import { committeesAndKeywordsForTopics } from '../../../onboarding/topics.js';
 
 const noop = () => {};
 const logger = { error: noop, info: noop };
@@ -156,6 +157,55 @@ describe('makeGoLiveSubmit', () => {
     // first post = live confirmation, second = the per-area proposal
     assert.equal(posts.length, 2);
     assert.match(JSON.stringify(posts[1].blocks), /#civic-/);
+  });
+
+  it('writes the union of the SELECTED topic chips, not the raw metadata defaults (MOO-121)', async () => {
+    let upsert;
+    const deps = homeDeps({
+      upsertSubscription: async (input) => {
+        upsert = input;
+      },
+    });
+    const client = { chat: { postMessage: async () => {} }, views: { publish: async () => {} } };
+    await makeGoLiveSubmit(deps)({
+      ack: async () => {},
+      body: { user: { id: 'U1' } },
+      view: {
+        // metadata defaults are LICENSES, but the user checked streets + safety
+        private_metadata: baseMeta('C1'),
+        state: {
+          values: {
+            onboarding_topics_block: {
+              onboarding_topics: { selected_options: [{ value: 'streets' }, { value: 'safety' }] },
+            },
+          },
+        },
+      },
+      client,
+      logger,
+    });
+    const expected = committeesAndKeywordsForTopics(['streets', 'safety']);
+    assert.deepStrictEqual(upsert.committees, expected.committees);
+    assert.deepStrictEqual(upsert.keywords, expected.keywords);
+    assert.ok(!upsert.committees.includes('LICENSES COMMITTEE'), 'deselected default dropped');
+  });
+
+  it('falls back to the metadata defaults when the topics block is absent (older modal)', async () => {
+    let upsert;
+    const deps = homeDeps({
+      upsertSubscription: async (input) => {
+        upsert = input;
+      },
+    });
+    const client = { chat: { postMessage: async () => {} }, views: { publish: async () => {} } };
+    await makeGoLiveSubmit(deps)({
+      ack: async () => {},
+      body: { user: { id: 'U1' } },
+      view: { private_metadata: baseMeta('C1'), state: { values: {} } },
+      client,
+      logger,
+    });
+    assert.deepStrictEqual(upsert.committees, ['LICENSES COMMITTEE']);
   });
 
   it('prefers the picker-selected channel over the metadata channel', async () => {
