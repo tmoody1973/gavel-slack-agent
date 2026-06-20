@@ -92,7 +92,9 @@ export function makeStoryLeadOverflow(deps) {
         const channels = await channelList(deps);
         await client.views.push({ trigger_id: body.trigger_id, view: addWatchModal(channels, row?.title ?? '') });
       } else if (kind === 'a') {
-        await askGavelDM({ client, userId: context.userId, eventItemId }, deps);
+        const userId = context.userId;
+        const { fileBit } = await askGavelDM({ client, userId, eventItemId }, deps);
+        await nudgeToDm({ client, channelId: body.channel?.id, userId, fileBit, logger });
       }
     } catch (e) {
       logger.error(`story overflow failed: ${e}`);
@@ -105,7 +107,10 @@ export function makeStoryAsk(deps) {
   return async ({ ack, body, context, client, logger }) => {
     await ack();
     try {
-      await askGavelDM({ client, userId: context.userId, eventItemId: Number(body.actions?.[0]?.value) }, deps);
+      const userId = body.user?.id ?? context.userId;
+      const eventItemId = Number(body.actions?.[0]?.value);
+      const { fileBit } = await askGavelDM({ client, userId, eventItemId }, deps);
+      await nudgeToDm({ client, channelId: body.channel?.id, userId, fileBit, logger });
     } catch (e) {
       logger.error(`story ask failed: ${e}`);
     }
@@ -136,10 +141,29 @@ async function askGavelDM({ client, userId, eventItemId }, deps) {
     .join('\n');
 
   const dm = await client.conversations.open({ users: userId });
-  const channel = dm.channel?.id;
+  const dmChannel = dm.channel?.id;
   const posted = await client.chat.postMessage({
-    channel,
+    channel: dmChannel,
     text: `💬 Ask me anything about ${fileBit} — *reply in this thread* and I’ll dig into the public record.`,
   });
-  primeStore.setSession(channel, posted.ts, preamble);
+  primeStore.setSession(dmChannel, posted.ts, preamble);
+  return { dmChannel, fileBit };
+}
+
+/**
+ * Tell the user — at the click site — that the conversation moved to a DM. Ask Gavel
+ * acts on a different surface (the bot's DM), so without this the click looks dead in
+ * the channel/carousel. Best-effort: a failed nudge must never sink the (working) DM.
+ */
+async function nudgeToDm({ client, channelId, userId, fileBit, logger }) {
+  if (!channelId) return; // modal context has no channel to post an ephemeral into
+  try {
+    await client.chat.postEphemeral({
+      channel: channelId,
+      user: userId,
+      text: `💬 I opened a DM about ${fileBit} — check your messages with *Gavel* and reply there and I’ll dig into the record.`,
+    });
+  } catch (e) {
+    logger.error(`story ask nudge failed: ${e}`);
+  }
 }

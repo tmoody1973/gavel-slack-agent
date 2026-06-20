@@ -36,8 +36,9 @@ function client() {
   const pushed = [];
   const dmsOpened = [];
   const posted = [];
+  const ephemerals = [];
   return {
-    calls: { opened, updated, pushed, dmsOpened, posted },
+    calls: { opened, updated, pushed, dmsOpened, posted, ephemerals },
     views: {
       open: async (v) => opened.push(v),
       update: async (v) => updated.push(v),
@@ -54,6 +55,7 @@ function client() {
         posted.push(m);
         return { ts: '111.222' };
       },
+      postEphemeral: async (m) => ephemerals.push(m),
     },
   };
 }
@@ -117,13 +119,15 @@ test('overflow "Ask Gavel" opens a primed DM seeded with the item context', asyn
   assert.match(prime, /surveillance oversight board/);
   assert.match(prime, /File #230001/);
   assert.match(prime, /COMMON COUNCIL/);
+  // from a modal there's no channel to post an ephemeral into — DM is the only feedback
+  assert.equal(c.calls.ephemerals.length, 0);
 });
 
-test('carousel "Ask Gavel" button (story_ask) opens the same primed DM by eventItemId', async () => {
+test('carousel "Ask Gavel" button (story_ask) opens the DM AND nudges at the click site', async () => {
   const c = client();
   await makeStoryAsk(makeDeps())({
     ack: async () => {},
-    body: { actions: [{ value: '7' }] },
+    body: { actions: [{ value: '7' }], user: { id: 'U2' }, channel: { id: 'C_CAROUSEL' } },
     context: { userId: 'U2' },
     client: c,
     logger,
@@ -131,6 +135,11 @@ test('carousel "Ask Gavel" button (story_ask) opens the same primed DM by eventI
   assert.deepEqual(c.calls.dmsOpened[0], { users: 'U2' });
   const prime = primeStore.getSession('D1', '111.222');
   assert.match(prime, /surveillance oversight board/);
+  // the fix: a visible ephemeral confirmation in the channel where the user clicked
+  assert.equal(c.calls.ephemerals.length, 1);
+  assert.equal(c.calls.ephemerals[0].channel, 'C_CAROUSEL');
+  assert.equal(c.calls.ephemerals[0].user, 'U2');
+  assert.match(c.calls.ephemerals[0].text, /opened a DM|check your messages/i);
 });
 
 test('handlers never throw on failure — they log and ack', async () => {
