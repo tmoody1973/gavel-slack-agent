@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   makeCommitteeOptions,
+  makeDiscoverWatch,
   makeHomeAddWatch,
   makeHomeEditChannel,
   makeHomeWatchRemove,
@@ -113,4 +114,28 @@ test('button failures log and never throw', async () => {
   await makeHomeEditChannel(deps)(b.args);
   assert.equal(a.opened.length, 0);
   assert.equal(b.opened.length, 0);
+});
+
+test('makeDiscoverWatch opens the add-watch modal pre-filled with the clicked item', async () => {
+  let opened;
+  const deps = {
+    listSubscriptions: async () => [{ channelId: 'C1' }],
+    getChannelName: async () => 'general',
+  };
+  const client = {
+    views: {
+      open: async (a) => {
+        opened = a;
+      },
+    },
+  };
+  await makeDiscoverWatch(deps)({
+    ack: async () => {},
+    body: { trigger_id: 'T1', actions: [{ value: 'A resolution authorizing $4.2 million in bonding' }] },
+    client,
+    logger: { error() {} },
+  });
+  assert.equal(opened.view.callback_id, 'home_add_watch_modal');
+  const entity = opened.view.blocks.find((b) => b.block_id === 'watch_entity');
+  assert.equal(entity.element.initial_value, 'A resolution authorizing $4.2 million in bonding');
 });

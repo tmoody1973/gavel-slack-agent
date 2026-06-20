@@ -1,4 +1,5 @@
 import { matchSubscriptions } from '../alerts/match.js';
+import { selectSalient } from './salience.js';
 
 /**
  * Assemble the HomeState for blockkit/home-view.js from injected boundaries.
@@ -28,6 +29,11 @@ export async function buildHomeState(deps) {
     watches.some((w) => row.title.toLowerCase().includes(w.entity.toLowerCase())),
   ).length;
 
+  // MOO-123: salient items across the FULL agenda (not just subscription matches),
+  // for the "🔎 Discover this week" feed. District boundaries come from subscriptions.
+  const boundaries = subscriptions.map((s) => s.boundary?.value).filter(Boolean);
+  const discover = selectSalient(upcoming, { boundaries });
+
   const names = await resolveNames(
     [...new Set([...subscriptions.map((s) => s.channelId), ...watches.map((w) => w.channelId)])],
     deps.getChannelName,
@@ -39,6 +45,7 @@ export async function buildHomeState(deps) {
     // first-run intro only when there are no subscriptions at all — a poller-written
     // subscription without `configured` still belongs in the hub, not first-run.
     configuredCount: subscriptions.filter((s) => s.configured).length,
+    discover,
     watches: watches.map((w) => ({ channelId: w.channelId, channelName: names.get(w.channelId), entity: w.entity })),
     channels: subscriptions.map((s) => ({
       channelId: s.channelId,

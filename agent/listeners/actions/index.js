@@ -5,7 +5,13 @@ import { createHomeDeps } from '../../home/deps.js';
 import { createLegistarClient } from '../../poller/legistar.js';
 import { makeAlertAsk, makeAlertHistory, makeAlertWatch } from './alert-buttons.js';
 import { handleFeedbackButton } from './feedback-buttons.js';
-import { makeCommitteeOptions, makeHomeAddWatch, makeHomeEditChannel, makeHomeWatchRemove } from './home-buttons.js';
+import {
+  makeCommitteeOptions,
+  makeDiscoverWatch,
+  makeHomeAddWatch,
+  makeHomeEditChannel,
+  makeHomeWatchRemove,
+} from './home-buttons.js';
 import { makeParcelWatch } from './parcel-buttons.js';
 
 /**
@@ -43,6 +49,7 @@ export function register(app) {
 
   const homeDeps = createHomeDeps(app.client);
   app.action('home_add_watch', makeHomeAddWatch(homeDeps));
+  app.action('discover_watch', makeDiscoverWatch(homeDeps));
   app.action('home_edit_channel', makeHomeEditChannel(homeDeps));
   app.action('home_watch_remove', makeHomeWatchRemove(homeDeps));
   app.options('home_committees', makeCommitteeOptions(homeDeps));

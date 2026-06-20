@@ -94,3 +94,11 @@ test('reports configuredCount and surfaces per-channel role/configured', async (
   assert.equal(state.channels[1].configured, false);
   assert.equal(state.channels[1].role, null);
 });
+
+test('buildHomeState surfaces salient items in `discover` (walk-on + big), regardless of subscription (MOO-123)', async () => {
+  const state = await buildHomeState(deps());
+  const ids = state.discover.map((e) => e.item.eventItemId);
+  assert.ok(ids.includes(1), 'the walk-on surfaces');
+  assert.ok(ids.includes(4), 'the budget item surfaces as "big" even though no channel subscribes to Finance');
+  for (const entry of state.discover) assert.ok(entry.reasons.length > 0, 'every discover item is explainable');
+});

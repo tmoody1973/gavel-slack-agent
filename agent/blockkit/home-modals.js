@@ -10,7 +10,15 @@ const LANGUAGE_OPTIONS = [
  * @param {Array<{channelId: string, channelName: string}>} channels
  * @returns {object}
  */
-export function addWatchModal(channels) {
+export function addWatchModal(channels, prefillEntity = '') {
+  const entityElement = {
+    type: 'plain_text_input',
+    action_id: 'value',
+    placeholder: plain('e.g. File #260229 · 2000 S 13th St · Punta Cana LLC'),
+  };
+  // MOO-123: a Discover "👁 Watch" pre-fills the item so the citizen can trim it to a
+  // file #/address/name before saving (Slack caps initial_value, so clamp it).
+  if (prefillEntity) entityElement.initial_value = String(prefillEntity).slice(0, 150);
   return {
     type: 'modal',
     callback_id: 'home_add_watch_modal',
@@ -32,11 +40,7 @@ export function addWatchModal(channels) {
         type: 'input',
         block_id: 'watch_entity',
         label: plain('File number, address, or name'),
-        element: {
-          type: 'plain_text_input',
-          action_id: 'value',
-          placeholder: plain('e.g. File #260229 · 2000 S 13th St · Punta Cana LLC'),
-        },
+        element: entityElement,
       },
     ],
   };
