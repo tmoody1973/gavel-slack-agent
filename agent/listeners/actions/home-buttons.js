@@ -19,6 +19,23 @@ export function makeHomeAddWatch(deps) {
   };
 }
 
+/** 👁 Watch on a Discover item (MOO-123) → the add-watch modal, pre-filled with the item. */
+export function makeDiscoverWatch(deps) {
+  return async ({ ack, body, client, logger }) => {
+    await ack();
+    try {
+      const prefill = body.actions?.[0]?.value ?? '';
+      const subscriptions = await deps.listSubscriptions();
+      const channels = await Promise.all(
+        subscriptions.map(async (s) => ({ channelId: s.channelId, channelName: await safeName(deps, s.channelId) })),
+      );
+      await client.views.open({ trigger_id: body.trigger_id, view: addWatchModal(channels, prefill) });
+    } catch (e) {
+      logger.error(`discover watch open failed: ${e}`);
+    }
+  };
+}
+
 /** Edit → per-channel config modal pre-filled from Convex. */
 export function makeHomeEditChannel(deps) {
   return async ({ ack, body, client, logger }) => {

@@ -16,8 +16,9 @@ const plural = (count, singular, pluralForm = `${singular}s`) => (count === 1 ? 
  * }} state
  * @returns {{type: 'home', blocks: object[]}}
  */
-export function homeView({ strip, watches, channels }) {
+export function homeView({ strip, watches, channels, discover = [] }) {
   if (channels.length === 0) return emptyStateView();
+  const language = channels.some((c) => c.language === 'es') ? 'es' : 'en';
 
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '🏛️ Gavel — your civic week', emoji: true } },
@@ -25,6 +26,7 @@ export function homeView({ strip, watches, channels }) {
       `This week: *${strip.meetings}* ${plural(strip.meetings, 'meeting touches', 'meetings touch')} your subscriptions · ⚠️ *${strip.lateAdds}* added late · 👁 *${strip.watchHits}* ${plural(strip.watchHits, 'watch hit')}`,
     ),
     { type: 'divider' },
+    ...discoverBlocks(discover, language),
     {
       type: 'section',
       text: { type: 'mrkdwn', text: '*👁 Watches*' },
@@ -65,6 +67,70 @@ export function homeView({ strip, watches, channels }) {
     },
   ];
   return { type: 'home', blocks };
+}
+
+const MAX_DISCOVER_ROWS = 6;
+
+const DISCOVER_COPY = {
+  en: {
+    heading: '*🔎 Discover this week*',
+    quiet: 'Quiet week — nothing flagged beyond your subscriptions yet.',
+    watch: '👁 Watch',
+  },
+  es: {
+    heading: '*🔎 Descubre esta semana*',
+    quiet: 'Semana tranquila — nada destacado más allá de tus suscripciones todavía.',
+    watch: '👁 Seguir',
+  },
+};
+
+const REASON_LABEL = {
+  en: {
+    district: (d) => `📍 District ${d}`,
+    walkOn: () => '⚠️ Added late',
+    consent: () => '⚠️ Consent calendar',
+    big: () => '💰 Big this week',
+  },
+  es: {
+    district: (d) => `📍 Distrito ${d}`,
+    walkOn: () => '⚠️ Añadido tarde',
+    consent: () => '⚠️ Agenda de consentimiento',
+    big: () => '💰 Importante esta semana',
+  },
+};
+
+/** Explainable "why this surfaced" tags: committee + one tag per salience reason. */
+function reasonTagText(reasons, eventBodyName, language) {
+  const labels = REASON_LABEL[language] ?? REASON_LABEL.en;
+  const tags = reasons.map((reason) => labels[reason.kind]?.(reason.detail)).filter(Boolean);
+  return [`🏛️ ${eventBodyName}`, ...tags].join(' · ');
+}
+
+/** The "🔎 Discover this week" section: salient items + a 👁 Watch button each (MOO-123). */
+function discoverBlocks(discover, language) {
+  const copy = DISCOVER_COPY[language] ?? DISCOVER_COPY.en;
+  if (!discover || discover.length === 0) {
+    return [mrkdwn(`${copy.heading}\n${copy.quiet}`), { type: 'divider' }];
+  }
+  const blocks = [mrkdwn(copy.heading)];
+  for (const { item, reasons } of discover.slice(0, MAX_DISCOVER_ROWS)) {
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: `*${item.title}*` },
+      accessory: {
+        type: 'button',
+        action_id: 'discover_watch',
+        text: { type: 'plain_text', text: copy.watch, emoji: true },
+        value: String(item.title ?? '').slice(0, 1900),
+      },
+    });
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: reasonTagText(reasons, item.eventBodyName ?? '', language) }],
+    });
+  }
+  blocks.push({ type: 'divider' });
+  return blocks;
 }
 
 function watchBlocks(watches) {

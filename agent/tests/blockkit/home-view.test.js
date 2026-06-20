@@ -74,3 +74,55 @@ test('homeView shows an empty-watches hint instead of nothing', () => {
   const view = homeView({ ...state, watches: [] });
   assert.match(JSON.stringify(view.blocks), /No watches yet/i);
 });
+
+const discoverEntry = (over) => ({
+  item: {
+    eventItemId: 491,
+    title: 'A resolution authorizing $4.2 million in bonding',
+    eventBodyName: 'COMMON COUNCIL',
+    ...over,
+  },
+  reasons: [{ kind: 'big', detail: 'money' }],
+});
+
+// The shared `state` fixture has an ES channel; use an EN channel for English-string assertions.
+const enState = { ...state, channels: [{ ...state.channels[0], language: 'en' }] };
+
+test('homeView renders a Discover this week section with a watch button per item (MOO-123)', () => {
+  const view = homeView({ ...enState, discover: [discoverEntry()] });
+  const all = JSON.stringify(view.blocks);
+  assert.match(all, /Discover this week/);
+  assert.match(all, /\$4\.2 million in bonding/);
+  assert.ok(all.includes('discover_watch'), 'each discover item carries a discover_watch button');
+});
+
+test('Discover section shows explainable reason tags', () => {
+  const view = homeView({
+    ...enState,
+    discover: [
+      {
+        item: { eventItemId: 7, title: 'Paving (7th Aldermanic District)', eventBodyName: 'PUBLIC WORKS COMMITTEE' },
+        reasons: [{ kind: 'district', detail: '7' }, { kind: 'walkOn' }],
+      },
+    ],
+  });
+  const all = JSON.stringify(view.blocks);
+  assert.match(all, /District 7/);
+  assert.match(all, /Added late/);
+});
+
+test('Discover section shows a friendly quiet-week line when empty', () => {
+  const all = JSON.stringify(homeView({ ...enState, discover: [] }).blocks);
+  assert.match(all, /Discover this week/);
+  assert.match(all, /[Qq]uiet week/);
+});
+
+test('Discover section localizes to Spanish', () => {
+  const esState = { ...state, channels: [{ ...state.channels[0], language: 'es' }], discover: [discoverEntry()] };
+  const all = JSON.stringify(homeView(esState).blocks);
+  assert.match(all, /Descubre esta semana/);
+});
+
+test('homeView tolerates a state with no discover field (back-compat)', () => {
+  assert.doesNotThrow(() => homeView(state));
+});

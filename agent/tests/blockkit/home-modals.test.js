@@ -44,3 +44,14 @@ test('channelConfigModal tolerates empty committees/keywords (no initial_options
   const all = JSON.stringify(modal);
   assert.ok(!all.includes('undefined'));
 });
+
+test('addWatchModal pre-fills the entity input when given one (MOO-123 Discover watch)', () => {
+  const modal = addWatchModal(channels, 'A resolution authorizing $4.2 million in bonding');
+  const entity = modal.blocks.find((b) => b.block_id === 'watch_entity');
+  assert.equal(entity.element.initial_value, 'A resolution authorizing $4.2 million in bonding');
+});
+
+test('addWatchModal omits initial_value with no prefill (back-compat)', () => {
+  const entity = addWatchModal(channels).blocks.find((b) => b.block_id === 'watch_entity');
+  assert.ok(!('initial_value' in entity.element));
+});
