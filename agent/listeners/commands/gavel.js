@@ -1,5 +1,5 @@
 import { growWatchlistPrompt } from '../../blockkit/grow.js';
-import { storyLeadCards } from '../../blockkit/index.js';
+import { storyCarousel, storyLeadCards } from '../../blockkit/index.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
@@ -66,7 +66,7 @@ export async function handleGavelCommand({ command, ack, respond, logger }, deps
     // Story Radar (MOO-127) is the one subcommand that affords LLM latency: it acks,
     // posts a "digging…" status, then enriches + writes grounded angles and posts again.
     if (subcommand === 'stories') {
-      await runStories({ args, channelId, respond }, deps);
+      await runStories({ args, channelId, respond, logger }, deps);
       return;
     }
 
@@ -119,7 +119,7 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
  *   countTranscript?: (eventId: number) => Promise<number>,
  * }} deps
  */
-async function runStories({ args, channelId, respond }, deps) {
+async function runStories({ args, channelId, respond, logger }, deps) {
   const subscription = await deps.getSubscription(channelId);
   const language = subscription?.language === 'es' ? 'es' : 'en';
   const copy = STORIES_COPY[language];
@@ -142,12 +142,17 @@ async function runStories({ args, channelId, respond }, deps) {
     language,
     countTranscript: deps.countTranscript,
   });
-  await respond({
-    response_type: 'ephemeral',
-    replace_original: false,
-    text: `📰 Story leads — ${label}`,
-    blocks: storyLeadCards(composed, { label, language }),
-  });
+
+  // MOO-130: render the response as a swipeable carousel of story cards (confirmed to
+  // render on the deployed app). If Slack ever rejects the newer carousel block, fall
+  // back to the classic storyLeadCards list so the reporter still gets their leads.
+  const base = { response_type: 'ephemeral', replace_original: false, text: `📰 Story leads — ${label}` };
+  try {
+    await respond({ ...base, blocks: storyCarousel(composed, { label, language }) });
+  } catch (err) {
+    logger?.error?.(`/gavel stories carousel rejected, falling back to list: ${err.message}`);
+    await respond({ ...base, blocks: storyLeadCards(composed, { label, language }) });
+  }
 }
 
 async function runWatch({ args, channelId }, deps) {

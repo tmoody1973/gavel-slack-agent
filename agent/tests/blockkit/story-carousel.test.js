@@ -65,7 +65,9 @@ describe('storyCarousel — /gavel stories swipeable cards (MOO-130)', () => {
   });
 
   it('caps at 10 cards (carousel max)', () => {
-    const many = Array.from({ length: 15 }, (_, i) => lead({ item: { eventItemId: i, title: `lead ${i}`, eventBodyName: 'C', eventDate: '2026-06-23' } }));
+    const many = Array.from({ length: 15 }, (_, i) =>
+      lead({ item: { eventItemId: i, title: `lead ${i}`, eventBodyName: 'C', eventDate: '2026-06-23' } }),
+    );
     const carousel = carouselOf(storyCarousel(many, { label: 'x', language: 'en' }));
     assert.ok(carousel.elements.length <= 10, `got ${carousel.elements.length}`);
   });

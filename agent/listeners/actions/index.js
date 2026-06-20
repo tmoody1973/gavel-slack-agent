@@ -13,6 +13,7 @@ import {
   makeHomeWatchRemove,
 } from './home-buttons.js';
 import { makeParcelWatch } from './parcel-buttons.js';
+import { makeStoryAsk, makeStoryBrowse, makeStoryLeadOverflow, makeStoryModalFilter } from './story-buttons.js';
 
 /**
  * Register action listeners. Convex/Legistar boundaries are constructed here
@@ -52,10 +53,20 @@ export function register(app) {
   app.action('discover_watch', makeDiscoverWatch(homeDeps));
   // MOO-127: the "📰 Story leads" watch button opens the same pre-filled add-watch
   // modal as Discover (App Home has no channel context to resolve a watch directly).
+  // MOO-130: the /gavel stories carousel reuses story_watch the same way.
   app.action('story_watch', makeDiscoverWatch(homeDeps));
   app.action('home_edit_channel', makeHomeEditChannel(homeDeps));
   app.action('home_watch_remove', makeHomeWatchRemove(homeDeps));
   app.options('home_committees', makeCommitteeOptions(homeDeps));
+
+  // MOO-130: Story-leads rich view. The modal/overflow/Ask need both the Home
+  // boundaries (subscriptions, upcoming, channel names) and the alert-style record
+  // lookups (detected row + matter file number) for the primed Ask-Gavel DM.
+  const storyDeps = { ...homeDeps, getDetectedItem: deps.getDetectedItem, getMatter: deps.getMatter };
+  app.action('story_browse', makeStoryBrowse(storyDeps));
+  app.action('story_modal_filter', makeStoryModalFilter(storyDeps));
+  app.action('story_lead_overflow', makeStoryLeadOverflow(storyDeps));
+  app.action('story_ask', makeStoryAsk(storyDeps));
 }
 
 function requireConvex(convex) {

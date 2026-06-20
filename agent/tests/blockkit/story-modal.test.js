@@ -46,9 +46,7 @@ describe('storyModal — filterable Story-leads browse modal (MOO-130)', () => {
 
   it('carries a static_select filter (story_modal_filter) with All / committee / topic / district groups', () => {
     const view = storyModal(leads, { language: 'en', filter: { t: 'all' } });
-    const select = view.blocks
-      .flatMap((b) => b.elements ?? [])
-      .find((e) => e.action_id === 'story_modal_filter');
+    const select = view.blocks.flatMap((b) => b.elements ?? []).find((e) => e.action_id === 'story_modal_filter');
     assert.ok(select, 'filter present');
     const labels = (select.option_groups ?? []).map((g) => g.label.text).join(' | ');
     assert.match(labels, /Committee/i);

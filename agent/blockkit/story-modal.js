@@ -9,9 +9,9 @@
 // option value back into a filter object for that refetch.
 
 import { matchSubscriptions } from '../alerts/match.js';
+import { districtOf } from '../home/salience.js';
 import { committeesAndKeywordsForTopics, topicChoices } from '../onboarding/topics.js';
 import { clusterLeads } from '../stories/cluster.js';
-import { districtOf } from '../home/salience.js';
 import { metaLine, themeLabel } from './story-labels.js';
 
 const plain = (text) => ({ type: 'plain_text', text: String(text).slice(0, 75), emoji: true });

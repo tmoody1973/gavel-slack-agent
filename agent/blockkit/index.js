@@ -6,5 +6,7 @@ export { homeView } from './home-view.js';
 export { matterCard } from './matter-card.js';
 export { parcelCard } from './parcel-card.js';
 export { sponsorCard } from './sponsor-card.js';
+export { storyCarousel } from './story-carousel.js';
 export { storyLeadCards, storyLeadsSection } from './story-leads.js';
+export { decodeFilter, storyModal } from './story-modal.js';
 export { voteTable } from './vote-table.js';

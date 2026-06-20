@@ -7,8 +7,8 @@
 // newsworthiness tags so the ranking is explainable, and stay bilingual.
 
 import { clusterLeads } from '../stories/cluster.js';
-import { metaLine, tagText, themeLabel } from './story-labels.js';
 import { sponsorCard } from './sponsor-card.js';
+import { metaLine, tagText, themeLabel } from './story-labels.js';
 
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 const context = (text) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
