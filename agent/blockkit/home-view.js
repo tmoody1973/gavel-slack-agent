@@ -27,7 +27,10 @@ const STRIP_COPY = {
  */
 export function homeView({ strip, watches, channels, discover = [], storyLeads = [] }) {
   if (channels.length === 0) return emptyStateView();
-  const language = channels.some((c) => c.language === 'es') ? 'es' : 'en';
+  // The App Home is per-user and single-language: default to English, switching to
+  // Spanish only when EVERY subscribed channel is Spanish (MOO-128). An English reporter
+  // should not get a Spanish Home just because one other neighborhood's channel is ES.
+  const language = channels.every((c) => c.language === 'es') ? 'es' : 'en';
   // MOO-127: the "📰 Story leads" section is the reporter persona's switch.
   const hasReporter = channels.some((c) => c.role === 'reporter');
 
