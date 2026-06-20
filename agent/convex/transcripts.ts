@@ -52,6 +52,19 @@ export const countByEvent = query({
     ).length,
 });
 
+/**
+ * Distinct eventIds that have transcript chunks — the "🔍 Searchable" set behind
+ * video discovery (MOO-142). One query the caller tags meetings against in memory,
+ * instead of an N-round-trip `countByEvent` per meeting.
+ */
+export const listIngestedEventIds = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query('transcriptChunks').collect();
+    return [...new Set(rows.map((row) => row.eventId))];
+  },
+});
+
 /** Hydrate vector-search hits into full receipts (search runs in an action). */
 export const fetchChunks = internalQuery({
   args: { ids: v.array(v.id('transcriptChunks')) },
