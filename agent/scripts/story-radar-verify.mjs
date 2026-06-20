@@ -19,6 +19,7 @@ import { enrichForAlert } from '../alerts/enrich.js';
 import { api } from '../convex/_generated/api.js';
 import { createLegistarClient } from '../poller/legistar.js';
 import { STORY_ANGLE_SCHEMA } from '../stories/angle.js';
+import { clusterLeads } from '../stories/cluster.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../stories/leads.js';
 import { scoreNewsworthiness } from '../stories/newsworthiness.js';
 import { createClaudeGenerate } from '../summarizer/index.js';
@@ -62,6 +63,19 @@ async function main() {
   if (leads.length === 0) {
     console.log('\n(no leads — quiet week for this filter)');
     return;
+  }
+
+  // MOO-128: how the App Home actually renders — related leads clustered by beat.
+  const entries = clusterLeads(leads);
+  console.log(`\n=== 🧷 Clustered (App Home view): ${entries.length} entries ===`);
+  for (const entry of entries) {
+    if (entry.kind === 'cluster') {
+      console.log(
+        `  ▣ [${entry.theme}] ${entry.members.length} items · ${entry.committee}${entry.district ? ` · 📍 D${entry.district}` : ''} · tags=${entry.tags.map((t) => t.kind).join('/')}`,
+      );
+    } else {
+      console.log(`  • ${entry.item.title.slice(0, 70)}${entry.district ? ` · 📍 D${entry.district}` : ''}`);
+    }
   }
 
   console.log(
