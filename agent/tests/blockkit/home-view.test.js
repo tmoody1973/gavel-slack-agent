@@ -151,12 +151,13 @@ const reporterState = (over) => ({
   ...over,
 });
 
-test('reporter channel surfaces the "Story leads" section with tags', () => {
+test('reporter channel surfaces the "Story leads" section with tags + a Browse button', () => {
   const all = JSON.stringify(homeView(reporterState({ storyLeads: [storyLead()] })).blocks);
   assert.match(all, /Story leads this week/);
   assert.match(all, /police surveillance oversight board/);
   assert.match(all, /Power & accountability/);
-  assert.match(all, /story_watch/);
+  // MOO-130: the lean Home routes to the filterable modal instead of per-item watches
+  assert.match(all, /story_browse/);
 });
 
 test('non-reporter channel never shows the Story leads section', () => {

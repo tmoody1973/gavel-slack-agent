@@ -17,21 +17,24 @@ const lead = (overrides = {}) => ({
   ...overrides,
 });
 
-describe('storyLeadsSection — App Home reporter feed (tags-only, LLM-free)', () => {
-  it('renders the heading + each lead title + its newsworthiness tags', () => {
+describe('storyLeadsSection — App Home lean triage (MOO-130: one line + Browse button)', () => {
+  it('renders the heading, the lead title, its tags, and the meeting date', () => {
     const blocks = storyLeadsSection([lead()], 'en');
     const text = JSON.stringify(blocks);
     assert.match(text, /Story leads this week/);
     assert.match(text, /police surveillance oversight board/);
     assert.match(text, /Power & accountability/);
     assert.match(text, /Added late/); // anomaly:walkOn label
+    assert.match(text, /🗓 Thu Jun 25/); // meeting date on the meta line
   });
 
-  it('every lead carries a story_watch button pre-filled with the title', () => {
+  it('offers ONE 📋 Browse story leads button (story_browse) instead of per-item watches', () => {
     const blocks = storyLeadsSection([lead()], 'en');
-    const watch = blocks.find((b) => b.accessory?.action_id === 'story_watch');
-    assert.ok(watch, 'story_watch button present');
-    assert.match(watch.accessory.value, /surveillance oversight board/);
+    const actions = blocks.filter((b) => b.type === 'actions').flatMap((b) => b.elements);
+    const browse = actions.find((e) => e.action_id === 'story_browse');
+    assert.ok(browse, 'story_browse button present');
+    // the lean Home no longer carries per-item story_watch accessories
+    assert.doesNotMatch(JSON.stringify(blocks), /story_watch/);
   });
 
   it('frames them as leads, not conclusions (the safety line)', () => {
@@ -120,11 +123,14 @@ describe('storyLeadsSection — clustered render (MOO-128)', () => {
     policeLead(4, 'Fire and Police Commission training communication'),
   ];
 
-  it('collapses the 4 police items into ONE cluster header with the count', () => {
+  it('collapses the 4 police items into ONE cluster line with the count, members hidden (modal shows them)', () => {
     const text = JSON.stringify(storyLeadsSection(fourPolice, 'en'));
     assert.equal((text.match(/Police & public safety/g) || []).length, 1);
     assert.match(text, /4 items/);
-    for (const t of ['use of force', 'pursuit policies', 'SOP 660', 'training']) assert.match(text, new RegExp(t));
+    // the lean Home compresses — member titles move to the Browse modal, not inline
+    for (const t of ['use of force', 'pursuit policies', 'SOP 660', 'training']) {
+      assert.doesNotMatch(text, new RegExp(t));
+    }
   });
 
   it('shows the shared tag once at the cluster level, not per member', () => {
@@ -140,7 +146,7 @@ describe('storyLeadsSection — clustered render (MOO-128)', () => {
     assert.match(JSON.stringify(storyLeadsSection(district7, 'en')), /District 7/);
   });
 
-  it('a singleton still renders title + tags + watch', () => {
+  it('a singleton still renders its title + tags on one line (no inline watch)', () => {
     const single = [
       {
         item: { eventItemId: 9, title: 'tavern liquor license', eventBodyName: 'LICENSES' },
@@ -151,10 +157,11 @@ describe('storyLeadsSection — clustered render (MOO-128)', () => {
     ];
     const text = JSON.stringify(storyLeadsSection(single, 'en'));
     assert.match(text, /tavern liquor license/);
-    assert.match(text, /story_watch/);
+    assert.match(text, /Conflict/);
+    assert.doesNotMatch(text, /story_watch/);
   });
 
-  it('caps to the top 3 entries and shows a "ver más" instruction for the rest', () => {
+  it('stays lean under many entries and routes the full set to the Browse modal', () => {
     const many = Array.from({ length: 6 }, (_, i) => ({
       item: {
         eventItemId: i,
@@ -166,12 +173,15 @@ describe('storyLeadsSection — clustered render (MOO-128)', () => {
       score: 6 - i,
       reasons: [],
     }));
-    const text = JSON.stringify(storyLeadsSection(many, 'en'));
-    assert.match(text, /3 (?:more|más)/);
-    assert.match(text, /\/gavel stories/);
-    // the lower-ranked entries are genuinely withheld, not just counted
-    assert.match(text, /tavern liquor license 0/);
-    assert.doesNotMatch(text, /tavern liquor license 3/);
+    const blocks = storyLeadsSection(many, 'en');
+    const actions = blocks.filter((b) => b.type === 'actions').flatMap((b) => b.elements);
+    assert.ok(
+      actions.some((e) => e.action_id === 'story_browse'),
+      'Browse button routes to the full filterable modal',
+    );
+    // top-ranked entry is shown; the Home stays well under Slack's 100-block ceiling
+    assert.match(JSON.stringify(blocks), /tavern liquor license 0/);
+    assert.ok(blocks.length <= 20, `lean Home, got ${blocks.length} blocks`);
   });
 
   it('bilingual: ES theme label', () => {
