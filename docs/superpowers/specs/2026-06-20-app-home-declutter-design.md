@@ -22,27 +22,45 @@ Out of scope: the tap-through dossier (video/minutes/votes) — that's MOO-129. 
 
 **Deterministic theme-family clustering.** Considered and rejected: (A2) an LLM clustering pass — breaks the LLM-free/deterministic Home and the "not ML" rule; (A3) no clustering, rank+style only — the user explicitly wants clustering, and it's the biggest declutter win.
 
-A lead's **theme** is read off its title by a small set of named keyword families. Leads sharing the **same committee + same theme family** form a cluster (≥2 members); singletons pass through unchanged. The cluster label stays deterministic on the Home (`🛡️ Police & accountability — 4 items · Common Council`); the Claude-written narrative headline ("rules are being rewritten") is deferred to the dossier (MOO-129), so the Home makes no model call.
+Two axes are kept separate (this is the load-bearing distinction):
+
+- **Theme = the beat / subject** — the clustering axis: what the item is *about* (police, health, housing, development, …). Read off the title by named keyword families.
+- **Tag = newsworthiness** — already exists from MOO-127 (💰money · 🛡️accountability · 👥equity · ⚔️conflict · ✨novelty · ⚠️anomaly · 🔁recurrence): *why* it matters.
+
+Money is **not** a theme — almost every agenda item involves money, so it's a useless grouping axis but a great "why." It stays a tag. A lead's **theme** groups it; its **tags** (already scored) describe it.
+
+Leads sharing the **same committee + same theme** form a cluster (≥2 members); singletons pass through unchanged. The cluster label stays deterministic on the Home (`🏗️ Development — 3 items · CED`, with the shared tags beside it); the Claude-written narrative headline ("rules are being rewritten") is deferred to the dossier (MOO-129), so the Home makes no model call.
 
 ## Components
 
 ### `agent/stories/cluster.js` (new, pure)
 
 ```
+// THEME = subject / beat (the clustering axis). NOT newsworthiness — those are the
+// MOO-127 tags. Extends the MOO-121 topic vocabulary. First match wins, so the order
+// is specific → general (a "$5M TIF for a development" is a development story, not a
+// generic money one). Money is deliberately absent: it's a tag, not a beat.
 THEME_FAMILIES = [
-  { key: 'police',       emoji: '🛡️', en, es, re: /police|MPD|use of force|pursuit|surveillance|officer|fire and police|body camera/i },
-  { key: 'money',        emoji: '💰', en, es, re: /bond(?:ing|s)?|TIF|appropriat|contract|tax (?:levy|incremental)|budget/i },
-  { key: 'housing',      emoji: '🏠', en, es, re: /demolition|rezoning|eviction|redevelopment|vacant|zoning|land sale/i },
-  { key: 'licenses',     emoji: '🍺', en, es, re: /license|tavern|liquor|bartender|food dealer/i },
-  { key: 'streets',      emoji: '🚧', en, es, re: /paving|repaving|sewer|water main|sidewalk|alley|pothole/i },
-  { key: 'appointments', emoji: '👔', en, es, re: /appoint|confirm|nomination|board|commission/i },
+  { key: 'police',       emoji: '🛡️', re: /police|MPD|use of force|pursuit|surveillance|officer|fire and police|body camera/i },
+  { key: 'health',       emoji: '🏥', re: /lead(?: poisoning)?|public health|health department|clinic|food safety|water quality|opioid|sanitation|disease/i },
+  { key: 'housing',      emoji: '🏠', re: /rezoning|demolition|variance|blight|vacant lot|eviction|conditional use|housing/i },
+  { key: 'development',  emoji: '🏗️', re: /TIF|tax incremental|redevelopment|development agreement|business improvement district|\bBID\b|economic development|land sale/i },
+  { key: 'licenses',     emoji: '🍺', re: /license|tavern|liquor|bartender|food dealer/i },
+  { key: 'parks',        emoji: '🌳', re: /\bpark(?:s|land)?\b|forestry|green space|community garden|tree planting|climate|sustainab/i },
+  { key: 'streets',      emoji: '🚧', re: /paving|repaving|resurfac|sewer|water main|sidewalk|alley|pothole/i },
+  { key: 'appointments', emoji: '👔', re: /appoint|confirmation|nomination|\bboard\b|\bcommission\b/i },
 ]
+// Localized theme labels live in the render layer (like the existing tag labels).
 
-themeOf(item) -> family key | null     // first matching family, deterministic order
+themeOf(title) -> family key | null    // first matching family; null → the lead is always a single
+
+// District is a FACET (location), not a theme or a tag. Reuse districtOf() from
+// home/salience.js (MOO-123) — it parses "(Nth Aldermanic District)" off the title.
+// Shown as a 📍 chip when present; absent on council-wide policy items. No new fetch.
 
 clusterLeads(leads) -> Array<
-  { kind: 'cluster', theme, committee, tags, members: Lead[], topScore }   // ≥2 members
-  | { kind: 'single', ...lead }                                            // unchanged
+  { kind: 'cluster', theme, committee, tags, district?, members: Lead[], topScore }  // ≥2 members
+  | { kind: 'single', district?, ...lead }                                           // unchanged
 >
 ```
 
@@ -50,14 +68,16 @@ Rules:
 - Bucket by `eventBodyName` (committee). Theme only clusters *within* a committee (the chosen "theme + committee" granularity).
 - Within a committee bucket, group leads by `themeOf(title)`. A group of ≥2 → a `cluster`; a group of 1 (or `null` theme) → a `single`.
 - `tags` on a cluster = the tag kinds shared by **all** members (the genuinely common signal), falling back to the union if none is shared.
+- `district` on a cluster = the single district shared by all members, else omitted; on a single = `districtOf(title)` when present.
 - Order: clusters/singles ranked by `topScore` desc (a cluster's `topScore` = max member score), then earliest `eventDate`, then `eventItemId` — deterministic, mirrors `selectStoryLeads`.
 - Pure, no I/O, no mutation; exhaustively unit-tested.
 
 ### `agent/blockkit/story-leads.js` (modify) + `home-view.js` (modify)
 
 - `storyLeadsSection(entries, language)` now consumes `clusterLeads(...)` output (clusters + singles), not raw leads.
-- **Cluster block:** a section with the deterministic label `{emoji} {Theme} — {N} {items} · {committee}` carrying the shared tag once; member titles listed compactly beneath (context/section lines), each with its own `story_watch`; a cluster-level overflow (`👁 Watch all · 🔎 stories`).
-- **Single block:** as today (title + tags + watch), via the existing path.
+- **Cluster block:** a section with the deterministic label `{emoji} {Theme} — {N} {items} · {committee}` carrying the shared tag(s) + a 📍 District chip when shared, once; member titles listed compactly beneath (context/section lines), each with its own `story_watch`; a cluster-level overflow (`👁 Watch all · 🔎 stories`).
+- **Single block:** title + context line `🏛️ {committee} · 📍 District {N} (when present) · {tags}` + watch, via the existing path.
+- **District chip:** rendered from `districtOf(title)` (MOO-123) wherever a lead/cluster carries a district; the alder *name* (MOO-72 directory) is deferred to the dossier (MOO-129) to keep the Home fetch-free.
 - **Hierarchy:** render the top **N_EXPANDED = 3** entries fully; remaining entries collapse behind a `▾ Ver N pistas más` affordance (a button → `/gavel stories`, since the App Home can't lazy-expand in place).
 - **Per-item actions → overflow** where more than Watch applies, to stop the one-fat-button repetition.
 - **Language fix:** move the hardcoded-English strip line in `home-view.js` into a localized `STRIP_COPY[language]` table so the entire Home renders in the resolved language.
@@ -82,9 +102,9 @@ Decision: call `clusterLeads` inside `storyLeadsSection` (render), keeping `stat
 
 ## Testing
 
-**`tests/stories/cluster.test.js`:** the real 4-item police fixture → one `police` cluster of 4 (the load-bearing case); two unrelated Common Council items → two singles (conservative non-merge); a money + a police item in the same committee → two groups; `themeOf` family matches + `null`; deterministic order across runs; purity (input untouched).
+**`tests/stories/cluster.test.js`:** the real 4-item police fixture → one `police` cluster of 4 (the load-bearing case); two unrelated Common Council items → two singles (conservative non-merge); a development (TIF) item + a police item in the same committee → two groups; `themeOf` resolves each of the 8 beats (incl. health, development, parks) and returns `null` for an off-vocabulary title; first-match precedence (a "TIF for a development" → `development`, not caught elsewhere); a cluster of items all in District 7 carries `district: '7'`, mixed/absent → no district; deterministic order across runs; purity (input untouched).
 
-**`tests/blockkit/story-leads.test.js` / `home-view.test.js` (extend):** cluster header shows the shared tag + count once and not per-member; member titles all present; `▾ ver más` affordance when entries exceed N_EXPANDED; whole Home one language (strip localized — the regression test for the bug); singles still render; empty/quiet-week unchanged.
+**`tests/blockkit/story-leads.test.js` / `home-view.test.js` (extend):** cluster header shows the shared tag + count once and not per-member; the 📍 District chip renders when a title names a district and is absent otherwise; member titles all present; `▾ ver más` affordance when entries exceed N_EXPANDED; whole Home one language (strip localized — the regression test for the bug); singles still render; empty/quiet-week unchanged.
 
 **Live (`scripts/story-radar-verify.mjs` extend or a new check):** against the real agenda, the four police items collapse into one cluster; reporter App Home renders one language. Screenshot.
 
