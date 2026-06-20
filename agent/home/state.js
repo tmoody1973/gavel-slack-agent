@@ -1,4 +1,5 @@
 import { matchSubscriptions } from '../alerts/match.js';
+import { tagSearchable } from '../blockkit/video-modal.js';
 import { selectStoryLeads } from '../stories/leads.js';
 import { selectSalient } from './salience.js';
 
@@ -41,6 +42,10 @@ export async function buildHomeState(deps) {
   const hasReporter = subscriptions.some((s) => s.role === 'reporter');
   const storyLeads = hasReporter ? selectStoryLeads(upcoming, { boundaries }) : [];
 
+  // MOO-142: the "🎥 Meeting video" preview. Same reporter gate, and the extra Legistar
+  // + Convex round-trips only fire for reporters — the non-reporter Home stays fetch-light.
+  const meetingsWithVideo = hasReporter ? await fetchMeetingsWithVideo(deps) : [];
+
   const names = await resolveNames(
     [...new Set([...subscriptions.map((s) => s.channelId), ...watches.map((w) => w.channelId)])],
     deps.getChannelName,
@@ -54,6 +59,7 @@ export async function buildHomeState(deps) {
     configuredCount: subscriptions.filter((s) => s.configured).length,
     discover,
     storyLeads,
+    meetingsWithVideo,
     watches: watches.map((w) => ({ channelId: w.channelId, channelName: names.get(w.channelId), entity: w.entity })),
     channels: subscriptions.map((s) => ({
       channelId: s.channelId,
@@ -65,6 +71,17 @@ export async function buildHomeState(deps) {
       configured: s.configured ?? false,
     })),
   };
+}
+
+/**
+ * Recent meetings-with-video, each tagged searchable — the Home preview source (MOO-142).
+ * One ingested-id query joined in memory (not countByEvent per meeting). Degrades to an
+ * empty preview when the video boundaries aren't wired (e.g. unit tests of other slices).
+ */
+async function fetchMeetingsWithVideo(deps) {
+  if (!deps.listRecentMeetingsWithVideo || !deps.listIngestedEventIds) return [];
+  const [meetings, ingested] = await Promise.all([deps.listRecentMeetingsWithVideo(), deps.listIngestedEventIds()]);
+  return tagSearchable(meetings, ingested);
 }
 
 /** Resolve channel names, degrading to the raw id — never let a name kill the Home. */
