@@ -254,7 +254,8 @@ function storiesHarness({ text, subscription = null, upcoming, language } = {}) 
     getSubscription: async () => subscription ?? (language ? { language } : null),
     listUpcoming: async () => items,
     listMembers: async () => [{ name: 'José G. Pérez', title: 'Alderman', imageUrl: 'http://i/p.png' }],
-    enrichLead: async () => ({ matter: { matterText: 'body', fileNumber: '230099' }, event: {}, person: null }),
+    // Real enrich shape: file number + sponsor, no body text (see alerts/enrich.js).
+    enrichLead: async () => ({ matter: { fileNumber: '230099' }, event: {}, person: null }),
     generateAngle: async ({ system }) => ({
       hook: /español|spanish/i.test(system) ? 'gancho' : 'hook',
       whyStory: 'why',

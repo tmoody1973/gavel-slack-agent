@@ -12,6 +12,10 @@ const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 const context = (text) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
 
 const MAX_HOME_LEADS = 5;
+// Slack caps a message at 50 blocks. Each slash card is ≤6 blocks + a divider, so 6
+// leads (~45 blocks) is the safe ceiling — cap defensively so a future STORY_LEAD_CAP
+// bump can't silently truncate the response.
+const MAX_SLASH_LEADS = 6;
 
 const COPY = {
   en: {
@@ -119,7 +123,7 @@ export function storyLeadCards(leads, { label, language = 'en' } = {}) {
     context(copy.leadIn),
     { type: 'divider' },
   ];
-  for (const lead of leads) {
+  for (const lead of leads.slice(0, MAX_SLASH_LEADS)) {
     blocks.push(...storyLeadCard(lead, copy, language));
     blocks.push({ type: 'divider' });
   }

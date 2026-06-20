@@ -18,7 +18,7 @@ config();
 import { enrichForAlert } from '../alerts/enrich.js';
 import { api } from '../convex/_generated/api.js';
 import { createLegistarClient } from '../poller/legistar.js';
-import { STORY_ANGLE_SCHEMA, generateStoryAngle } from '../stories/angle.js';
+import { STORY_ANGLE_SCHEMA } from '../stories/angle.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../stories/leads.js';
 import { scoreNewsworthiness } from '../stories/newsworthiness.js';
 import { createClaudeGenerate } from '../summarizer/index.js';
@@ -47,10 +47,12 @@ async function main() {
   // How many of the full agenda earn any tag (the journalist-lens funnel).
   const tagged = upcoming.filter((i) => scoreNewsworthiness(i).score > 0);
   const anomalies = upcoming.filter((i) => i.walkOnFlag || i.consentFlag);
-  console.log(`🏷  ${tagged.length}/${upcoming.length} items earn ≥1 newsworthiness tag · ${anomalies.length} process anomalies (walk-on/consent)`);
+  console.log(
+    `🏷  ${tagged.length}/${upcoming.length} items earn ≥1 newsworthiness tag · ${anomalies.length} process anomalies (walk-on/consent)`,
+  );
 
   const leads = selectStoryLeads(items, { cap: TOP_N });
-  console.log(`\n=== 📰 Ranked story leads (tags-only, App Home view) ===`);
+  console.log('\n=== 📰 Ranked story leads (tags-only, App Home view) ===');
   for (const [i, lead] of leads.entries()) {
     console.log(`\n${i + 1}. [score ${lead.score}] ${lead.item.title}`);
     console.log(`   🏛 ${lead.item.eventBodyName} · ${lead.item.eventDate} · eventItemId=${lead.item.eventItemId}`);
@@ -62,7 +64,9 @@ async function main() {
     return;
   }
 
-  console.log(`\n=== 💡 Grounded angles for the top ${Math.min(TOP_N, leads.length)} (real Legistar + real Claude) ===`);
+  console.log(
+    `\n=== 💡 Grounded angles for the top ${Math.min(TOP_N, leads.length)} (real Legistar + real Claude) ===`,
+  );
   const composed = await composeLeadAngles(leads, {
     enrich: (item) => enrichForAlert(item, legistar),
     generate,
@@ -72,7 +76,9 @@ async function main() {
 
   for (const [i, lead] of composed.entries()) {
     console.log(`\n${i + 1}. ${lead.item.title}`);
-    console.log(`   🏷 ${tags(lead)}${lead.fileNumber ? ` · File #${lead.fileNumber}` : ''}${lead.member ? ` · sponsor ${lead.member.name}` : ''}${lead.hasTranscript ? ' · 🎙 transcript available' : ''}`);
+    console.log(
+      `   🏷 ${tags(lead)}${lead.fileNumber ? ` · File #${lead.fileNumber}` : ''}${lead.member ? ` · sponsor ${lead.member.name}` : ''}${lead.hasTranscript ? ' · 🎙 transcript available' : ''}`,
+    );
     if (lead.angle) {
       console.log(`   💡 HOOK: ${lead.angle.hook}`);
       console.log(`   ❓ WHY:  ${lead.angle.whyStory}`);

@@ -110,15 +110,13 @@ describe('composeLeadAngles — enrich + ground the top leads (async, injected)'
     },
   ];
 
+  // The REAL enrich shape (alerts/enrich.js → legistar.getMatter → mapMatter): file
+  // number + sponsor only. The current Legistar client fetches no matter BODY text
+  // (the alert pipeline does the same — alerts/process.js passes matterText:''), so
+  // angles ground on title + committee + sponsor + tags. Mocks must match that.
   const deps = {
     enrich: async (item) => ({
-      matter: {
-        matterText:
-          item.eventItemId === 2
-            ? 'Creates a 9-member board to review police surveillance contracts worth $2 million.'
-            : 'body',
-        fileNumber: '230001',
-      },
+      matter: { fileNumber: '230001' },
       event: {},
       person: item.eventItemId === 2 ? { name: 'José G. Pérez' } : null,
     }),
@@ -126,15 +124,32 @@ describe('composeLeadAngles — enrich + ground the top leads (async, injected)'
     members,
   };
 
-  it('enriches each lead, re-scores with matter text, attaches sponsor + angle', async () => {
+  it('enriches each lead from the real record (file # + sponsor), attaches the angle', async () => {
     const leads = selectStoryLeads(UPCOMING).filter((l) => l.item.eventItemId === 2);
     const composed = await composeLeadAngles(leads, deps);
     const lead = composed[0];
     assert.equal(lead.angle.hook.startsWith('hook for'), true);
     assert.equal(lead.member?.name, 'José G. Pérez');
     assert.equal(lead.fileNumber, '230001');
-    // re-scoring with the matter body adds the money tag the bare title lacked
-    assert.ok(lead.tags.some((t) => t.kind === 'money'));
+    // no body text in the real path → tags come from the title (accountability/novelty), not a body
+    assert.ok(lead.tags.some((t) => t.kind === 'accountability'));
+    assert.ok(!lead.tags.some((t) => t.kind === 'money'));
+  });
+
+  it('forward-compatible seam: when an enrichment DOES supply body text, it re-scores with it', async () => {
+    // If a future enrich provides matter body text, composeLeadAngles folds it into the
+    // score — proving the seam works without claiming today's Legistar path delivers it.
+    const withText = {
+      ...deps,
+      enrich: async () => ({
+        matter: { fileNumber: '230001', matterText: 'authorizes $2 million in bonding' },
+        event: {},
+        person: null,
+      }),
+    };
+    const leads = selectStoryLeads(UPCOMING).filter((l) => l.item.eventItemId === 2);
+    const composed = await composeLeadAngles(leads, withText);
+    assert.ok(composed[0].tags.some((t) => t.kind === 'money'));
   });
 
   it('a failing angle degrades that lead to angle:null without killing the batch', async () => {

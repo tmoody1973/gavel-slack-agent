@@ -78,8 +78,14 @@ export function filterByCommitteeOrTopic(upcoming = [], query = '') {
 /**
  * Enrich the top leads and write a grounded angle for each (async). Each lead is
  * isolated: an enrichment or angle failure degrades that one to `angle: null`
- * rather than sinking the batch. Re-scores with the matter body so the tags
- * reflect signals the terse title hid.
+ * rather than sinking the batch.
+ *
+ * NOTE on grounding: the current Legistar enrich (alerts/enrich.js) returns the file
+ * number + sponsor but NO matter body text (mapMatter → {fileNumber}; the alert
+ * pipeline is the same). So angles ground on title + committee + sponsor + tags — which
+ * live verification confirmed is accurate and safe. The `{ text: matterText }` re-score
+ * is a forward-compatible seam: if a future enrich supplies body text, the score and
+ * prompt fold it in automatically (the prompt degrades gracefully to "thin record").
  *
  * @param {Array<object>} leads - already capped by the caller
  * @param {{
@@ -125,7 +131,11 @@ export async function composeLeadAngles(leads, { enrich, generate, members = [],
   );
 }
 
-/** Drop a leading emoji + space from a topic label so it reads in prose. */
+/**
+ * Drop a leading emoji + space from a topic label so it reads in prose ("🏠 Housing
+ * & development" → "Housing & development"). Strips any leading non-letter run, which
+ * is safe for the fixed TOPICS label set (all start with an emoji + space).
+ */
 function stripEmoji(label) {
   return label.replace(/^\P{L}+/u, '').trim();
 }
