@@ -83,6 +83,21 @@ describe('confirmModal', () => {
     const input = view.blocks.find((b) => b.type === 'input' && b.block_id === 'onboarding_channel');
     assert.ok(!('initial_conversation' in input.element), 'no pre-fill when channel unknown');
   });
+
+  it('offers an optional neighborhood typeahead → district boundary (MOO-131)', () => {
+    const view = confirmModal('association', defaultsForRole('association'), 'en');
+    const block = view.blocks.find((b) => b.block_id === 'onboarding_neighborhood_block');
+    assert.ok(block, 'neighborhood block present');
+    assert.equal(block.optional, true, 'skippable for reporters covering all');
+    assert.equal(block.element.type, 'external_select');
+    assert.equal(block.element.action_id, 'onboarding_neighborhood');
+  });
+
+  it('localizes the neighborhood label to Spanish', () => {
+    const view = confirmModal('organizer', defaultsForRole('organizer'), 'es');
+    const block = view.blocks.find((b) => b.block_id === 'onboarding_neighborhood_block');
+    assert.match(block.label.text, /vecindario/i);
+  });
   it('Spanish role shows the Activar submit label', () => {
     const view = confirmModal('organizer', defaultsForRole('organizer'), 'es');
     assert.match(view.submit.text, /Activar/);

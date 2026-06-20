@@ -1,6 +1,6 @@
 import { createHomeDeps } from '../../home/deps.js';
 import { makeCoverMultipleAreas, makeWatchlistHow } from './grow.js';
-import { makeGoLiveSubmit, makeOpenConfirmModal, makeOpenRoleModal } from './setup.js';
+import { makeGoLiveSubmit, makeNeighborhoodOptions, makeOpenConfirmModal, makeOpenRoleModal } from './setup.js';
 import { makeAskGavel, makeMemberJoined, makeWhatCanYouDo } from './welcome.js';
 
 /**
@@ -17,6 +17,7 @@ export function register(app) {
   const deps = createHomeDeps(app.client);
   app.action('onboarding_open_role', makeOpenRoleModal(deps));
   app.action(/^onboarding_pick_role_/, makeOpenConfirmModal(deps));
+  app.options('onboarding_neighborhood', makeNeighborhoodOptions());
   app.view('onboarding_confirm_modal', makeGoLiveSubmit(deps));
 
   app.event('member_joined_channel', makeMemberJoined(deps));

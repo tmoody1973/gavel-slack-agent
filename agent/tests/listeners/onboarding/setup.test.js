@@ -1,7 +1,12 @@
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { makeGoLiveSubmit, makeOpenConfirmModal, makeOpenRoleModal } from '../../../listeners/onboarding/setup.js';
+import {
+  makeGoLiveSubmit,
+  makeNeighborhoodOptions,
+  makeOpenConfirmModal,
+  makeOpenRoleModal,
+} from '../../../listeners/onboarding/setup.js';
 import { committeesAndKeywordsForTopics } from '../../../onboarding/topics.js';
 
 const noop = () => {};
@@ -453,5 +458,79 @@ describe('makeGoLiveSubmit — "show, don\'t tell" sample alert (MOO-122)', () =
       }),
     );
     assert.ok(confirmed, 'live confirmation still posted despite sample failure');
+  });
+});
+
+describe('MOO-131: neighborhood → district boundary on Go-live', () => {
+  const meta = JSON.stringify({
+    role: 'association',
+    defaults: { committees: ['LICENSES COMMITTEE'], keywords: [], language: 'en' },
+    channelId: 'C1',
+  });
+
+  const goLive = async (values) => {
+    let upsert;
+    const deps = homeDeps({
+      upsertSubscription: async (input) => {
+        upsert = input;
+      },
+    });
+    const client = { chat: { postMessage: async () => {} }, views: { publish: async () => {} } };
+    await makeGoLiveSubmit(deps)({
+      ack: async () => {},
+      body: { user: { id: 'U1' } },
+      view: { private_metadata: meta, state: { values } },
+      client,
+      logger,
+    });
+    return upsert;
+  };
+
+  it('writes the district boundary for the picked neighborhood', async () => {
+    const upsert = await goLive({
+      onboarding_neighborhood_block: { onboarding_neighborhood: { selected_option: { value: 'Riverwest' } } },
+    });
+    assert.deepStrictEqual(upsert.boundary, { type: 'district', value: '3' });
+  });
+
+  it('omits the boundary when no neighborhood is picked (optional field)', async () => {
+    const upsert = await goLive({});
+    assert.ok(!('boundary' in upsert), 'no boundary written when skipped');
+  });
+
+  it('omits the boundary for an unresolvable name (never writes garbage)', async () => {
+    const upsert = await goLive({
+      onboarding_neighborhood_block: { onboarding_neighborhood: { selected_option: { value: 'Gotham City' } } },
+    });
+    assert.ok(!('boundary' in upsert));
+  });
+});
+
+describe('makeNeighborhoodOptions', () => {
+  it('filters the neighborhood list by query and labels each with its district', async () => {
+    let acked;
+    await makeNeighborhoodOptions()({
+      ack: async (r) => {
+        acked = r;
+      },
+      options: { value: 'riverw' },
+      logger,
+    });
+    const riverwest = acked.options.find((o) => o.value === 'Riverwest');
+    assert.ok(riverwest, 'Riverwest surfaced for query "riverw"');
+    assert.match(riverwest.text.text, /District 3/);
+    assert.ok(acked.options.length <= 100, 'caps at Slack 100-option limit');
+  });
+
+  it('acks an empty list rather than throwing on failure', async () => {
+    let acked;
+    await makeNeighborhoodOptions()({
+      ack: async (r) => {
+        acked = r;
+      },
+      options: null, // forces the empty-query path; must not throw
+      logger,
+    });
+    assert.ok(Array.isArray(acked.options));
   });
 });
