@@ -1,4 +1,7 @@
 const DEFAULT_WINDOW_DAYS = 7;
+// Video is a look-back surface (footage exists only after a meeting), so the
+// discovery query (MOO-142) scans a past window rather than the future-only spine.
+const DEFAULT_VIDEO_WINDOW_DAYS = 30;
 
 /** Advance an ISO timestamp by N days (UTC), deterministically. */
 export function addDaysIso(iso, days) {
@@ -20,6 +23,28 @@ export function buildEventsQuery(nowIso, windowDays = DEFAULT_WINDOW_DAYS) {
 }
 
 /**
+ * Build the `/events` OData query for PAST Final agendas with video in a look-back
+ * window (newest first). The inverse of buildEventsQuery's future-only window.
+ */
+export function buildPastEventsQuery(nowIso, windowDays = DEFAULT_VIDEO_WINDOW_DAYS) {
+  const start = addDaysIso(nowIso, -windowDays).slice(0, 10);
+  const end = nowIso.slice(0, 10);
+  const filter = `EventDate ge datetime'${start}' and EventDate lt datetime'${end}' and EventAgendaStatusName eq 'Final'`;
+  const params = new URLSearchParams({ $filter: filter, $orderby: 'EventDate desc', $top: '1000' });
+  return `events?${params.toString()}`;
+}
+
+/**
+ * Coerce a raw Legistar EventMedia to a positive Granicus clip id, or undefined.
+ * EventMedia arrives as a string on both the list and single-event endpoints
+ * (e.g. "5210"); null/0 means the meeting has no published webcast.
+ */
+export function videoClipId(raw) {
+  const clipId = Number(raw);
+  return Number.isFinite(clipId) && clipId > 0 ? clipId : undefined;
+}
+
+/**
  * Tag a no-offset timestamp as UTC. Legistar returns EventAgendaLastPublishedUTC
  * without a timezone designator (e.g. "2026-06-08T14:38:48.597") even though the
  * field is genuinely UTC; left bare, `new Date()` would misparse it as local.
@@ -31,12 +56,17 @@ function toUtcIso(value) {
 
 /** Normalize a raw Legistar event to the fields the spine needs. */
 export function mapEvent(raw) {
-  return {
+  const event = {
     eventId: raw.EventId,
     eventBodyName: raw.EventBodyName,
     eventDate: raw.EventDate,
     agendaPublishedUTC: toUtcIso(raw.EventAgendaLastPublishedUTC),
   };
+  // Carry the Granicus clip id only when this meeting actually has a webcast, so the
+  // poller spine (which omits undefined optionals) is unchanged by the video surface.
+  const eventMedia = videoClipId(raw.EventMedia);
+  if (eventMedia !== undefined) event.eventMedia = eventMedia;
+  return event;
 }
 
 /** Normalize a raw Legistar event item (agenda line) to spine fields. */
@@ -172,6 +202,25 @@ export function createLegistarClient({
     return mapEventDetail(await getJson(`events/${eventId}`));
   }
 
+  /**
+   * Recent PAST meetings that have a published Granicus webcast — the video-discovery
+   * source (MOO-142). Filters the look-back window to events with a real clip id and
+   * (optionally) one committee. Returns `{ eventId, eventBodyName, eventDate, eventMedia }`.
+   */
+  async function listRecentMeetingsWithVideo({ days = DEFAULT_VIDEO_WINDOW_DAYS, committee } = {}) {
+    const raw = await getJson(buildPastEventsQuery(now(), days));
+    return raw
+      .map(mapEvent)
+      .filter((event) => event.eventMedia !== undefined)
+      .filter((event) => !committee || event.eventBodyName === committee)
+      .map(({ eventId, eventBodyName, eventDate, eventMedia }) => ({
+        eventId,
+        eventBodyName,
+        eventDate,
+        eventMedia,
+      }));
+  }
+
   return {
     fetchUpcomingFinalEvents,
     fetchEventItems,
@@ -181,5 +230,6 @@ export function createLegistarClient({
     getMatterHistory,
     getPerson,
     getEvent,
+    listRecentMeetingsWithVideo,
   };
 }
