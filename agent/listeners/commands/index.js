@@ -44,6 +44,10 @@ export function register(app) {
     enrichLead: (item) => enrichForAlert(item, legistar),
     generateAngle,
     countTranscript: (eventId) => requireConvex(convex).query(api.transcripts.countByEvent, { eventId }),
+
+    // MOO-142 video-discovery boundaries (/gavel video).
+    listRecentMeetingsWithVideo: () => legistar.listRecentMeetingsWithVideo(),
+    listIngestedEventIds: () => requireConvex(convex).query(api.transcripts.listIngestedEventIds, {}),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

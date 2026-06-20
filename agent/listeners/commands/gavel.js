@@ -1,9 +1,9 @@
 import { growWatchlistPrompt } from '../../blockkit/grow.js';
-import { storyCarousel, storyLeadCards } from '../../blockkit/index.js';
+import { meetingVideoSection, storyCarousel, storyLeadCards, tagSearchable, videoModal } from '../../blockkit/index.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
-const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories'];
+const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video'];
 
 const STORY_LEAD_CAP = 5;
 
@@ -24,6 +24,7 @@ const HELP_TEXT = [
   '*Gavel commands*',
   '• `/gavel watch <entity>` — alert this channel when a file number, address, or name appears',
   '• `/gavel stories [committee|topic]` — ranked story leads on the upcoming agenda (for reporters)',
+  '• `/gavel video [committee]` — browse recent meeting video you can watch (and search)',
   '• `/gavel status` — show this channel’s committees, keywords, language, and watches',
   '• `/gavel unwatch <entity>` — stop watching (names as shown in `/gavel status`)',
   '• `/gavel digest` — weekly digest _(coming in Phase 3)_',
@@ -33,7 +34,7 @@ const HELP_TEXT = [
  * Parse the free text after `/gavel` into a subcommand + its arguments.
  * Unknown or empty input maps to `help`. Pure.
  * @param {string} text
- * @returns {{ subcommand: 'watch' | 'unwatch' | 'status' | 'digest' | 'stories' | 'help', args: string }}
+ * @returns {{ subcommand: 'watch' | 'unwatch' | 'status' | 'digest' | 'stories' | 'video' | 'help', args: string }}
  */
 export function parseGavelCommand(text) {
   const trimmed = (text ?? '').trim();
@@ -57,7 +58,7 @@ export function parseGavelCommand(text) {
  * }} deps
  * @returns {Promise<void>}
  */
-export async function handleGavelCommand({ command, ack, respond, logger }, deps) {
+export async function handleGavelCommand({ command, ack, respond, client, body, logger }, deps) {
   await ack();
   const { subcommand, args } = parseGavelCommand(command.text);
   const channelId = command.channel_id;
@@ -67,6 +68,13 @@ export async function handleGavelCommand({ command, ack, respond, logger }, deps
     // posts a "digging…" status, then enriches + writes grounded angles and posts again.
     if (subcommand === 'stories') {
       await runStories({ args, channelId, respond, logger }, deps);
+      return;
+    }
+
+    // Video discovery (MOO-142): no arg opens the filterable browse modal (needs the
+    // command's trigger_id); an arg filters straight to an ephemeral list.
+    if (subcommand === 'video') {
+      await runVideo({ args, channelId, body, client, respond, logger }, deps);
       return;
     }
 
@@ -152,6 +160,47 @@ async function runStories({ args, channelId, respond, logger }, deps) {
   } catch (err) {
     logger?.error?.(`/gavel stories carousel rejected, falling back to list: ${err.message}`);
     await respond({ ...base, blocks: storyLeadCards(composed, { label, language }) });
+  }
+}
+
+/**
+ * `/gavel video [committee]` — the no-jargon video library (MOO-142). No arg opens the
+ * filterable browse modal via the command's `trigger_id`; an arg narrows directly to an
+ * ephemeral list. Lookup + links only (no Claude). Heavy boundaries are injected.
+ *
+ * @param {{ args: string, channelId: string, body: object, client: object, respond: Function, logger?: {error: Function} }} ctx
+ * @param {{
+ *   getSubscription: (channelId: string) => Promise<object|null>,
+ *   listRecentMeetingsWithVideo: () => Promise<Array<object>>,
+ *   listIngestedEventIds: () => Promise<number[]>,
+ * }} deps
+ */
+async function runVideo({ args, channelId, body, client, respond, logger }, deps) {
+  const subscription = await deps.getSubscription(channelId);
+  const language = subscription?.language === 'es' ? 'es' : 'en';
+  const [meetings, ingested] = await Promise.all([deps.listRecentMeetingsWithVideo(), deps.listIngestedEventIds()]);
+  const tagged = tagSearchable(meetings, ingested);
+
+  const term = args.trim();
+  if (term) {
+    const matches = tagged.filter((m) => m.eventBodyName.toLowerCase().includes(term.toLowerCase()));
+    await respond({
+      response_type: 'ephemeral',
+      replace_original: false,
+      text: `🎥 Meeting video — ${term}`,
+      blocks: meetingVideoSection(matches, language),
+    });
+    return;
+  }
+
+  try {
+    await client.views.open({ trigger_id: body.trigger_id, view: videoModal(tagged, { language, committee: null }) });
+  } catch (err) {
+    logger?.error?.(`/gavel video modal open failed: ${err.message}`);
+    await respond({
+      response_type: 'ephemeral',
+      text: ':movie_camera: Could not open the video browser — please try again.',
+    });
   }
 }
 

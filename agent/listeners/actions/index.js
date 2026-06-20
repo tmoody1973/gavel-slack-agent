@@ -14,6 +14,7 @@ import {
 } from './home-buttons.js';
 import { makeParcelWatch } from './parcel-buttons.js';
 import { makeStoryAsk, makeStoryBrowse, makeStoryLeadOverflow, makeStoryModalFilter } from './story-buttons.js';
+import { makeVideoBrowse, makeVideoFilter } from './video-buttons.js';
 
 /**
  * Register action listeners. Convex/Legistar boundaries are constructed here
@@ -67,6 +68,18 @@ export function register(app) {
   app.action('story_modal_filter', makeStoryModalFilter(storyDeps));
   app.action('story_lead_overflow', makeStoryLeadOverflow(storyDeps));
   app.action('story_ask', makeStoryAsk(storyDeps));
+
+  // MOO-142: meeting-video discovery. Browse + the committee dropdown share the cheap
+  // pipeline (live Legistar look-back + one Convex ingested-id query). The ▶ Watch button
+  // is a url link — Slack still dispatches an interaction, so ack it to avoid the spinner.
+  const videoDeps = {
+    listSubscriptions: homeDeps.listSubscriptions,
+    listRecentMeetingsWithVideo: () => legistar.listRecentMeetingsWithVideo(),
+    listIngestedEventIds: () => requireConvex(convex).query(api.transcripts.listIngestedEventIds, {}),
+  };
+  app.action('video_browse', makeVideoBrowse(videoDeps));
+  app.action('video_filter', makeVideoFilter(videoDeps));
+  app.action('video_watch', async ({ ack }) => ack());
 }
 
 function requireConvex(convex) {

@@ -329,3 +329,71 @@ test('stories falls back to the classic list if Slack rejects the carousel', asy
   assert.match(JSON.stringify(last.blocks), /Class B Tavern license/);
   assert.equal(rejectedOnce, true);
 });
+
+// ---------- MOO-142: /gavel video ----------
+
+const VIDEO_MEETINGS = [
+  {
+    eventId: 13441,
+    eventBodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE',
+    eventDate: '2026-06-16T00:00:00',
+    eventMedia: 5210,
+  },
+  {
+    eventId: 13456,
+    eventBodyName: 'FINANCE & PERSONNEL COMMITTEE',
+    eventDate: '2026-06-18T00:00:00',
+    eventMedia: 5213,
+  },
+];
+
+function videoHarness({ text, subscription = { language: 'en' } }) {
+  const calls = { responds: [], opened: [] };
+  const args = {
+    command: { text, channel_id: 'C123', user_id: 'U1' },
+    ack: async () => {},
+    respond: async (m) => calls.responds.push(m),
+    client: { views: { open: async (v) => calls.opened.push(v) } },
+    body: { trigger_id: 'TRIG1' },
+    logger: { error: () => {} },
+  };
+  const deps = {
+    getSubscription: async () => subscription,
+    listRecentMeetingsWithVideo: async () => VIDEO_MEETINGS,
+    listIngestedEventIds: async () => [13441],
+  };
+  return { calls, args, deps };
+}
+
+test('parseGavelCommand recognizes the video subcommand', () => {
+  assert.deepEqual(parseGavelCommand('video'), { subcommand: 'video', args: '' });
+  assert.deepEqual(parseGavelCommand('video zoning'), { subcommand: 'video', args: 'zoning' });
+});
+
+test('/gavel video (no arg) opens the filterable modal via the command trigger_id', async () => {
+  const h = videoHarness({ text: 'video' });
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(h.calls.opened.length, 1);
+  assert.equal(h.calls.opened[0].trigger_id, 'TRIG1');
+  assert.equal(h.calls.opened[0].view.callback_id, 'video_browse_modal');
+  const blocks = JSON.stringify(h.calls.opened[0].view.blocks);
+  assert.match(blocks, /🔍 Searchable/);
+  assert.match(blocks, /🎥 Video only/);
+});
+
+test('/gavel video <committee> filters directly to an ephemeral list (no modal)', async () => {
+  const h = videoHarness({ text: 'video finance' });
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(h.calls.opened.length, 0, 'arg path does not open a modal');
+  const resp = h.calls.responds.at(-1);
+  assert.equal(resp.response_type, 'ephemeral');
+  const blocks = JSON.stringify(resp.blocks);
+  assert.match(blocks, /clip_id=5213/);
+  assert.doesNotMatch(blocks, /clip_id=5210/, 'zoning meeting excluded by the finance filter');
+});
+
+test('/gavel video renders Spanish for a Spanish channel', async () => {
+  const h = videoHarness({ text: 'video', subscription: { language: 'es' } });
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(JSON.stringify(h.calls.opened[0].view.blocks), /Ver en Granicus|Solo video|Con búsqueda/);
+});
