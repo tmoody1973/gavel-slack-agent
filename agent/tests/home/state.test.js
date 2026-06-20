@@ -95,6 +95,39 @@ test('reports configuredCount and surfaces per-channel role/configured', async (
   assert.equal(state.channels[1].role, null);
 });
 
+test('storyLeads stays empty without a reporter channel (MOO-127 persona gate)', async () => {
+  const state = await buildHomeState(deps());
+  assert.deepEqual(state.storyLeads, []);
+});
+
+test('storyLeads is computed when a reporter channel exists, ranked + tagged', async () => {
+  const state = await buildHomeState(
+    deps({
+      listSubscriptions: async () => [
+        { channelId: 'C9', committees: [], keywords: [], language: 'en', role: 'reporter' },
+      ],
+      listUpcoming: async () => [
+        {
+          eventId: 12,
+          eventItemId: 4,
+          eventBodyName: 'FINANCE & PERSONNEL COMMITTEE',
+          title: 'Resolution authorizing $5 million in bonding',
+          walkOnFlag: true,
+        },
+        {
+          eventId: 13,
+          eventItemId: 5,
+          eventBodyName: 'COMMON COUNCIL',
+          title: 'Communication relating to routine staffing',
+        },
+      ],
+    }),
+  );
+  assert.equal(state.storyLeads.length, 1);
+  assert.equal(state.storyLeads[0].item.eventItemId, 4);
+  assert.ok(state.storyLeads[0].tags.some((t) => t.kind === 'money'));
+});
+
 test('buildHomeState surfaces salient items in `discover` (walk-on + big), regardless of subscription (MOO-123)', async () => {
   const state = await buildHomeState(deps());
   const ids = state.discover.map((e) => e.item.eventItemId);

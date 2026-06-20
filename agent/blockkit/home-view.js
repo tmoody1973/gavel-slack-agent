@@ -2,6 +2,8 @@
 const MAX_WATCH_ROWS = 20;
 const MAX_CHANNEL_ROWS = 10;
 
+import { storyLeadsSection } from './story-leads.js';
+
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 
 const plural = (count, singular, pluralForm = `${singular}s`) => (count === 1 ? singular : pluralForm);
@@ -16,9 +18,11 @@ const plural = (count, singular, pluralForm = `${singular}s`) => (count === 1 ? 
  * }} state
  * @returns {{type: 'home', blocks: object[]}}
  */
-export function homeView({ strip, watches, channels, discover = [] }) {
+export function homeView({ strip, watches, channels, discover = [], storyLeads = [] }) {
   if (channels.length === 0) return emptyStateView();
   const language = channels.some((c) => c.language === 'es') ? 'es' : 'en';
+  // MOO-127: the "📰 Story leads" section is the reporter persona's switch.
+  const hasReporter = channels.some((c) => c.role === 'reporter');
 
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '🏛️ Gavel — your civic week', emoji: true } },
@@ -26,6 +30,7 @@ export function homeView({ strip, watches, channels, discover = [] }) {
       `This week: *${strip.meetings}* ${plural(strip.meetings, 'meeting touches', 'meetings touch')} your subscriptions · ⚠️ *${strip.lateAdds}* added late · 👁 *${strip.watchHits}* ${plural(strip.watchHits, 'watch hit')}`,
     ),
     { type: 'divider' },
+    ...(hasReporter ? storyLeadsSection(storyLeads, language) : []),
     ...discoverBlocks(discover, language),
     {
       type: 'section',

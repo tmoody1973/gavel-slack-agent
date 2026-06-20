@@ -6,4 +6,5 @@ export { homeView } from './home-view.js';
 export { matterCard } from './matter-card.js';
 export { parcelCard } from './parcel-card.js';
 export { sponsorCard } from './sponsor-card.js';
+export { storyLeadCards, storyLeadsSection } from './story-leads.js';
 export { voteTable } from './vote-table.js';

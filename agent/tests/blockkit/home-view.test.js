@@ -126,3 +126,43 @@ test('Discover section localizes to Spanish', () => {
 test('homeView tolerates a state with no discover field (back-compat)', () => {
   assert.doesNotThrow(() => homeView(state));
 });
+
+// ---------- MOO-127: reporter-gated "📰 Story leads" section ----------
+
+const storyLead = (over) => ({
+  item: {
+    eventItemId: 2,
+    title: 'An ordinance creating a police surveillance oversight board',
+    eventBodyName: 'COMMON COUNCIL',
+    walkOnFlag: true,
+    ...over,
+  },
+  tags: [{ kind: 'accountability' }, { kind: 'novelty' }, { kind: 'anomaly', detail: 'walkOn' }],
+  score: 10,
+  reasons: [],
+});
+
+const reporterState = (over) => ({
+  ...enState,
+  channels: [{ ...enState.channels[0], role: 'reporter' }],
+  ...over,
+});
+
+test('reporter channel surfaces the "Story leads" section with tags', () => {
+  const all = JSON.stringify(homeView(reporterState({ storyLeads: [storyLead()] })).blocks);
+  assert.match(all, /Story leads this week/);
+  assert.match(all, /police surveillance oversight board/);
+  assert.match(all, /Power & accountability/);
+  assert.match(all, /story_watch/);
+});
+
+test('non-reporter channel never shows the Story leads section', () => {
+  const all = JSON.stringify(homeView({ ...enState, storyLeads: [storyLead()] }).blocks);
+  assert.doesNotMatch(all, /Story leads this week/);
+});
+
+test('reporter channel with a quiet week shows the friendly empty line', () => {
+  const all = JSON.stringify(homeView(reporterState({ storyLeads: [] })).blocks);
+  assert.match(all, /Story leads this week/);
+  assert.match(all.toLowerCase(), /quiet week/);
+});
