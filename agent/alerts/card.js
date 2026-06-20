@@ -1,9 +1,34 @@
-import { sponsorCard } from '../blockkit/sponsor-card.js';
-
 /** Slack header text caps at 150 chars. */
 function headerText(title) {
   const text = `⚖️ ${title}`;
   return text.length > 150 ? `${text.slice(0, 147)}…` : text;
+}
+
+/**
+ * The Notification-template thumbnail: a matched council member's headshot as a
+ * section accessory. Returns null unless the URL is a real https image — Slack
+ * rejects a card with a malformed/empty image block, so a missing headshot must
+ * degrade to no accessory (the contact line still renders).
+ */
+function headshotAccessory(member) {
+  const url = member?.imageUrl;
+  if (typeof url === 'string' && url.startsWith('https://')) {
+    return { type: 'image', image_url: url, alt_text: member.name ?? 'council member' };
+  }
+  return null;
+}
+
+/** Member name/title + contact links as a context line (the headshot rides as the
+ * section accessory now, so this carries no image). */
+function memberContext(member) {
+  const contact = [
+    member.phone && `☎️ ${member.phone}`,
+    member.email && `✉️ <mailto:${member.email}|${member.email}>`,
+    member.webpage && `<${member.webpage}|City webpage>`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return { type: 'context', elements: [{ type: 'mrkdwn', text: `*${member.name}* — ${member.title}\n${contact}` }] };
 }
 
 /**
@@ -28,7 +53,7 @@ export function buildAlertCard({ row, matter, event, summary, footer, language =
   const value = String(row.eventItemId);
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: headerText(row.title), emoji: true } },
-    { type: 'context', elements: [{ type: 'mrkdwn', text: `*${row.eventBodyName}*` }] },
+    { type: 'context', elements: [{ type: 'mrkdwn', text: `🏛️ *${row.eventBodyName}*` }] },
   ];
 
   if (row.walkOnFlag) {
@@ -50,10 +75,19 @@ export function buildAlertCard({ row, matter, event, summary, footer, language =
     });
   }
 
-  blocks.push(
-    { type: 'section', text: { type: 'mrkdwn', text: summary.en.summary } },
-    { type: 'context', elements: [{ type: 'mrkdwn', text: `💡 *Why it matters:* ${summary.en.whyItMatters}` }] },
-  );
+  // Primary section: the plain-language summary, with the council headshot as the
+  // Notification-template accessory thumbnail when a sponsor is matched.
+  const primarySection = { type: 'section', text: { type: 'mrkdwn', text: summary.en.summary } };
+  const accessory = headshotAccessory(member);
+  if (accessory) primarySection.accessory = accessory;
+  blocks.push(primarySection, {
+    type: 'context',
+    elements: [{ type: 'mrkdwn', text: `💡 *Why it matters:* ${summary.en.whyItMatters}` }],
+  });
+
+  if (member) {
+    blocks.push(memberContext(member));
+  }
 
   if (language === 'es') {
     blocks.push(
@@ -64,10 +98,6 @@ export function buildAlertCard({ row, matter, event, summary, footer, language =
   }
 
   blocks.push({ type: 'divider' }, { type: 'section', text: { type: 'mrkdwn', text: footer.text } });
-
-  if (member) {
-    blocks.push(sponsorCard(member));
-  }
 
   blocks.push({
     type: 'actions',
