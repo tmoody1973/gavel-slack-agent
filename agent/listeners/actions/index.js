@@ -50,6 +50,9 @@ export function register(app) {
   const homeDeps = createHomeDeps(app.client);
   app.action('home_add_watch', makeHomeAddWatch(homeDeps));
   app.action('discover_watch', makeDiscoverWatch(homeDeps));
+  // MOO-127: the "📰 Story leads" watch button opens the same pre-filled add-watch
+  // modal as Discover (App Home has no channel context to resolve a watch directly).
+  app.action('story_watch', makeDiscoverWatch(homeDeps));
   app.action('home_edit_channel', makeHomeEditChannel(homeDeps));
   app.action('home_watch_remove', makeHomeWatchRemove(homeDeps));
   app.options('home_committees', makeCommitteeOptions(homeDeps));

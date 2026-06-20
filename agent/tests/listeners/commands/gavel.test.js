@@ -216,3 +216,87 @@ test('unwatch with no args shows usage', async () => {
   assert.equal(removed.length, 0);
   assert.match(responses[0].text, /Usage: `\/gavel unwatch <entity>`/);
 });
+
+// ---------- /gavel stories (MOO-127 Story Radar) ----------
+
+test('parses stories with a committee/topic argument', () => {
+  assert.deepEqual(parseGavelCommand('stories licenses'), { subcommand: 'stories', args: 'licenses' });
+  assert.deepEqual(parseGavelCommand('stories'), { subcommand: 'stories', args: '' });
+});
+
+function storiesHarness({ text, subscription = null, upcoming, language } = {}) {
+  const calls = { ack: 0, responds: [] };
+  const args = {
+    command: { text, channel_id: 'C1', user_id: 'U1' },
+    ack: async () => {
+      calls.ack += 1;
+    },
+    respond: async (m) => calls.responds.push(m),
+    logger: { error: () => {} },
+  };
+  const items = upcoming ?? [
+    {
+      eventId: 11,
+      eventItemId: 5,
+      eventBodyName: 'Licenses Committee',
+      title: 'Appeal of the denial of a Class B Tavern license',
+      eventDate: '2026-06-26',
+    },
+    {
+      eventId: 12,
+      eventItemId: 6,
+      eventBodyName: 'Common Council',
+      title: 'Communication relating to routine staffing',
+      eventDate: '2026-06-22',
+    },
+  ];
+  const deps = {
+    getSubscription: async () => subscription ?? (language ? { language } : null),
+    listUpcoming: async () => items,
+    listMembers: async () => [{ name: 'José G. Pérez', title: 'Alderman', imageUrl: 'http://i/p.png' }],
+    enrichLead: async () => ({ matter: { matterText: 'body', fileNumber: '230099' }, event: {}, person: null }),
+    generateAngle: async ({ system }) => ({
+      hook: /español|spanish/i.test(system) ? 'gancho' : 'hook',
+      whyStory: 'why',
+    }),
+    countTranscript: async () => 0,
+  };
+  return { calls, args, deps };
+}
+
+test('stories posts a status line first, then ranked leads with a grounded angle', async () => {
+  const h = storiesHarness({ text: 'stories licenses' });
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(h.calls.ack, 1);
+  assert.equal(h.calls.responds.length, 2);
+  assert.match(h.calls.responds[0].text, /Digging through/);
+  const result = JSON.stringify(h.calls.responds[1].blocks);
+  assert.match(result, /Class B Tavern license/);
+  assert.match(result, /hook/);
+  assert.match(h.calls.responds[1].text, /Story leads — Bars & licenses/);
+});
+
+test('stories with no leads in the filter posts a friendly empty line', async () => {
+  const h = storiesHarness({
+    text: 'stories streets',
+    upcoming: [
+      {
+        eventId: 1,
+        eventItemId: 9,
+        eventBodyName: 'Common Council',
+        title: 'Communication, routine',
+        eventDate: '2026-06-22',
+      },
+    ],
+  });
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(h.calls.responds.length, 2);
+  assert.match(h.calls.responds[1].text, /No story leads/i);
+});
+
+test('stories honors the channel language (ES status + Spanish angle)', async () => {
+  const h = storiesHarness({ text: 'stories', language: 'es' });
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(h.calls.responds[0].text, /Revisando la agenda/);
+  assert.match(JSON.stringify(h.calls.responds[1].blocks), /gancho/);
+});

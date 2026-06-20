@@ -1,4 +1,5 @@
 import { matchSubscriptions } from '../alerts/match.js';
+import { selectStoryLeads } from '../stories/leads.js';
 import { selectSalient } from './salience.js';
 
 /**
@@ -34,6 +35,12 @@ export async function buildHomeState(deps) {
   const boundaries = subscriptions.map((s) => s.boundary?.value).filter(Boolean);
   const discover = selectSalient(upcoming, { boundaries });
 
+  // MOO-127: the journalist lens. Only computed (and only shown) when a reporter-role
+  // channel exists — the reporter persona is the switch. Tags-only / LLM-free here so
+  // the Home stays fast; the grounded angles live behind `/gavel stories`.
+  const hasReporter = subscriptions.some((s) => s.role === 'reporter');
+  const storyLeads = hasReporter ? selectStoryLeads(upcoming, { boundaries }) : [];
+
   const names = await resolveNames(
     [...new Set([...subscriptions.map((s) => s.channelId), ...watches.map((w) => w.channelId)])],
     deps.getChannelName,
@@ -46,6 +53,7 @@ export async function buildHomeState(deps) {
     // subscription without `configured` still belongs in the hub, not first-run.
     configuredCount: subscriptions.filter((s) => s.configured).length,
     discover,
+    storyLeads,
     watches: watches.map((w) => ({ channelId: w.channelId, channelName: names.get(w.channelId), entity: w.entity })),
     channels: subscriptions.map((s) => ({
       channelId: s.channelId,

@@ -1,6 +1,10 @@
 import { ConvexHttpClient } from 'convex/browser';
 
+import { enrichForAlert } from '../../alerts/enrich.js';
 import { api } from '../../convex/_generated/api.js';
+import { createLegistarClient } from '../../poller/legistar.js';
+import { STORY_ANGLE_SCHEMA } from '../../stories/angle.js';
+import { createClaudeGenerate } from '../../summarizer/index.js';
 import { handleGavelCommand } from './gavel.js';
 
 /**
@@ -15,6 +19,14 @@ export function register(app) {
     app.logger?.warn?.('CONVEX_URL is not set — /gavel commands will report errors instead of reading config.');
   }
   const convex = convexUrl ? new ConvexHttpClient(convexUrl) : null;
+  const legistar = createLegistarClient({
+    fetch: globalThis.fetch,
+    client: 'milwaukee',
+    userAgent: 'gavel-slack-agent (tarik@radiomilwaukee.org)',
+  });
+  // The story-angle Claude call (MOO-127), constructed once and constrained to the
+  // {hook, whyStory} schema. Only invoked on `/gavel stories`, never on the Home path.
+  const generateAngle = createClaudeGenerate({ schema: STORY_ANGLE_SCHEMA });
 
   const deps = {
     addWatch: ({ channelId, entity }) => requireConvex(convex).mutation(api.watches.addWatch, { channelId, entity }),
@@ -22,6 +34,16 @@ export function register(app) {
     listWatches: (channelId) => requireConvex(convex).query(api.watches.listWatches, { channelId }),
     removeWatch: ({ channelId, entity }) =>
       requireConvex(convex).mutation(api.watches.removeWatch, { channelId, entity }),
+
+    // MOO-127 Story Radar boundaries.
+    listUpcoming: () =>
+      requireConvex(convex).query(api.detectedItems.listUpcoming, {
+        fromDate: new Date().toISOString().slice(0, 10),
+      }),
+    listMembers: () => requireConvex(convex).query(api.councilMembers.listMembers, {}),
+    enrichLead: (item) => enrichForAlert(item, legistar),
+    generateAngle,
+    countTranscript: (eventId) => requireConvex(convex).query(api.transcripts.countByEvent, { eventId }),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));
