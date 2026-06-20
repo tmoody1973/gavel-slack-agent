@@ -176,3 +176,16 @@ test('the status strip localizes to Spanish when the Home language is ES', () =>
   assert.match(all, /Esta semana/); // ES strip
   assert.doesNotMatch(all, /meetings touch your subscriptions/); // no English strip leaking
 });
+
+test('a mixed-language workspace renders the Home in English (MOO-128: ES only if ALL channels ES)', () => {
+  const mixed = {
+    ...state,
+    channels: [
+      { ...state.channels[0], channelId: 'C_es', language: 'es' },
+      { ...state.channels[0], channelId: 'C_en', language: 'en' },
+    ],
+  };
+  const all = JSON.stringify(homeView(mixed).blocks);
+  assert.match(all, /meetings touch your subscriptions/); // English Home
+  assert.doesNotMatch(all, /Esta semana/); // not Spanish, despite one ES channel
+});
