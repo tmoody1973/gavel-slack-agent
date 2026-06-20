@@ -8,6 +8,13 @@ const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 
 const plural = (count, singular, pluralForm = `${singular}s`) => (count === 1 ? singular : pluralForm);
 
+const STRIP_COPY = {
+  en: (s) =>
+    `This week: *${s.meetings}* ${plural(s.meetings, 'meeting touches', 'meetings touch')} your subscriptions · ⚠️ *${s.lateAdds}* added late · 👁 *${s.watchHits}* ${plural(s.watchHits, 'watch hit')}`,
+  es: (s) =>
+    `Esta semana: *${s.meetings}* ${s.meetings === 1 ? 'reunión toca' : 'reuniones tocan'} tus suscripciones · ⚠️ *${s.lateAdds}* añadidas tarde · 👁 *${s.watchHits}* ${s.watchHits === 1 ? 'coincidencia' : 'coincidencias'}`,
+};
+
 /**
  * The Hybrid App Home (MOO-74): status strip (Denise) + watches and
  * per-channel config with edit modals (Marcos). Pure over HomeState.
@@ -26,9 +33,7 @@ export function homeView({ strip, watches, channels, discover = [], storyLeads =
 
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '🏛️ Gavel — your civic week', emoji: true } },
-    mrkdwn(
-      `This week: *${strip.meetings}* ${plural(strip.meetings, 'meeting touches', 'meetings touch')} your subscriptions · ⚠️ *${strip.lateAdds}* added late · 👁 *${strip.watchHits}* ${plural(strip.watchHits, 'watch hit')}`,
-    ),
+    mrkdwn((STRIP_COPY[language] ?? STRIP_COPY.en)(strip)),
     { type: 'divider' },
     ...(hasReporter ? storyLeadsSection(storyLeads, language) : []),
     ...discoverBlocks(discover, language),
