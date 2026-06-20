@@ -16,8 +16,11 @@ const state = {
   ],
 };
 
+// The status strip now localizes (MOO-128); assert the English copy against an English channel.
+const englishStripState = { ...state, channels: [{ ...state.channels[0], language: 'en' }] };
+
 test('homeView renders the status strip with all three counts', () => {
-  const view = homeView(state);
+  const view = homeView(englishStripState);
   assert.equal(view.type, 'home');
   const all = JSON.stringify(view.blocks);
   assert.match(all, /3\*+ meetings touch your subscriptions/);
@@ -26,7 +29,7 @@ test('homeView renders the status strip with all three counts', () => {
 });
 
 test('homeView strip uses singular forms for counts of one', () => {
-  const view = homeView({ ...state, strip: { meetings: 1, lateAdds: 1, watchHits: 1 } });
+  const view = homeView({ ...englishStripState, strip: { meetings: 1, lateAdds: 1, watchHits: 1 } });
   const all = JSON.stringify(view.blocks);
   assert.match(all, /1\*+ meeting touches your subscriptions/);
   assert.match(all, /1\*+ watch hit[^s]/);
@@ -165,4 +168,11 @@ test('reporter channel with a quiet week shows the friendly empty line', () => {
   const all = JSON.stringify(homeView(reporterState({ storyLeads: [] })).blocks);
   assert.match(all, /Story leads this week/);
   assert.match(all.toLowerCase(), /quiet week/);
+});
+
+test('the status strip localizes to Spanish when the Home language is ES', () => {
+  const esState = { ...state, channels: [{ ...state.channels[0], language: 'es' }] };
+  const all = JSON.stringify(homeView(esState).blocks);
+  assert.match(all, /Esta semana/); // ES strip
+  assert.doesNotMatch(all, /meetings touch your subscriptions/); // no English strip leaking
 });

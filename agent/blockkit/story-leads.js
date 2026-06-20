@@ -6,12 +6,12 @@
 // Both keep the project's leads-not-verdicts framing in the copy itself, render the
 // newsworthiness tags so the ranking is explainable, and stay bilingual.
 
+import { clusterLeads } from '../stories/cluster.js';
 import { sponsorCard } from './sponsor-card.js';
 
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 const context = (text) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
 
-const MAX_HOME_LEADS = 5;
 // Slack caps a message at 50 blocks. Each slash card is ≤6 blocks + a divider, so 6
 // leads (~45 blocks) is the safe ceiling — cap defensively so a future STORY_LEAD_CAP
 // bump can't silently truncate the response.
@@ -29,6 +29,9 @@ const COPY = {
     file: 'File',
     transcript: '🎙 Ask Gavel to *search transcripts* for past discussion of this',
     headerPrefix: '📰 Story leads',
+    items: 'items',
+    item: 'item',
+    more: (n) => `➕ ${n} more — \`/gavel stories\` to see them all`,
   },
   es: {
     heading: '*📰 Pistas de reportaje esta semana*',
@@ -41,8 +44,40 @@ const COPY = {
     file: 'Expediente',
     transcript: '🎙 Pídele a Gavel que *busque en las transcripciones* discusiones previas sobre esto',
     headerPrefix: '📰 Pistas de reportaje',
+    items: 'puntos',
+    item: 'punto',
+    more: (n) => `➕ ${n} más — \`/gavel stories\` para verlas todas`,
   },
 };
+
+const N_EXPANDED = 3;
+const MAX_CLUSTER_MEMBERS = 6;
+
+const THEME_LABEL = {
+  en: {
+    police: '🛡️ Police & public safety',
+    health: '🏥 Health',
+    housing: '🏠 Housing & zoning',
+    development: '🏗️ Development',
+    licenses: '🍺 Licenses',
+    parks: '🌳 Parks & environment',
+    streets: '🚧 Streets & infrastructure',
+    appointments: '👔 Appointments',
+  },
+  es: {
+    police: '🛡️ Policía y seguridad',
+    health: '🏥 Salud',
+    housing: '🏠 Vivienda y zonificación',
+    development: '🏗️ Desarrollo',
+    licenses: '🍺 Licencias',
+    parks: '🌳 Parques y medio ambiente',
+    streets: '🚧 Calles e infraestructura',
+    appointments: '👔 Nombramientos',
+  },
+};
+
+const districtLabel = (district, language) =>
+  district ? (language === 'es' ? `📍 Distrito ${district}` : `📍 District ${district}`) : null;
 
 // Each tag → an explainable chip. Functions take the optional `detail` (district,
 // walk-on vs consent, recurrence entity). Committee/proper names stay English (ES too).
@@ -84,8 +119,8 @@ const storyWatchButton = (item, copy) => ({
 });
 
 /**
- * App Home reporter section. Tags + title only — no Claude call on the render path.
- * @param {Array<{item: object, tags: Array<object>}>} leads
+ * App Home reporter section, clustered (MOO-128). Tags + titles only — no Claude call.
+ * @param {Array<object>} leads - ranked story leads (from state.storyLeads)
  * @param {'en'|'es'} language
  * @returns {object[]} Block Kit blocks
  */
@@ -95,18 +130,56 @@ export function storyLeadsSection(leads, language = 'en') {
     return [mrkdwn(`${copy.heading}\n${copy.quiet}`), { type: 'divider' }];
   }
 
+  const entries = clusterLeads(leads);
   const blocks = [mrkdwn(copy.heading), context(copy.leadIn)];
-  for (const lead of leads.slice(0, MAX_HOME_LEADS)) {
-    blocks.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: `*${lead.item.title}*` },
-      accessory: storyWatchButton(lead.item, copy),
-    });
-    blocks.push(context(`🏛️ ${lead.item.eventBodyName ?? ''}  ·  ${tagText(lead.tags, language)}`));
+  for (const entry of entries.slice(0, N_EXPANDED)) {
+    blocks.push(
+      ...(entry.kind === 'cluster' ? clusterBlocks(entry, copy, language) : singleBlocks(entry, copy, language)),
+    );
   }
+  if (entries.length > N_EXPANDED) blocks.push(context(copy.more(entries.length - N_EXPANDED)));
   blocks.push(context(copy.disclaimer));
   blocks.push({ type: 'divider' });
   return blocks;
+}
+
+/** "🏛️ {committee} · 📍 District N · {tags}" — the explainable context line. */
+function metaLine(committee, district, tags, language) {
+  return [`🏛️ ${committee ?? ''}`, districtLabel(district, language), tagText(tags, language)]
+    .filter(Boolean)
+    .join('  ·  ');
+}
+
+function clusterBlocks(cluster, copy, language) {
+  const label = (THEME_LABEL[language] ?? THEME_LABEL.en)[cluster.theme] ?? cluster.theme;
+  const count = `${cluster.members.length} ${cluster.members.length === 1 ? copy.item : copy.items}`;
+  const out = [
+    mrkdwn(`*${label}* — ${count}`),
+    context(metaLine(cluster.committee, cluster.district, cluster.tags, language)),
+  ];
+  // Defensive block-budget cap (parity with MAX_SLASH_LEADS): the upstream selector caps
+  // leads at 6 today, but don't let a future bump blow past Slack's 100-block home limit.
+  for (const member of cluster.members.slice(0, MAX_CLUSTER_MEMBERS)) {
+    out.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: `• ${member.item.title}` },
+      accessory: storyWatchButton(member.item, copy),
+    });
+  }
+  const overflow = cluster.members.length - MAX_CLUSTER_MEMBERS;
+  if (overflow > 0) out.push(context(copy.more(overflow)));
+  return out;
+}
+
+function singleBlocks(lead, copy, language) {
+  return [
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `*${lead.item.title}*` },
+      accessory: storyWatchButton(lead.item, copy),
+    },
+    context(metaLine(lead.item.eventBodyName, lead.district, lead.tags, language)),
+  ];
 }
 
 /**

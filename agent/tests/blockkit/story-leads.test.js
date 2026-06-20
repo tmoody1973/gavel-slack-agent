@@ -104,3 +104,78 @@ describe('storyLeadCards — /gavel stories response (with grounded angle + star
     assert.match(text.toLowerCase(), /lead|worth a look/);
   });
 });
+
+const policeLead = (id, title) => ({
+  item: { eventItemId: id, title, eventBodyName: 'COMMON COUNCIL', eventDate: '2026-06-23' },
+  tags: [{ kind: 'accountability' }],
+  score: 5,
+  reasons: [],
+});
+
+describe('storyLeadsSection — clustered render (MOO-128)', () => {
+  const fourPolice = [
+    policeLead(1, 'A motion modifying Police use of force SOP'),
+    policeLead(2, 'Communication on police pursuit policies'),
+    policeLead(3, 'Motion modifying Police SOP 660 pursuits'),
+    policeLead(4, 'Fire and Police Commission training communication'),
+  ];
+
+  it('collapses the 4 police items into ONE cluster header with the count', () => {
+    const text = JSON.stringify(storyLeadsSection(fourPolice, 'en'));
+    assert.equal((text.match(/Police & public safety/g) || []).length, 1);
+    assert.match(text, /4 items/);
+    for (const t of ['use of force', 'pursuit policies', 'SOP 660', 'training']) assert.match(text, new RegExp(t));
+  });
+
+  it('shows the shared tag once at the cluster level, not per member', () => {
+    const text = JSON.stringify(storyLeadsSection(fourPolice, 'en'));
+    assert.equal((text.match(/Power & accountability/g) || []).length, 1);
+  });
+
+  it('renders a 📍 District chip when the cluster shares a district', () => {
+    const district7 = [
+      policeLead(1, 'Police matter (7th Aldermanic District)'),
+      policeLead(2, 'Police pursuit (7th Aldermanic District)'),
+    ];
+    assert.match(JSON.stringify(storyLeadsSection(district7, 'en')), /District 7/);
+  });
+
+  it('a singleton still renders title + tags + watch', () => {
+    const single = [
+      {
+        item: { eventItemId: 9, title: 'tavern liquor license', eventBodyName: 'LICENSES' },
+        tags: [{ kind: 'conflict' }],
+        score: 3,
+        reasons: [],
+      },
+    ];
+    const text = JSON.stringify(storyLeadsSection(single, 'en'));
+    assert.match(text, /tavern liquor license/);
+    assert.match(text, /story_watch/);
+  });
+
+  it('caps to the top 3 entries and shows a "ver más" instruction for the rest', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      item: {
+        eventItemId: i,
+        title: `tavern liquor license ${i}`,
+        eventBodyName: `LICENSES ${i}`,
+        eventDate: '2026-06-2' + i,
+      },
+      tags: [{ kind: 'conflict' }],
+      score: 6 - i,
+      reasons: [],
+    }));
+    const text = JSON.stringify(storyLeadsSection(many, 'en'));
+    assert.match(text, /3 (?:more|más)/);
+    assert.match(text, /\/gavel stories/);
+    // the lower-ranked entries are genuinely withheld, not just counted
+    assert.match(text, /tavern liquor license 0/);
+    assert.doesNotMatch(text, /tavern liquor license 3/);
+  });
+
+  it('bilingual: ES theme label', () => {
+    const text = JSON.stringify(storyLeadsSection(fourPolice, 'es'));
+    assert.match(text, /Policía y seguridad/);
+  });
+});
