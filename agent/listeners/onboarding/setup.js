@@ -2,10 +2,15 @@ import { pickSampleItem } from '../../alerts/sample.js';
 import { growAreasBlocks } from '../../blockkit/grow.js';
 import { confirmModal, roleModal } from '../../blockkit/onboarding.js';
 import { sampleAlertCard } from '../../blockkit/sample-alert.js';
+import { districtForNeighborhood, neighborhoodChoices } from '../../geo/neighborhoods.js';
 import { publishHome } from '../../home/publish.js';
 import { copyFor } from '../../onboarding/copy.js';
 import { defaultsForRole } from '../../onboarding/defaults.js';
 import { committeesAndKeywordsForTopics } from '../../onboarding/topics.js';
+
+// Slack returns at most 100 options per external_select query; the picker is over
+// the 190-neighborhood list (MOO-131), so cap defensively.
+const MAX_NEIGHBORHOOD_OPTIONS = 100;
 
 // The 2-taps-to-live setup flow (MOO-118 FD-B). Three thin I/O handlers over the
 // pure builders + the role→defaults engine: open the role modal, push the
@@ -87,6 +92,8 @@ export function makeGoLiveSubmit(deps) {
     // of their committees + keywords. Fall back to the role defaults only when the
     // chips block is absent (an older modal), so the write is always meaningful.
     const { committees, keywords } = subscriptionFromTopics(view, defaults);
+    // MOO-131: the optional neighborhood picker resolves to the district boundary.
+    const boundary = boundaryFromNeighborhood(view);
     // MOO-122: the sample alert teaches a brand-new channel by example — gate on
     // first-configure (no prior subscription) so a re-run doesn't repost it.
     const firstConfigure = await isFirstConfigure(deps, channelId);
@@ -100,6 +107,7 @@ export function makeGoLiveSubmit(deps) {
         role,
         configured: true,
         onboardedAt: Date.now(),
+        ...(boundary ? { boundary } : {}),
       });
       await publishHome({ client, userId: body.user.id }, deps, logger);
       await postLiveConfirmation({ client, channelId, userId: body.user.id, language: defaults.language, logger });
@@ -197,4 +205,43 @@ function readChannelId(metadata) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve the optional neighborhood pick to a district boundary, or null when the
+ * citizen skipped it (or the name doesn't resolve — defensive, the picker only
+ * offers canonical names). Single district per channel (MOO-131).
+ * @param {{ state?: { values?: object } }} view
+ * @returns {{ type: 'district', value: string } | null}
+ */
+function boundaryFromNeighborhood(view) {
+  const name = view.state?.values?.onboarding_neighborhood_block?.onboarding_neighborhood?.selected_option?.value;
+  const district = districtForNeighborhood(name);
+  return district != null ? { type: 'district', value: String(district) } : null;
+}
+
+/**
+ * Typeahead for the onboarding neighborhood external_select (MOO-131). Filters the
+ * 190-neighborhood list by the query and labels each with its district so the citizen
+ * sees the mapping ("Riverwest · District 3"). The option value is the neighborhood
+ * name, which Go-live resolves to the boundary. Never throws — acks an empty list.
+ */
+export function makeNeighborhoodOptions() {
+  return async ({ ack, options, logger }) => {
+    try {
+      const query = (options?.value ?? '').toLowerCase();
+      const matches = neighborhoodChoices()
+        .filter((choice) => choice.name.toLowerCase().includes(query))
+        .slice(0, MAX_NEIGHBORHOOD_OPTIONS);
+      await ack({
+        options: matches.map((choice) => ({
+          text: { type: 'plain_text', text: `${choice.name} · District ${choice.district}`.slice(0, 75) },
+          value: choice.name.slice(0, 75),
+        })),
+      });
+    } catch (error) {
+      logger.error(`onboarding neighborhood options failed: ${error}`);
+      await ack({ options: [] });
+    }
+  };
 }

@@ -86,6 +86,17 @@ export function confirmModal(role, defaults, language, channelId = null) {
     filter: { include: ['public', 'private'], exclude_bot_users: true },
   };
   if (channelId) channelSelect.initial_conversation = channelId;
+
+  // MOO-131: pick your neighborhood (not a district number); Go-live resolves it to the
+  // district boundary. 190 neighborhoods > Slack's 100 static-option cap, so it's an
+  // external_select typeahead (the onboarding_neighborhood options handler). Optional —
+  // a reporter covering "all" can skip it.
+  const neighborhoodSelect = {
+    type: 'external_select',
+    action_id: 'onboarding_neighborhood',
+    min_query_length: 0,
+    placeholder: plain(t.neighborhoodPlaceholder),
+  };
   return {
     type: 'modal',
     callback_id: 'onboarding_confirm_modal',
@@ -96,6 +107,13 @@ export function confirmModal(role, defaults, language, channelId = null) {
     blocks: [
       { type: 'context', elements: [mrkdwn(ROLE_LABEL[role] ?? role)] },
       { type: 'input', block_id: 'onboarding_topics_block', label: plain(t.confirmHeading), element: topicsElement },
+      {
+        type: 'input',
+        block_id: 'onboarding_neighborhood_block',
+        optional: true,
+        label: plain(t.neighborhoodLabel),
+        element: neighborhoodSelect,
+      },
       { type: 'context', elements: [mrkdwn(`🌐 ${defaults.language === 'es' ? 'Español' : 'English'}`)] },
       { type: 'input', block_id: 'onboarding_channel', label: plain('Channel'), element: channelSelect },
     ],

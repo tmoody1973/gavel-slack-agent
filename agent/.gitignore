@@ -19,5 +19,6 @@ convex/_generated/
 
 # OAuth (directory contents stay untracked…)
 data/*
-# …except committed public reference data (MOO-72)
+# …except committed public reference data (MOO-72, MOO-131)
 !data/milwaukee-council-members.json
+!data/milwaukee-neighborhoods.json
