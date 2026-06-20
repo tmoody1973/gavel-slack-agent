@@ -169,6 +169,9 @@ describe('storyLeadsSection — clustered render (MOO-128)', () => {
     const text = JSON.stringify(storyLeadsSection(many, 'en'));
     assert.match(text, /3 (?:more|más)/);
     assert.match(text, /\/gavel stories/);
+    // the lower-ranked entries are genuinely withheld, not just counted
+    assert.match(text, /tavern liquor license 0/);
+    assert.doesNotMatch(text, /tavern liquor license 3/);
   });
 
   it('bilingual: ES theme label', () => {

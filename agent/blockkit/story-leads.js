@@ -51,6 +51,7 @@ const COPY = {
 };
 
 const N_EXPANDED = 3;
+const MAX_CLUSTER_MEMBERS = 6;
 
 const THEME_LABEL = {
   en: {
@@ -156,13 +157,17 @@ function clusterBlocks(cluster, copy, language) {
     mrkdwn(`*${label}* — ${count}`),
     context(metaLine(cluster.committee, cluster.district, cluster.tags, language)),
   ];
-  for (const member of cluster.members) {
+  // Defensive block-budget cap (parity with MAX_SLASH_LEADS): the upstream selector caps
+  // leads at 6 today, but don't let a future bump blow past Slack's 100-block home limit.
+  for (const member of cluster.members.slice(0, MAX_CLUSTER_MEMBERS)) {
     out.push({
       type: 'section',
       text: { type: 'mrkdwn', text: `• ${member.item.title}` },
       accessory: storyWatchButton(member.item, copy),
     });
   }
+  const overflow = cluster.members.length - MAX_CLUSTER_MEMBERS;
+  if (overflow > 0) out.push(context(copy.more(overflow)));
   return out;
 }
 

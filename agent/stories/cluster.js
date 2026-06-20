@@ -33,6 +33,8 @@ export const THEME_FAMILIES = [
     re: /\bpark(?:s|land)?\b|forestry|green space|community garden|tree planting|climate|sustainab/i,
   },
   { key: 'streets', emoji: '🚧', re: /paving|repaving|resurfac|sewer|water main|sidewalk|alley|pothole/i },
+  // appointments stays LAST: its board/commission net is broad, so it only catches what
+  // the specific beats above (police/development/…) didn't. Do not reorder it upward.
   { key: 'appointments', emoji: '👔', re: /appoint|confirmation|nomination|\bboard\b|\bcommission\b/i },
 ];
 
