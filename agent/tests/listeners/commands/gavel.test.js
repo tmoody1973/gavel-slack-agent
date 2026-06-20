@@ -301,3 +301,31 @@ test('stories honors the channel language (ES status + Spanish angle)', async ()
   assert.match(h.calls.responds[0].text, /Revisando la agenda/);
   assert.match(JSON.stringify(h.calls.responds[1].blocks), /gancho/);
 });
+
+test('stories renders the leads as a swipeable carousel (MOO-130)', async () => {
+  const h = storiesHarness({ text: 'stories licenses' });
+  await handleGavelCommand(h.args, h.deps);
+  const carousel = h.calls.responds[1].blocks.find((b) => b.type === 'carousel');
+  assert.ok(carousel, 'response uses a carousel block');
+  assert.equal(carousel.elements[0].type, 'card');
+  assert.match(carousel.elements[0].title.text, /Class B Tavern license/);
+});
+
+test('stories falls back to the classic list if Slack rejects the carousel', async () => {
+  const h = storiesHarness({ text: 'stories licenses' });
+  // First blocks-bearing respond (the carousel) is rejected by Slack; the retry must
+  // deliver the storyLeadCards list instead so the reporter still gets their leads.
+  let rejectedOnce = false;
+  h.args.respond = async (m) => {
+    if (!rejectedOnce && m.blocks?.some((b) => b.type === 'carousel')) {
+      rejectedOnce = true;
+      throw new Error('invalid_blocks: carousel not supported');
+    }
+    h.calls.responds.push(m);
+  };
+  await handleGavelCommand(h.args, h.deps);
+  const last = h.calls.responds.at(-1);
+  assert.ok(!last.blocks.some((b) => b.type === 'carousel'), 'fallback contains no carousel');
+  assert.match(JSON.stringify(last.blocks), /Class B Tavern license/);
+  assert.equal(rejectedOnce, true);
+});

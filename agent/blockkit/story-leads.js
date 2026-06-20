@@ -8,6 +8,7 @@
 
 import { clusterLeads } from '../stories/cluster.js';
 import { sponsorCard } from './sponsor-card.js';
+import { metaLine, tagText, themeLabel } from './story-labels.js';
 
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 const context = (text) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
@@ -32,6 +33,7 @@ const COPY = {
     items: 'items',
     item: 'item',
     more: (n) => `➕ ${n} more — \`/gavel stories\` to see them all`,
+    browse: '📋 Browse story leads',
   },
   es: {
     heading: '*📰 Pistas de reportaje esta semana*',
@@ -47,69 +49,14 @@ const COPY = {
     items: 'puntos',
     item: 'punto',
     more: (n) => `➕ ${n} más — \`/gavel stories\` para verlas todas`,
+    browse: '📋 Explorar pistas',
   },
 };
 
-const N_EXPANDED = 3;
-const MAX_CLUSTER_MEMBERS = 6;
-
-const THEME_LABEL = {
-  en: {
-    police: '🛡️ Police & public safety',
-    health: '🏥 Health',
-    housing: '🏠 Housing & zoning',
-    development: '🏗️ Development',
-    licenses: '🍺 Licenses',
-    parks: '🌳 Parks & environment',
-    streets: '🚧 Streets & infrastructure',
-    appointments: '👔 Appointments',
-  },
-  es: {
-    police: '🛡️ Policía y seguridad',
-    health: '🏥 Salud',
-    housing: '🏠 Vivienda y zonificación',
-    development: '🏗️ Desarrollo',
-    licenses: '🍺 Licencias',
-    parks: '🌳 Parques y medio ambiente',
-    streets: '🚧 Calles e infraestructura',
-    appointments: '👔 Nombramientos',
-  },
-};
-
-const districtLabel = (district, language) =>
-  district ? (language === 'es' ? `📍 Distrito ${district}` : `📍 District ${district}`) : null;
-
-// Each tag → an explainable chip. Functions take the optional `detail` (district,
-// walk-on vs consent, recurrence entity). Committee/proper names stay English (ES too).
-const TAG_LABEL = {
-  en: {
-    money: () => '💰 Money',
-    accountability: () => '🛡️ Power & accountability',
-    equity: (d) => (d ? `👥 Equity · District ${d}` : '👥 Equity / displacement'),
-    conflict: () => '⚔️ Conflict',
-    novelty: () => '✨ First-of-its-kind',
-    anomaly: (d) => (d === 'consent' ? '⚠️ Buried on consent' : '⚠️ Added late'),
-    recurrence: (d) => `🔁 ${d ?? 'Repeat entity'}`,
-  },
-  es: {
-    money: () => '💰 Dinero',
-    accountability: () => '🛡️ Poder y rendición de cuentas',
-    equity: (d) => (d ? `👥 Equidad · Distrito ${d}` : '👥 Equidad / desplazamiento'),
-    conflict: () => '⚔️ Conflicto',
-    novelty: () => '✨ Primero en su tipo',
-    anomaly: (d) => (d === 'consent' ? '⚠️ Oculto en consentimiento' : '⚠️ Añadido tarde'),
-    recurrence: (d) => `🔁 ${d ?? 'Entidad recurrente'}`,
-  },
-};
-
-/** "💰 Money · 🛡️ Power & accountability · ⚠️ Added late" — the explainable why. */
-function tagText(tags, language) {
-  const labels = TAG_LABEL[language] ?? TAG_LABEL.en;
-  return (tags ?? [])
-    .map((tag) => labels[tag.kind]?.(tag.detail))
-    .filter(Boolean)
-    .join('  ·  ');
-}
+// Lean-triage cap (MOO-130): the App Home shows compact one-liners; the full,
+// filterable set lives behind the 📋 Browse modal, so the Home never needs more than
+// a handful of rows. Keeps us far under Slack's 100-block home ceiling.
+const MAX_HOME_ENTRIES = 8;
 
 const storyWatchButton = (item, copy) => ({
   type: 'button',
@@ -118,8 +65,19 @@ const storyWatchButton = (item, copy) => ({
   value: String(item.title ?? '').slice(0, 1900),
 });
 
+/** Earliest meeting date across a cluster's members (the soonest thing to cover). */
+function clusterDate(cluster) {
+  return cluster.members
+    .map((member) => member.item?.eventDate)
+    .filter(Boolean)
+    .sort()[0];
+}
+
 /**
- * App Home reporter section, clustered (MOO-128). Tags + titles only — no Claude call.
+ * App Home reporter section, MOO-130 lean triage: ONE compact line per cluster/single
+ * (subject beat + count or title, plus the committee · district · date · why meta line),
+ * then a single 📋 Browse story leads button into the filterable modal. No per-item
+ * watches, no inline cluster members — that richness lives in the modal. LLM-free.
  * @param {Array<object>} leads - ranked story leads (from state.storyLeads)
  * @param {'en'|'es'} language
  * @returns {object[]} Block Kit blocks
@@ -132,54 +90,52 @@ export function storyLeadsSection(leads, language = 'en') {
 
   const entries = clusterLeads(leads);
   const blocks = [mrkdwn(copy.heading), context(copy.leadIn)];
-  for (const entry of entries.slice(0, N_EXPANDED)) {
-    blocks.push(
-      ...(entry.kind === 'cluster' ? clusterBlocks(entry, copy, language) : singleBlocks(entry, copy, language)),
-    );
+  for (const entry of entries.slice(0, MAX_HOME_ENTRIES)) {
+    blocks.push(entry.kind === 'cluster' ? clusterLine(entry, copy, language) : singleLine(entry, language));
+    blocks.push(context(entryMeta(entry, language)));
   }
-  if (entries.length > N_EXPANDED) blocks.push(context(copy.more(entries.length - N_EXPANDED)));
+  blocks.push(browseActions(copy));
   blocks.push(context(copy.disclaimer));
   blocks.push({ type: 'divider' });
   return blocks;
 }
 
-/** "🏛️ {committee} · 📍 District N · {tags}" — the explainable context line. */
-function metaLine(committee, district, tags, language) {
-  return [`🏛️ ${committee ?? ''}`, districtLabel(district, language), tagText(tags, language)]
-    .filter(Boolean)
-    .join('  ·  ');
-}
-
-function clusterBlocks(cluster, copy, language) {
-  const label = (THEME_LABEL[language] ?? THEME_LABEL.en)[cluster.theme] ?? cluster.theme;
+/** The compact headline block for one entry. */
+function clusterLine(cluster, copy, language) {
   const count = `${cluster.members.length} ${cluster.members.length === 1 ? copy.item : copy.items}`;
-  const out = [
-    mrkdwn(`*${label}* — ${count}`),
-    context(metaLine(cluster.committee, cluster.district, cluster.tags, language)),
-  ];
-  // Defensive block-budget cap (parity with MAX_SLASH_LEADS): the upstream selector caps
-  // leads at 6 today, but don't let a future bump blow past Slack's 100-block home limit.
-  for (const member of cluster.members.slice(0, MAX_CLUSTER_MEMBERS)) {
-    out.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: `• ${member.item.title}` },
-      accessory: storyWatchButton(member.item, copy),
-    });
-  }
-  const overflow = cluster.members.length - MAX_CLUSTER_MEMBERS;
-  if (overflow > 0) out.push(context(copy.more(overflow)));
-  return out;
+  return mrkdwn(`*${themeLabel(cluster.theme, language)}* — ${count}`);
 }
 
-function singleBlocks(lead, copy, language) {
-  return [
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: `*${lead.item.title}*` },
-      accessory: storyWatchButton(lead.item, copy),
-    },
-    context(metaLine(lead.item.eventBodyName, lead.district, lead.tags, language)),
-  ];
+function singleLine(lead, _language) {
+  return mrkdwn(`*${lead.item.title}*`);
+}
+
+/** "🏛️ {committee} · 📍 District N · 🗓 Tue Jun 23 · {tags}" for either entry kind. */
+function entryMeta(entry, language) {
+  return entry.kind === 'cluster'
+    ? metaLine(
+        { committee: entry.committee, district: entry.district, date: clusterDate(entry), tags: entry.tags },
+        language,
+      )
+    : metaLine(
+        { committee: entry.item.eventBodyName, district: entry.district, date: entry.item.eventDate, tags: entry.tags },
+        language,
+      );
+}
+
+/** The single 📋 Browse story leads button → the filterable modal (story_browse). */
+function browseActions(copy) {
+  return {
+    type: 'actions',
+    elements: [
+      {
+        type: 'button',
+        action_id: 'story_browse',
+        text: { type: 'plain_text', text: copy.browse, emoji: true },
+        style: 'primary',
+      },
+    ],
+  };
 }
 
 /**
