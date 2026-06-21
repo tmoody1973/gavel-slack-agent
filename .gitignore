@@ -23,3 +23,6 @@ build/
 # Convex
 .convex/
 .superpowers/
+
+# Demo media assets (large binaries, cut on demand)
+demo-assets/
