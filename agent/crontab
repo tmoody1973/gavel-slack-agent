@@ -5,3 +5,9 @@
 # 14:00 UTC Sunday = 9am CDT (summer) / 8am CST (winter). Fixed UTC: supercronic
 # rejects an inline CRON_TZ= token, and a fixed expression can't crash the poller.
 0 14 * * 0 node /app/scripts/digest-once.mjs
+
+# Gavel community-memory bridge (MOO-125) — once a day at 15:00 UTC (~10am CDT),
+# match each channel's own live discussion against upcoming agenda items and propose
+# a watch. Dedup (bridgeProposals) makes the daily cadence self-rate-limiting; Slack
+# message content is queried live via RTS and never stored.
+0 15 * * * node /app/scripts/bridge-sweep.mjs
