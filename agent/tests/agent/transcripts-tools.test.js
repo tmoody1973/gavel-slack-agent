@@ -46,6 +46,34 @@ test('runTranscriptSearch formats receipts with speaker, quote, agenda item, and
   assert.match(result, /clip_id=5210&starttime=787/); // tier-1 deep link
 });
 
+test('runTranscriptSearch names the speaker when a speaker map exists (publishable receipt)', async () => {
+  let mappedEventId;
+  const result = await runTranscriptSearch(
+    { query: 'sale of the West Hopkins Street property', eventId: 13441 },
+    {
+      embedQuery: async () => [0.1],
+      search: async () => [HOPKINS_HIT],
+      deepLink,
+      getSpeakerMap: async (eventId) => {
+        mappedEventId = eventId;
+        return { 0: { name: 'Lamont Westmoreland', title: 'Alderman', role: 'member', confidence: 0.9 } };
+      },
+    },
+  );
+  assert.equal(mappedEventId, 13441, 'map fetched for the hit event');
+  assert.match(result, /Alderman Lamont Westmoreland/);
+  assert.doesNotMatch(result, /Speaker 0/);
+});
+
+test('runTranscriptSearch degrades to a generic label when no speaker map is wired', async () => {
+  const result = await runTranscriptSearch(
+    { query: 'q', eventId: 13441 },
+    { embedQuery: async () => [0.1], search: async () => [HOPKINS_HIT], deepLink },
+  );
+  assert.match(result, /repurchase back to the former owner/);
+  assert.match(result, /### A speaker ·/); // generic label, no name invented without a map
+});
+
 test('runTranscriptSearch passes a committee filter through as eventBodyName', async () => {
   let searchedWith;
   await runTranscriptSearch(

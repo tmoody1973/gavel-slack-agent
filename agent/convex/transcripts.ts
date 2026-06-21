@@ -65,6 +65,28 @@ export const listIngestedEventIds = query({
   },
 });
 
+/**
+ * Every chunk for one event (speakers + text + start) — the input the speaker-naming
+ * re-map (MOO-143) reconstructs an attributable utterance stream from, so it can run
+ * on an already-ingested meeting without re-transcribing.
+ */
+export const listByEvent = query({
+  args: { eventId: v.number() },
+  handler: async (ctx, { eventId }) => {
+    const rows = await ctx.db
+      .query('transcriptChunks')
+      .withIndex('by_event', (q) => q.eq('eventId', eventId))
+      .collect();
+    return rows.map((r) => ({
+      speakers: r.speakers,
+      text: r.text,
+      startTime: r.startTime,
+      eventBodyName: r.eventBodyName,
+      eventDate: r.eventDate,
+    }));
+  },
+});
+
 /** Hydrate vector-search hits into full receipts (search runs in an action). */
 export const fetchChunks = internalQuery({
   args: { ids: v.array(v.id('transcriptChunks')) },

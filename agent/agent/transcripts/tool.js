@@ -36,6 +36,7 @@ export function createTranscriptsServer({ convexUrl, openaiApiKey, userAgent = '
   const deps = {
     embedQuery: (text) => embedQuery(text, { apiKey: openaiApiKey, fetchFn }),
     search: (args) => convex.action(api.transcripts.search, args),
+    getSpeakerMap: (eventId) => convex.query(api.speakerMaps.getByEvent, { eventId }),
     deepLink: videoMomentDeepLink,
     getEventItem: (eventId, itemId) => legistar(`/events/${eventId}/eventitems/${itemId}`),
     getEvent: (eventId) => legistar(`/events/${eventId}`),
