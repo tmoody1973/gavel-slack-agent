@@ -60,7 +60,7 @@ describe('storyModal — filterable Story-leads browse modal (MOO-130)', () => {
     assert.ok(vals.includes('d::7'));
   });
 
-  it('groups leads by beat with member rows; each row has a Watch+Ask overflow', () => {
+  it('groups leads by beat with member rows; each row has a Brief+Watch+Ask overflow', () => {
     const view = storyModal(police, { language: 'en', filter: { t: 'all' } });
     const text = flatText(view);
     assert.equal((text.match(/Police & public safety/g) || []).length, 1, 'one beat header');
@@ -68,7 +68,7 @@ describe('storyModal — filterable Story-leads browse modal (MOO-130)', () => {
     const overflow = view.blocks.find((b) => b.accessory?.action_id === 'story_lead_overflow');
     assert.ok(overflow, 'per-row overflow present');
     const optVals = overflow.accessory.options.map((o) => o.value);
-    assert.deepEqual(optVals, ['w::1', 'a::1']);
+    assert.deepEqual(optVals, ['b::1', 'w::1', 'a::1']);
   });
 
   it('filter=committee narrows to that committee only', () => {

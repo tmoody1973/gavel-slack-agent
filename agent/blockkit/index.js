@@ -1,4 +1,5 @@
 export { digestCard } from './digest-card.js';
+export { dossierModal, dossierStatusModal } from './dossier-modal.js';
 export { errorReply } from './error-reply.js';
 export { historyTimeline } from './history-timeline.js';
 export { addWatchModal, channelConfigModal } from './home-modals.js';

@@ -10,6 +10,7 @@ import { addWatchModal, storyModal } from '../../blockkit/index.js';
 import { decodeFilter } from '../../blockkit/story-modal.js';
 import { selectStoryLeads } from '../../stories/leads.js';
 import { primeStore } from '../../thread-context/index.js';
+import { openDossier } from './dossier-buttons.js';
 
 // The modal is the "show me everything" view, so it pulls a deeper slice than the lean
 // Home (≤6). Still tiny in practice (newsworthy items only), well under the block cap.
@@ -87,7 +88,9 @@ export function makeStoryLeadOverflow(deps) {
       const value = body.actions?.[0]?.selected_option?.value ?? '';
       const [kind, id] = value.split('::');
       const eventItemId = Number(id);
-      if (kind === 'w') {
+      if (kind === 'b') {
+        await openDossier({ body, client, eventItemId, deps, logger });
+      } else if (kind === 'w') {
         const row = await deps.getDetectedItem(eventItemId);
         const channels = await channelList(deps);
         await client.views.push({ trigger_id: body.trigger_id, view: addWatchModal(channels, row?.title ?? '') });
