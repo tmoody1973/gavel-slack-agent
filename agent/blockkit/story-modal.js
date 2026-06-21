@@ -37,6 +37,7 @@ const COPY = {
     byDistrict: 'By district',
     watch: '👁 Watch',
     ask: '💬 Ask Gavel',
+    brief: '📋 Brief me',
     empty: 'No story leads match this filter — try another.',
     quiet: 'Quiet week — nothing on the upcoming agenda is jumping out as a story yet.',
     disclaimer: '_Leads, not conclusions — Gavel points you to what’s worth a look and the public record behind it._',
@@ -52,6 +53,7 @@ const COPY = {
     byDistrict: 'Por distrito',
     watch: '👁 Seguir',
     ask: '💬 Pregúntale a Gavel',
+    brief: '📋 Resúmeme',
     empty: 'Ninguna pista coincide con este filtro — prueba otro.',
     quiet: 'Semana tranquila — nada en la próxima agenda destaca como reportaje todavía.',
     disclaimer: '_Pistas, no conclusiones — Gavel te señala lo que vale la pena revisar y el registro público detrás._',
@@ -142,7 +144,7 @@ function leadRow(lead, copy, { bullet } = {}) {
     accessory: {
       type: 'overflow',
       action_id: 'story_lead_overflow',
-      options: [option(copy.watch, `w::${id}`), option(copy.ask, `a::${id}`)],
+      options: [option(copy.brief, `b::${id}`), option(copy.watch, `w::${id}`), option(copy.ask, `a::${id}`)],
     },
   };
 }
