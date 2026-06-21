@@ -171,6 +171,29 @@ test('reporter channel with a quiet week shows the friendly empty line', () => {
   assert.match(all.toLowerCase(), /quiet week/);
 });
 
+// ---------- MOO-142: reporter-gated "🎥 Meeting video" section ----------
+
+const videoMeeting = (over) => ({
+  eventId: 13441,
+  eventBodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE',
+  eventDate: '2026-06-16T00:00:00',
+  eventMedia: 5210,
+  searchable: true,
+  ...over,
+});
+
+test('reporter channel surfaces the "Meeting video" section with a Browse videos button (MOO-142)', () => {
+  const all = JSON.stringify(homeView(reporterState({ meetingsWithVideo: [videoMeeting()] })).blocks);
+  assert.match(all, /Meeting video/);
+  assert.match(all, /video_browse/);
+  assert.match(all, /clip_id=5210/);
+});
+
+test('non-reporter channel never shows the Meeting video section (MOO-142)', () => {
+  const all = JSON.stringify(homeView({ ...enState, meetingsWithVideo: [videoMeeting()] }).blocks);
+  assert.doesNotMatch(all, /Meeting video/);
+});
+
 test('the status strip localizes to Spanish when the Home language is ES', () => {
   const esState = { ...state, channels: [{ ...state.channels[0], language: 'es' }] };
   const all = JSON.stringify(homeView(esState).blocks);

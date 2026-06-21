@@ -128,6 +128,46 @@ test('storyLeads is computed when a reporter channel exists, ranked + tagged', a
   assert.ok(state.storyLeads[0].tags.some((t) => t.kind === 'money'));
 });
 
+test('meetingsWithVideo stays empty without a reporter channel (MOO-142 persona gate)', async () => {
+  const state = await buildHomeState(
+    deps({
+      listRecentMeetingsWithVideo: async () => [
+        {
+          eventId: 13441,
+          eventBodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE',
+          eventDate: '2026-06-16',
+          eventMedia: 5210,
+        },
+      ],
+      listIngestedEventIds: async () => [13441],
+    }),
+  );
+  assert.deepEqual(state.meetingsWithVideo, []);
+});
+
+test('meetingsWithVideo is fetched + searchable-tagged when a reporter channel exists (MOO-142)', async () => {
+  const state = await buildHomeState(
+    deps({
+      listSubscriptions: async () => [
+        { channelId: 'C9', committees: [], keywords: [], language: 'en', role: 'reporter' },
+      ],
+      listRecentMeetingsWithVideo: async () => [
+        {
+          eventId: 13441,
+          eventBodyName: 'ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE',
+          eventDate: '2026-06-16',
+          eventMedia: 5210,
+        },
+        { eventId: 13456, eventBodyName: 'FINANCE & PERSONNEL COMMITTEE', eventDate: '2026-06-18', eventMedia: 5213 },
+      ],
+      listIngestedEventIds: async () => [13441],
+    }),
+  );
+  assert.equal(state.meetingsWithVideo.length, 2);
+  assert.equal(state.meetingsWithVideo.find((m) => m.eventId === 13441).searchable, true);
+  assert.equal(state.meetingsWithVideo.find((m) => m.eventId === 13456).searchable, false);
+});
+
 test('buildHomeState surfaces salient items in `discover` (walk-on + big), regardless of subscription (MOO-123)', async () => {
   const state = await buildHomeState(deps());
   const ids = state.discover.map((e) => e.item.eventItemId);

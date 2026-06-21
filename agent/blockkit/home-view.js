@@ -3,6 +3,7 @@ const MAX_WATCH_ROWS = 20;
 const MAX_CHANNEL_ROWS = 10;
 
 import { storyLeadsSection } from './story-leads.js';
+import { meetingVideoSection } from './video-modal.js';
 
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 
@@ -25,7 +26,7 @@ const STRIP_COPY = {
  * }} state
  * @returns {{type: 'home', blocks: object[]}}
  */
-export function homeView({ strip, watches, channels, discover = [], storyLeads = [] }) {
+export function homeView({ strip, watches, channels, discover = [], storyLeads = [], meetingsWithVideo = [] }) {
   if (channels.length === 0) return emptyStateView();
   // The App Home is per-user and single-language: default to English, switching to
   // Spanish only when EVERY subscribed channel is Spanish (MOO-128). An English reporter
@@ -39,6 +40,7 @@ export function homeView({ strip, watches, channels, discover = [], storyLeads =
     mrkdwn((STRIP_COPY[language] ?? STRIP_COPY.en)(strip)),
     { type: 'divider' },
     ...(hasReporter ? storyLeadsSection(storyLeads, language) : []),
+    ...(hasReporter ? meetingVideoSection(meetingsWithVideo, language) : []),
     ...discoverBlocks(discover, language),
     {
       type: 'section',

@@ -9,4 +9,5 @@ export { sponsorCard } from './sponsor-card.js';
 export { storyCarousel } from './story-carousel.js';
 export { storyLeadCards, storyLeadsSection } from './story-leads.js';
 export { decodeFilter, storyModal } from './story-modal.js';
+export { decodeCommittee, meetingVideoSection, tagSearchable, videoModal } from './video-modal.js';
 export { voteTable } from './vote-table.js';

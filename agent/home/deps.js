@@ -35,6 +35,12 @@ export function createHomeDeps(slackClient) {
         fromDate: new Date().toISOString().slice(0, 10),
       }),
     getSubscription: (channelId) => requireConvex(convex).query(api.subscriptions.getSubscription, { channelId }),
+
+    // MOO-142: video-discovery boundaries — recent meetings with a Granicus webcast
+    // (live Legistar look-back) joined against the set of transcribed eventIds (one query).
+    listRecentMeetingsWithVideo: () => legistar.listRecentMeetingsWithVideo(),
+    listIngestedEventIds: () => requireConvex(convex).query(api.transcripts.listIngestedEventIds, {}),
+
     addWatch: (input) => requireConvex(convex).mutation(api.watches.addWatch, input),
     removeWatch: (input) => requireConvex(convex).mutation(api.watches.removeWatch, input),
     upsertSubscription: (input) => requireConvex(convex).mutation(api.subscriptions.upsertSubscription, input),
