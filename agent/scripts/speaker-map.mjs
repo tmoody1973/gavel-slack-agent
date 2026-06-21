@@ -19,7 +19,11 @@ import {
   SPEAKER_MAP_SCHEMA,
 } from '../transcripts/speakers.js';
 
-const eventId = Number(process.argv[2] ?? 13441);
+const eventId = Number(process.argv[2]);
+if (!Number.isFinite(eventId)) {
+  console.error('Usage: node scripts/speaker-map.mjs <eventId>   (e.g. 13441)');
+  process.exit(1);
+}
 const convex = new ConvexHttpClient(process.env.CONVEX_URL);
 
 async function main() {

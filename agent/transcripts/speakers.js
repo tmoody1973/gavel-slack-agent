@@ -160,6 +160,14 @@ export async function generateSpeakerMap(input, { generate }) {
   if (!result || !Array.isArray(result.mappings)) {
     throw new Error('Speaker map generator returned a malformed result: need { mappings: [...] }');
   }
+  // The real Claude boundary enforces SPEAKER_MAP_SCHEMA, but this pure function's
+  // contract doesn't — guard each row so a stray shape can't seed an `undefined`
+  // speaker key (NaN/undefined) downstream in applyConfidenceGate.
+  for (const mapping of result.mappings) {
+    if (typeof mapping?.speaker !== 'number' || !mapping.role) {
+      throw new Error(`Speaker map row is malformed (needs numeric speaker + role): ${JSON.stringify(mapping)}`);
+    }
+  }
   return { mappings: result.mappings };
 }
 
