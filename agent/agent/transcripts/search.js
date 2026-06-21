@@ -1,9 +1,11 @@
 /**
  * Transcript memory orchestrators, formatted for Claude to quote FROM. Pure: all
- * I/O (embeddings, Convex vector search, Legistar lookups) is injected, so the
- * Slack-thread tools (`search_transcripts`, `get_video_moment`) are unit-tested
+ * I/O (embeddings, Convex vector search, Legistar lookups, speaker maps) is injected,
+ * so the Slack-thread tools (`search_transcripts`, `get_video_moment`) are unit-tested
  * without the network. Indexed from the PUBLIC webcast only — never Slack content.
  */
+
+import { formatSpeakerLabel } from '../../transcripts/speakers.js';
 
 /** Seconds → HH:MM:SS (the form Granicus deep links and humans both read). */
 function hms(seconds) {
@@ -11,8 +13,8 @@ function hms(seconds) {
   return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, '0')).join(':');
 }
 
-function formatReceipt(hit, deepLink) {
-  const who = hit.speakers?.length ? `Speaker ${hit.speakers.join(', ')}` : 'A speaker';
+function formatReceipt(hit, deepLink, speakerMap) {
+  const who = formatSpeakerLabel(hit.speakers, speakerMap);
   const item = hit.agendaNumber ? `agenda item ${hit.agendaNumber}` : 'the meeting';
   const link = deepLink(hit.eventMedia, hit.startTime);
   return `### ${who} · ${item} · ${hit.eventDate} @ ${hms(hit.startTime)}\n«${hit.text.trim()}»\n▶ ${link}`;
@@ -25,6 +27,7 @@ function formatReceipt(hit, deepLink) {
  *   embedQuery:(text:string)=>Promise<number[]>,
  *   search:(q:{embedding:number[], eventId?:number, eventBodyName?:string, limit?:number})=>Promise<Array<object>>,
  *   deepLink:(eventMedia:number, startSeconds:number)=>string,
+ *   getSpeakerMap?:(eventId:number)=>Promise<Record<number,object>|null>,
  * }} deps
  * @returns {Promise<string>}
  */
@@ -34,12 +37,30 @@ export async function runTranscriptSearch({ query, eventId, committee, limit = 6
   if (hits.length === 0) {
     return `information_unavailable: no meeting-transcript passage matched "${query}". Say you don't have a transcript quote for that and don't invent one.`;
   }
+  const speakerMaps = await loadSpeakerMaps(hits, deps.getSpeakerMap);
   const header = [
     'From Milwaukee committee meeting transcripts (the public webcast). These are REAL quotes —',
     'present them with the speaker, agenda item, and the ▶ video link. Quote only what appears here; never invent a quote.',
   ].join(' ');
-  const body = hits.map((hit) => formatReceipt(hit, deps.deepLink)).join('\n\n');
+  const body = hits.map((hit) => formatReceipt(hit, deps.deepLink, speakerMaps.get(hit.eventId))).join('\n\n');
   return `${header}\n\n${body}`;
+}
+
+/** Fetch each hit-event's gated speaker map once (MOO-143), so receipts can name the speaker. */
+async function loadSpeakerMaps(hits, getSpeakerMap) {
+  const maps = new Map();
+  if (typeof getSpeakerMap !== 'function') return maps;
+  const eventIds = [...new Set(hits.map((hit) => hit.eventId).filter((id) => id != null))];
+  await Promise.all(
+    eventIds.map(async (eventId) => {
+      try {
+        maps.set(eventId, await getSpeakerMap(eventId));
+      } catch {
+        maps.set(eventId, null); // a missing map degrades to a generic label, never blocks the quote
+      }
+    }),
+  );
+  return maps;
 }
 
 /**

@@ -14,10 +14,11 @@ config({ path: '.env.local' });
 config({ path: '.env' });
 
 import { ConvexHttpClient } from 'convex/browser';
-
 import { api } from '../convex/_generated/api.js';
+import { createClaudeGenerate } from '../summarizer/client.js';
 import { buildTranscriptChunks } from '../transcripts/chunk.js';
 import { transcribeAudio } from '../transcripts/deepgram.js';
+import { buildSpeakerMapEntries, SPEAKER_MAP_SCHEMA } from '../transcripts/speakers.js';
 import { granicusMediaUrl } from '../transcripts/video.js';
 import { embedTexts } from '../zoning/embed.js';
 
@@ -98,6 +99,19 @@ async function main() {
   const inserted = await convex.mutation(api.transcripts.insertChunks, { chunks: rows });
   const total = await convex.query(api.transcripts.countByEvent, { eventId });
   console.log(`✓ stored ${inserted} chunks (table now holds ${total} for this event).`);
+
+  // MOO-143: name the diarized speakers from the public council roster, so receipts read
+  // "Alderman Stamper said…" not "Speaker 2". Post-Deepgram, conservative, idempotent per event.
+  console.log('  mapping speakers → council members…');
+  const councilMembers = await convex.query(api.councilMembers.listMembers, {});
+  const generate = createClaudeGenerate({ schema: SPEAKER_MAP_SCHEMA });
+  const entries = await buildSpeakerMapEntries(
+    { utterances, councilMembers, committee: eventBodyName, eventDate },
+    { generate },
+  );
+  await convex.mutation(api.speakerMaps.upsertByEvent, { eventId, eventBodyName, entries });
+  const named = entries.filter((e) => e.name).length;
+  console.log(`✓ speaker map: ${named}/${entries.length} labels named.`);
 }
 
 main().catch((err) => {

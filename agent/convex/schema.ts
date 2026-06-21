@@ -231,4 +231,24 @@ export default defineSchema({
     eventItemId: v.number(),
     proposedAt: v.number(),
   }).index('by_channel_item', ['channelId', 'eventItemId']),
+
+  // Speaker naming map (MOO-143). One row per meeting: the gated mapping from Deepgram's
+  // anonymous diarization labels (Speaker 0,1,2…) to the council member who spoke, so
+  // transcript receipts read "Alderman Stamper said…" instead of "Speaker 2." PUBLIC-RECORD
+  // OFFICIALS ONLY — names come from the councilMembers directory; never any Slack content.
+  // `name` is null for anyone not confidently a named official (degrades to the role label).
+  speakerMaps: defineTable({
+    eventId: v.number(),
+    eventBodyName: v.optional(v.string()),
+    entries: v.array(
+      v.object({
+        speaker: v.number(),
+        name: v.union(v.string(), v.null()),
+        title: v.union(v.string(), v.null()),
+        role: v.string(), // member | chair | staff | applicant | public | unknown
+        confidence: v.number(),
+      }),
+    ),
+    updatedAt: v.number(),
+  }).index('by_event', ['eventId']),
 });
