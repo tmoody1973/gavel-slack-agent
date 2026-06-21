@@ -3,7 +3,7 @@
 // Assembly + rendering live in stories/dossier.js + blockkit/dossier-modal.js; these are thin glue.
 // Boundaries are injected (the actions/index.js pattern) for testability.
 
-import { addWatchModal, dossierModal } from '../../blockkit/index.js';
+import { addWatchModal, dossierModal, dossierStatusModal } from '../../blockkit/index.js';
 import { assembleDossier } from '../../stories/dossier.js';
 
 /** All-Spanish channels → es, else en (the App Home / story-modal default). */
@@ -31,17 +31,30 @@ async function dossierFor(eventItemId, deps) {
   return assembleDossier(row, { ...deps, language });
 }
 
-/** Open the dossier modal, stacked on the story-leads modal (from the 'b::<id>' overflow). */
+/**
+ * Open the dossier modal, stacked on the story-leads modal (from the 'b::<id>' overflow).
+ * Slack trigger_ids expire in ~3s but assembling the brief (Claude + Legistar + vector search)
+ * is slower — so push a loading modal IMMEDIATELY, then views.update() it once assembled.
+ */
 export async function openDossier({ body, client, eventItemId, deps, logger }) {
+  let pushed;
+  try {
+    pushed = await client.views.push({ trigger_id: body.trigger_id, view: dossierStatusModal({ status: 'loading' }) });
+  } catch (e) {
+    logger?.error?.(`dossier loading push failed: ${e}`);
+    return;
+  }
   try {
     const dossier = await dossierFor(eventItemId, deps);
-    if (!dossier) return;
-    await client.views.push({
-      trigger_id: body.trigger_id,
-      view: dossierModal(dossier, { language: dossier.language }),
-    });
+    const view = dossier
+      ? dossierModal(dossier, { language: dossier.language })
+      : dossierStatusModal({ status: 'error' });
+    await client.views.update({ view_id: pushed.view.id, view });
   } catch (e) {
-    logger?.error?.(`dossier open failed: ${e}`);
+    logger?.error?.(`dossier assemble failed: ${e}`);
+    await client.views
+      .update({ view_id: pushed.view?.id, view: dossierStatusModal({ status: 'error' }) })
+      .catch(() => {});
   }
 }
 

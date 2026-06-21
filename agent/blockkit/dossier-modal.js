@@ -36,6 +36,8 @@ const COPY = {
     watchMoment: 'Watch',
     disclaimer: '_Leads, not verdicts — Gavel points you to the record, never asserts wrongdoing._',
     legistar: 'Open in Legistar',
+    loading: '⏳ *Assembling the brief* — pulling the record, the sponsor, the video moment, and the angle…',
+    error: '⚠️ Could not assemble the brief just now — please try again in a moment.',
   },
   es: {
     title: '📋 Resumen para prensa',
@@ -55,8 +57,27 @@ const COPY = {
     watchMoment: 'Ver',
     disclaimer: '_Pistas, no veredictos — Gavel te señala el registro, nunca afirma irregularidades._',
     legistar: 'Abrir en Legistar',
+    loading: '⏳ *Preparando el resumen* — reuniendo el registro, el patrocinador, el video y el ángulo…',
+    error: '⚠️ No se pudo preparar el resumen ahora — inténtalo de nuevo en un momento.',
   },
 };
+
+/**
+ * A minimal modal shown INSTANTLY while the dossier assembles. Slack trigger_ids expire in
+ * ~3s, but assembling the brief (Claude angle + Legistar + vector search) is slower — so the
+ * handler pushes this immediately, then views.update()s it with the full dossier.
+ * @param {{ language?: 'en'|'es', status?: 'loading'|'error' }} [opts]
+ */
+export function dossierStatusModal({ language = 'en', status = 'loading' } = {}) {
+  const copy = COPY[language] ?? COPY.en;
+  return {
+    type: 'modal',
+    callback_id: 'story_dossier_modal',
+    title: plain(copy.title),
+    close: plain(copy.close),
+    blocks: [section(copy[status])],
+  };
+}
 
 /** Seconds → H:MM:SS for the moment label. */
 function hms(seconds) {

@@ -31,12 +31,19 @@ function makeDeps(over = {}) {
 
 function client() {
   const pushed = [];
+  const updated = [];
   const dms = [];
   const posted = [];
   const ephemerals = [];
   return {
-    calls: { pushed, dms, posted, ephemerals },
-    views: { push: async (v) => pushed.push(v) },
+    calls: { pushed, updated, dms, posted, ephemerals },
+    views: {
+      push: async (v) => {
+        pushed.push(v);
+        return { view: { id: 'V_NEW' } };
+      },
+      update: async (v) => updated.push(v),
+    },
     conversations: {
       open: async (a) => {
         dms.push(a);
@@ -49,13 +56,35 @@ function client() {
 
 const logger = { error: () => {} };
 
-test('openDossier pushes the dossier modal stacked on the story modal', async () => {
+test('openDossier pushes a loading modal instantly (beats the 3s trigger), then updates with the dossier', async () => {
   const c = client();
   await openDossier({ body: { trigger_id: 'T1' }, client: c, eventItemId: 7, deps: makeDeps(), logger });
+  // pushed immediately with a loading state (no slow assembly before the push)
   assert.equal(c.calls.pushed.length, 1);
   assert.equal(c.calls.pushed[0].trigger_id, 'T1');
-  assert.equal(c.calls.pushed[0].view.callback_id, 'story_dossier_modal');
-  assert.match(JSON.stringify(c.calls.pushed[0].view.blocks), /West Hopkins/);
+  assert.match(JSON.stringify(c.calls.pushed[0].view.blocks), /Assembling/i);
+  // then updated in place with the real dossier
+  assert.equal(c.calls.updated.length, 1);
+  assert.equal(c.calls.updated[0].view_id, 'V_NEW');
+  assert.equal(c.calls.updated[0].view.callback_id, 'story_dossier_modal');
+  assert.match(JSON.stringify(c.calls.updated[0].view.blocks), /West Hopkins/);
+});
+
+test('openDossier shows an error state in the modal if assembly fails (never a dead spinner)', async () => {
+  const c = client();
+  await openDossier({
+    body: { trigger_id: 'T1' },
+    client: c,
+    eventItemId: 7,
+    deps: makeDeps({
+      getDetectedItem: async () => {
+        throw new Error('convex down');
+      },
+    }),
+    logger,
+  });
+  assert.equal(c.calls.updated.length, 1);
+  assert.match(JSON.stringify(c.calls.updated[0].view.blocks), /Could not assemble|try again/i);
 });
 
 test('makeDossierWatch pushes the channel-picker prefilled with the File number', async () => {
