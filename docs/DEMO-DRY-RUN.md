@@ -44,6 +44,27 @@ offset to absolute). 16 chunks now live in Convex; `search_transcripts` returns 
 Cana…"). Speaker stays role-labeled (no alderman confidently named in the messy-audio hearing — the
 conservative gate). Outcome per transcript: the license was **surrendered/revoked**.
 
+### Beat 7 clip — A/B cut, cached, posted, playback-verified
+
+Two 90s clips were cut (ffmpeg via yt-dlp), cached under `demo-assets/` (gitignored), and posted
+into **#clarke-square** (`C0BAPMK6HE2`) — both confirmed by Slack as hosted inline video
+(`mode: hosted`, `mp4` + `hls` + `thumb_video` derivatives generated; ~90s `duration_ms`):
+
+| | **A — hero matter** | **B — cleaner showcase (recommended)** |
+|---|---|---|
+| Moment | #260229 Punta Cana revocation @ `5194`/`16288` (4:31:28) | Hopkins St repurchase @ `5210`/`787` (0:13:07) |
+| Speaker | "the chair / committee staff" (role-labeled) | **District 4 Alderman Robert Bauman** (named) |
+| Audio/ASR | rough (artifacts: "two six zero two two nine", "Automatic District") | cleaner |
+| Through-line | ✅ on the demo hero item (#260229) | different matter (zoning) |
+| Cached file | `demo-assets/hero-clip-260229-punta-cana-revocation.mp4` | `demo-assets/hero-clip-13441-bauman-hopkins-st.mp4` |
+
+**Recommendation:** lead Beat 7 with **B (Bauman)** — "what did the alderman say?" lands hardest when
+Gavel *names* the alderman and the audio is clean (the clearest proof of MOO-143). Keep **A** as the
+through-line option if the video beat must stay on the hero matter, narrating the speaker as "the
+committee." Re-cut either with `node scripts/transcript-clip-demo.mjs <eventId> <startSec> 90`
+(uploads to `DEMO_CHANNEL_ID`) or `transcript-ingest-segment.mjs` for the deep-agenda case.
+**Still human:** eyeball both players on desktop + mobile before recording.
+
 ## 🟡 Beat 7 also needs MOO-143 (speaker naming) to be publishable
 
 Without MOO-143 the receipt reads "**Speaker 2** said…" but the script promises "*what did the
@@ -62,7 +83,7 @@ the demo's one weak link.
 | 4 | Parcel intelligence (ownership portfolio, permit, `/gavel watch`) | ✅ built | **[CLICK]** confirm 2000 S 13th St ownership/permit returns; `/gavel watch` adds LLC. `scripts/parcel-card-verify.mjs` |
 | 5 | Zoning RAG ("what could they build?") parcel-conditioned + citations | ✅ built | confirm zoning namespace ingested; `scripts/zoning-answer-verify.mjs` |
 | 6 | Equity + procedure — bilingual ES card in `#clarke-square` + agenda-change | ✅ built; **ES copy wants native-speaker review** (standing) | **[CLICK]** confirm bilingual render; stage a draft/final pair for the walk-on diff if no live walk-on |
-| 7 | Video clip ("what did the alderman say?") + inline 90s clip | ✅ hero item (13632) transcribed + searchable; speaker naming (MOO-143) live | pre-cut + cache the 90s clip at 16288s; speaker is role-labeled (revocation hearing, no named alder) |
+| 7 | Video clip ("what did the alderman say?") + inline 90s clip | ✅ done — 13632 + 13441 searchable, MOO-143 live, A/B clips cut + cached + posted to #clarke-square (playback-verified) | pick A vs B for the cut (recommend B/Bauman); eyeball inline players before recording |
 | 8 | Architecture (three-memory diagram) | ✅ MOO-61 | confirm diagram is final/exported |
 | 9 | Impact close (narration) | ✅ human | none |
 
