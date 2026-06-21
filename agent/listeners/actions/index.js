@@ -11,6 +11,7 @@ import { embedQuery } from '../../zoning/embed.js';
 import { makeAlertAsk, makeAlertHistory, makeAlertWatch } from './alert-buttons.js';
 import { makeDossierSend, makeDossierWatch } from './dossier-buttons.js';
 import { handleFeedbackButton } from './feedback-buttons.js';
+import { makeHelpRoleSwitch, makeHomeHelp } from './help-buttons.js';
 import {
   makeCommitteeOptions,
   makeDiscoverWatch,
@@ -105,6 +106,13 @@ export function register(app) {
   app.action('video_browse', makeVideoBrowse(videoDeps));
   app.action('video_filter', makeVideoFilter(videoDeps));
   app.action('video_watch', async ({ ack }) => ack());
+
+  // MOO-152: role-aware help. The App Home button opens the modal (defaulting to the
+  // user's primary role); the in-modal switcher (help_role:<role>) re-renders it; the
+  // "Full guide" button is a url link, so just ack to clear its spinner.
+  app.action('home_help', makeHomeHelp(homeDeps));
+  app.action(/^help_role:/, makeHelpRoleSwitch());
+  app.action('help_full_guide', async ({ ack }) => ack());
 }
 
 function requireConvex(convex) {

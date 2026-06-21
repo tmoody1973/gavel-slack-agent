@@ -69,6 +69,11 @@ export function homeView({ strip, watches, channels, discover = [], storyLeads =
           action_id: 'grow_areas',
           text: { type: 'plain_text', text: '🏘 I cover multiple neighborhoods', emoji: true },
         },
+        {
+          type: 'button',
+          action_id: 'home_help',
+          text: { type: 'plain_text', text: '❓ How Gavel works', emoji: true },
+        },
       ],
     },
     {

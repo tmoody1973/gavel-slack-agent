@@ -1,5 +1,12 @@
 import { growWatchlistPrompt } from '../../blockkit/grow.js';
-import { meetingVideoSection, storyCarousel, storyLeadCards, tagSearchable, videoModal } from '../../blockkit/index.js';
+import {
+  helpModal,
+  meetingVideoSection,
+  storyCarousel,
+  storyLeadCards,
+  tagSearchable,
+  videoModal,
+} from '../../blockkit/index.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
@@ -87,6 +94,10 @@ export async function handleGavelCommand({ command, ack, respond, client, body, 
         await respond(nudgeResponse(subscription?.language ?? 'en', HELP_TEXT));
         return;
       }
+      // Configured channel: open the role-aware help modal (MOO-152) instead of the
+      // bare command list. The modal is static, so views.open is instant (no trigger race).
+      await runHelp({ subscription, body, client, respond, logger });
+      return;
     }
     const result = await runSubcommand({ subcommand, args, channelId }, deps);
     const message = typeof result === 'string' ? { text: result } : result;
@@ -94,6 +105,22 @@ export async function handleGavelCommand({ command, ack, respond, client, body, 
   } catch (err) {
     logger?.error?.(`/gavel ${subcommand} failed: ${err.message}`);
     await respond({ response_type: 'ephemeral', text: ':warning: Something went wrong — please try again.' });
+  }
+}
+
+/**
+ * `/gavel help` in a configured channel → the role-aware help modal (MOO-152). Leads
+ * with this channel's persona (role) and language; the modal's switcher covers the rest.
+ * Falls back to the ephemeral command list if the modal can't open.
+ */
+async function runHelp({ subscription, body, client, respond, logger }) {
+  const language = subscription?.language === 'es' ? 'es' : 'en';
+  const role = subscription?.role ?? 'association';
+  try {
+    await client.views.open({ trigger_id: body.trigger_id, view: helpModal({ role, language }) });
+  } catch (err) {
+    logger?.error?.(`/gavel help modal open failed: ${err.message}`);
+    await respond({ response_type: 'ephemeral', text: HELP_TEXT });
   }
 }
 
