@@ -7,6 +7,7 @@ import {
   findBridgeMatches,
   generateBridgeQuery,
   judgeBridgeMatch,
+  selectCandidates,
 } from '../../agent/community-memory/bridge.js';
 
 const item = (over = {}) => ({
@@ -20,7 +21,15 @@ const item = (over = {}) => ({
   ...over,
 });
 
-const channel = (over = {}) => ({ channelId: 'C1', client: 'milwaukee', language: 'en', boundary: null, ...over });
+const channel = (over = {}) => ({
+  channelId: 'C1',
+  client: 'milwaukee',
+  language: 'en',
+  committees: ['ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE'],
+  keywords: [],
+  boundary: null,
+  ...over,
+});
 
 // A seeded RTS snippet whose `content` must NEVER appear in the pipeline's output.
 const SECRET_CONTENT = 'my neighbor said the corner store on 13th is being torn down';
@@ -131,11 +140,11 @@ describe('findBridgeMatches — the bounded match loop', () => {
     assert.equal(matches[0].language, 'es');
   });
 
-  it('considers only salient candidates (a dull item never reaches RTS)', async () => {
+  it('considers only channel-relevant candidates (an unrelated-committee item never reaches RTS)', async () => {
     let searched = 0;
-    const dull = item({ eventItemId: 8, title: 'Communication relating to routine staffing', walkOnFlag: false });
+    const unrelated = item({ eventItemId: 8, eventBodyName: 'PUBLIC WORKS COMMITTEE' });
     await findBridgeMatches(
-      { upcoming: [dull], subscriptions: [channel()], proposed: [] },
+      { upcoming: [unrelated], subscriptions: [channel()], proposed: [] },
       deps({
         searchChannel: async () => {
           searched += 1;
@@ -143,6 +152,31 @@ describe('findBridgeMatches — the bounded match loop', () => {
         },
       }),
     );
-    assert.equal(searched, 0, 'a non-salient item should not trigger an RTS query');
+    assert.equal(searched, 0, 'an item outside the channel’s committees should not trigger an RTS query');
+  });
+});
+
+describe('selectCandidates — channel-relevant, salience-ordered, capped', () => {
+  it('keeps only items in the channel’s committees and caps the count', () => {
+    const zoning = (id) => item({ eventItemId: id, walkOnFlag: false });
+    const upcoming = [
+      zoning(1),
+      zoning(2),
+      zoning(3),
+      item({ eventItemId: 9, eventBodyName: 'PUBLIC WORKS COMMITTEE' }),
+    ];
+    const out = selectCandidates(upcoming, channel(), 2);
+    assert.equal(out.length, 2, 'capped at 2');
+    assert.ok(
+      out.every((i) => i.eventBodyName.includes('ZONING')),
+      'only relevant committee survives',
+    );
+  });
+
+  it('orders a salient relevant item ahead of a dull relevant one', () => {
+    const dull = item({ eventItemId: 2, walkOnFlag: false, title: 'A communication about zoning paperwork' });
+    const salient = item({ eventItemId: 3, walkOnFlag: true });
+    const out = selectCandidates([dull, salient], channel(), 5);
+    assert.equal(out[0].eventItemId, 3, 'the walk-on item leads');
   });
 });

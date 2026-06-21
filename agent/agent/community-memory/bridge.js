@@ -12,6 +12,7 @@
 // Both Claude calls are INJECTED (createClaudeGenerate({ schema }) at the boundary), so the
 // prompts/validation/loop stay pure and unit-testable. Mirrors stories/angle.js.
 
+import { matchSubscriptions } from '../../alerts/match.js';
 import { selectSalient } from '../../home/salience.js';
 
 const DEFAULT_CANDIDATE_CAP = 5;
@@ -135,8 +136,27 @@ export async function judgeBridgeMatch({ item, snippets }, { generate }) {
 const dedupKey = (channelId, eventItemId) => `${channelId}:${eventItemId}`;
 
 /**
- * Find confident community↔agenda matches across all channels. Bounded by salience (candidate
- * cap per channel) and dedup (already-proposed pairs skipped). Boundaries (RTS + both Claude
+ * The capped candidate set for one channel: upcoming items RELEVANT to that channel (its
+ * committees/keywords/district — `matchSubscriptions`), the most NOTABLE first (salience
+ * orders within the relevant set), capped so RTS/Claude cost stays bounded. Relevance — not
+ * salience — is the gate: a channel only gets bridges for items in its own wheelhouse, and the
+ * cap keeps a busy agenda from fanning out into hundreds of RTS calls.
+ * @param {Array<object>} upcoming
+ * @param {object} sub - one subscription row
+ * @param {number} cap
+ * @returns {Array<object>}
+ */
+export function selectCandidates(upcoming, sub, cap = DEFAULT_CANDIDATE_CAP) {
+  const relevant = (upcoming ?? []).filter((item) => matchSubscriptions(item, [sub]).length > 0);
+  const boundaries = sub.boundary?.value != null ? [sub.boundary.value] : [];
+  const salient = selectSalient(relevant, { boundaries, cap: relevant.length }).map((entry) => entry.item);
+  const salientIds = new Set(salient.map((item) => item.eventItemId));
+  return [...salient, ...relevant.filter((item) => !salientIds.has(item.eventItemId))].slice(0, cap);
+}
+
+/**
+ * Find confident community↔agenda matches across all channels. Bounded by channel relevance +
+ * a per-channel candidate cap and dedup (already-proposed pairs skipped). Boundaries (RTS + Claude
  * calls) are injected. The returned matches carry ONLY agenda-derived data — never message
  * content (asserted in tests).
  *
@@ -162,10 +182,9 @@ export async function findBridgeMatches({ upcoming, subscriptions, proposed = []
   const matches = [];
 
   for (const sub of subscriptions ?? []) {
-    const boundaries = sub.boundary?.value != null ? [sub.boundary.value] : [];
-    const candidates = selectSalient(upcoming ?? [], { boundaries, cap: candidateCap })
-      .map((entry) => entry.item)
-      .filter((item) => !proposedSet.has(dedupKey(sub.channelId, item.eventItemId)));
+    const candidates = selectCandidates(upcoming ?? [], sub, candidateCap).filter(
+      (item) => !proposedSet.has(dedupKey(sub.channelId, item.eventItemId)),
+    );
 
     for (const item of candidates) {
       const { queryEn, queryEs, entity } = await generateQuery(item);
