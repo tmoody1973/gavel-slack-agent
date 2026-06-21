@@ -1,9 +1,15 @@
 import { ConvexHttpClient } from 'convex/browser';
 
+import { enrichForAlert } from '../../alerts/enrich.js';
 import { api } from '../../convex/_generated/api.js';
 import { createHomeDeps } from '../../home/deps.js';
 import { createLegistarClient } from '../../poller/legistar.js';
+import { STORY_ANGLE_SCHEMA } from '../../stories/angle.js';
+import { findMatterMoment } from '../../stories/dossier.js';
+import { createClaudeGenerate } from '../../summarizer/index.js';
+import { embedQuery } from '../../zoning/embed.js';
 import { makeAlertAsk, makeAlertHistory, makeAlertWatch } from './alert-buttons.js';
+import { makeDossierSend, makeDossierWatch } from './dossier-buttons.js';
 import { handleFeedbackButton } from './feedback-buttons.js';
 import {
   makeCommitteeOptions,
@@ -63,11 +69,30 @@ export function register(app) {
   // MOO-130: Story-leads rich view. The modal/overflow/Ask need both the Home
   // boundaries (subscriptions, upcoming, channel names) and the alert-style record
   // lookups (detected row + matter file number) for the primed Ask-Gavel DM.
-  const storyDeps = { ...homeDeps, getDetectedItem: deps.getDetectedItem, getMatter: deps.getMatter };
+  // MOO-129: the reporter dossier. "📋 Brief me" assembles every reporting thread for one lead —
+  // angle (Claude) + sponsor/contact + matter history + the transcript moment (vector search) +
+  // outcome. The overflow handler routes 'b::' into openDossier, so storyDeps carries the dossier
+  // boundaries too. Single-language (channel language), grounded, leads-not-verdicts.
+  const dossierDeps = {
+    enrich: (item) => enrichForAlert(item, legistar),
+    listMembers: () => requireConvex(convex).query(api.councilMembers.listMembers, { client: 'milwaukee' }),
+    getOutcomes: (matterId) => requireConvex(convex).query(api.outcomes.byMatter, { matterId }),
+    getMatterHistory: deps.getMatterHistory,
+    searchMoment: (item) =>
+      findMatterMoment(item, {
+        embedQuery: (text) => embedQuery(text, { apiKey: process.env.OPENAI_API_KEY }),
+        search: (query) => requireConvex(convex).action(api.transcripts.search, query),
+      }),
+    generate: createClaudeGenerate({ schema: STORY_ANGLE_SCHEMA }),
+  };
+
+  const storyDeps = { ...homeDeps, ...dossierDeps, getDetectedItem: deps.getDetectedItem, getMatter: deps.getMatter };
   app.action('story_browse', makeStoryBrowse(storyDeps));
   app.action('story_modal_filter', makeStoryModalFilter(storyDeps));
   app.action('story_lead_overflow', makeStoryLeadOverflow(storyDeps));
   app.action('story_ask', makeStoryAsk(storyDeps));
+  app.action('dossier_watch', makeDossierWatch(storyDeps));
+  app.action('dossier_send', makeDossierSend(storyDeps));
 
   // MOO-142: meeting-video discovery. Browse + the committee dropdown share the cheap
   // pipeline (live Legistar look-back + one Convex ingested-id query). The ▶ Watch button
