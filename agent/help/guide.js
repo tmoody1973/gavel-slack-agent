@@ -21,9 +21,9 @@ export function primaryRole(roles) {
   return 'association';
 }
 
-/** The full persona guide lives in a Slack Canvas; overridable once it's published. */
+/** The full persona guide lives in a Slack Canvas (MOO-152); env-overridable. */
 export const GUIDE_URL =
-  process.env.GAVEL_GUIDE_URL || 'https://github.com/tmoody1973/gavel-slack-agent/blob/main/docs/USER-GUIDE.md';
+  process.env.GAVEL_GUIDE_URL || 'https://gavel-project.enterprise.slack.com/docs/T0B8KS540G4/F0BCXBM57DE';
 
 /** Bilingual string pair. */
 const T = (en, es) => ({ en, es });
