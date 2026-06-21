@@ -219,4 +219,16 @@ export default defineSchema({
     .index('by_event', ['eventId'])
     .index('by_event_item', ['eventId', 'eventItemId'])
     .index('by_matter', ['matterId']),
+
+  // Community-memory bridge dedup ledger (MOO-125). One row per proposal already made
+  // ("you've been discussing X — it's on the agenda this week"), so the bridge never
+  // re-surfaces the same (channel, item) pair. OFFICIAL IDS + TIMESTAMP ONLY — never any
+  // Slack message content (the RTS guardrail: community memory is queried live, never
+  // stored). The live match that produced the proposal is computed each sweep and discarded.
+  bridgeProposals: defineTable({
+    channelId: v.string(),
+    client: v.union(v.literal('milwaukee'), v.literal('milwaukeecounty')),
+    eventItemId: v.number(),
+    proposedAt: v.number(),
+  }).index('by_channel_item', ['channelId', 'eventItemId']),
 });
