@@ -98,19 +98,25 @@ async function main() {
     console.log(`✓ created canvas ${canvasId}`);
   }
 
-  // Make it readable by the seeded demo channels' members.
+  // Make it readable by the seeded demo channels' members — a publish that nobody can
+  // open is a failed publish, so fail loudly (consistent with create/edit above).
   const access = await api('canvases.access.set', {
     canvas_id: canvasId,
     access_level: 'read',
     channel_ids: SHARE_CHANNELS,
   });
-  console.log('canvases.access.set →', access.ok ? 'ok' : access.error);
+  if (!access.ok) throw new Error(`canvases.access.set failed: ${access.error}`);
+  console.log('✓ set read access for demo channels');
 
-  // The canvas is a file object; files.info carries the canonical permalink.
-  const info = await fetch(`https://slack.com/api/files.info?file=${canvasId}`, {
+  // The canvas is a file object; files.info would carry the permalink — but it needs
+  // files:read (not granted), so treat it as best-effort: a non-200 or app error just
+  // yields the fallback note. The permalink is informational; absence isn't fatal.
+  const permalink = await fetch(`https://slack.com/api/files.info?file=${canvasId}`, {
     headers: { Authorization: `Bearer ${tok}` },
-  }).then((r) => r.json());
-  const permalink = info?.file?.permalink ?? '(files.info gave no permalink — ' + (info.error ?? 'unknown') + ')';
+  })
+    .then((r) => (r.ok ? r.json() : { ok: false, error: `http ${r.status}` }))
+    .then((info) => info?.file?.permalink ?? `(no permalink — ${info.error ?? 'unknown'}; needs files:read)`)
+    .catch((e) => `(files.info errored — ${e.message})`);
 
   console.log('\ncanvas_id:', canvasId);
   console.log('permalink:', permalink);
