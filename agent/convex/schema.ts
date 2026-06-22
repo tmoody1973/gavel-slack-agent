@@ -101,7 +101,8 @@ export default defineSchema({
     from: v.string(),
     subject: v.string(),
     bodyText: v.string(), // HTML-stripped body (agentmail has no extracted_text)
-    searchText: v.string(), // subject + bodyText, the full-text search field
+    searchText: v.string(), // subject + bodyText (+ attachmentText), the full-text search field
+    attachmentText: v.optional(v.string()), // text extracted from PDF attachments (MOO-153)
     category: v.string(), // curated bucket: meetings | neighborhood_services | licenses | newsletter | other
     categoryRaw: v.optional(v.string()),
     subType: v.optional(v.string()),

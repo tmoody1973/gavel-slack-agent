@@ -1,3 +1,4 @@
+import { composeSearchText } from './attachment-index.js';
 import { extractCivicFields, htmlToText } from './extract.js';
 
 /**
@@ -20,6 +21,7 @@ export function buildNotificationRecord(message) {
   const subject = message.subject ?? '';
   const bodyText = htmlToText(message.extractedHtml ?? message.html ?? message.bodyText ?? '');
   const extracted = extractCivicFields({ subject, bodyText });
+  const attachmentText = message.attachmentText ?? '';
 
   const record = {
     messageId: message.messageId,
@@ -27,7 +29,8 @@ export function buildNotificationRecord(message) {
     from: message.from ?? '',
     subject,
     bodyText,
-    searchText: `${subject} ${bodyText}`.trim(),
+    searchText: composeSearchText({ subject, bodyText, attachmentText }),
+    ...(attachmentText ? { attachmentText } : {}),
     ...extracted,
     taxkey: extracted.taxkeys[0],
     attachments: normalizeAttachments(message.attachments),

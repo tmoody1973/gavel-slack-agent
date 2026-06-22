@@ -140,6 +140,24 @@ export const markDigested = mutation({
   },
 });
 
+/**
+ * Store extracted attachment text and the rebuilt search field (MOO-153). The
+ * caller (the attachment-index script) composes searchText from subject + body +
+ * attachment text via the shared pure builder, so the fold logic lives in one place.
+ */
+export const setAttachmentText = mutation({
+  args: { messageId: v.string(), attachmentText: v.string(), searchText: v.string() },
+  handler: async (ctx, { messageId, attachmentText, searchText }) => {
+    const row = await ctx.db
+      .query('civicNotifications')
+      .withIndex('by_message', (q) => q.eq('messageId', messageId))
+      .unique();
+    if (!row) return null;
+    await ctx.db.patch(row._id, { attachmentText, searchText });
+    return row._id;
+  },
+});
+
 /** Clear the digested flag (all rows, or a given set) — keeps the demo repeatable. */
 export const resetDigested = mutation({
   args: { messageIds: v.optional(v.array(v.string())) },
