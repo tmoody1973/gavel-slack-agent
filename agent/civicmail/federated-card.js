@@ -27,12 +27,16 @@ const COPY = {
     header: (t) => `🔎 Records matching “${t}”`,
     empty: (t) => `No records match “${t}”. Try different words, or wrap a phrase in quotes for an exact match.`,
     footer: 'Searches city E-Notify, agendas, minutes & zoning · public records',
+    // Teaching next-step: one capability nudge so the surface never dead-ends.
+    watchNudge: (t) => `👁 Want to be notified when more records like this arrive? Try \`/gavel watch ${t}\``,
   },
   es: {
     header: (t) => `🔎 Registros que coinciden con “${t}”`,
     empty: (t) =>
       `No se encontró ningún registro para “${t}”. Pruebe otras palabras o use comillas para una frase exacta.`,
     footer: 'Busca correo cívico, agendas, actas y zonificación · registros públicos',
+    watchNudge: (t) =>
+      `👁 ¿Quieres recibir notificaciones cuando lleguen más registros como este? Prueba \`/gavel watch ${t}\``,
   },
 };
 
@@ -136,6 +140,7 @@ export function buildFederatedResultsCard({ term, groups, language = 'en' }) {
     );
   }
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: copy.footer }] });
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: copy.watchNudge(term) }] });
 
   return { text: `${copy.header(term)} — ${total} found`, blocks };
 }

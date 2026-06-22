@@ -17,6 +17,7 @@ import {
 import { mergeSearchResults, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
+import { commandCopy } from './copy.js';
 
 const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video', 'search'];
 
@@ -41,17 +42,6 @@ const STORIES_COPY = {
       `📰 No surgieron pistas de reportaje para *${label}* esta semana — prueba \`/gavel stories\` para toda la agenda.`,
   },
 };
-
-const HELP_TEXT = [
-  '*Gavel commands*',
-  '• `/gavel watch <entity>` — alert this channel when a file number, address, or name appears',
-  '• `/gavel search <term>` — search the city mail (addresses, owners, license types, record #s)',
-  '• `/gavel stories [committee|topic]` — ranked story leads on the upcoming agenda (for reporters)',
-  '• `/gavel video [committee]` — browse recent meeting video you can watch (and search)',
-  '• `/gavel status` — show this channel’s committees, keywords, language, and watches',
-  '• `/gavel unwatch <entity>` — stop watching (names as shown in `/gavel status`)',
-  '• `/gavel digest` — weekly digest _(coming in Phase 3)_',
-].join('\n');
 
 /**
  * Parse the free text after `/gavel` into a subcommand + its arguments.
@@ -107,7 +97,9 @@ export async function handleGavelCommand({ command, ack, respond, client, body, 
     if (subcommand === 'help') {
       const subscription = await deps.getSubscription(channelId);
       if (!isConfigured(subscription)) {
-        await respond(nudgeResponse(subscription?.language ?? 'en', HELP_TEXT));
+        const language = subscription?.language === 'es' ? 'es' : 'en';
+        const help = commandCopy(language).help;
+        await respond(nudgeResponse(subscription?.language ?? 'en', help));
         return;
       }
       // Configured channel: open the role-aware help modal (MOO-152) instead of the
@@ -120,7 +112,8 @@ export async function handleGavelCommand({ command, ack, respond, client, body, 
     await respond({ response_type: 'ephemeral', ...message });
   } catch (err) {
     logger?.error?.(`/gavel ${subcommand} failed: ${err.message}`);
-    await respond({ response_type: 'ephemeral', text: ':warning: Something went wrong — please try again.' });
+    const language = (await deps.getSubscription(channelId).catch(() => null))?.language === 'es' ? 'es' : 'en';
+    await respond({ response_type: 'ephemeral', text: commandCopy(language).genericError });
   }
 }
 
@@ -136,7 +129,7 @@ async function runHelp({ subscription, body, client, respond, logger }) {
     await client.views.open({ trigger_id: body.trigger_id, view: helpModal({ role, language }) });
   } catch (err) {
     logger?.error?.(`/gavel help modal open failed: ${err.message}`);
-    await respond({ response_type: 'ephemeral', text: HELP_TEXT });
+    await respond({ response_type: 'ephemeral', text: commandCopy('en').help });
   }
 }
 
@@ -150,10 +143,12 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
       return runUnwatch({ args, channelId }, deps);
     case 'search':
       return runSearch({ args, channelId }, deps);
-    case 'digest':
-      return 'The weekly digest is coming in Phase 3.';
+    case 'digest': {
+      const language = (await deps.getSubscription(channelId))?.language === 'es' ? 'es' : 'en';
+      return commandCopy(language).digestStub;
+    }
     default:
-      return HELP_TEXT;
+      return commandCopy('en').help;
   }
 }
 
@@ -168,16 +163,17 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
  *           searchNotifications: (input: {term: string, limit: number}) => Promise<object[]> }} deps
  */
 async function runSearch({ args, channelId }, deps) {
+  // Language resolved before the empty-args guard so usage strings are localized.
+  const subscription = await deps.getSubscription(channelId);
+  const language = subscription?.language === 'es' ? 'es' : 'en';
   if (!args.trim()) {
-    return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search "data center"` (quotes = exact phrase).';
+    return commandCopy(language).usageSearch;
   }
   // Federated across the civic memory: civic mail (keyword + semantic), upcoming
   // Legistar agendas (keyword over title), meeting minutes + zoning code (semantic).
   // Quotes → exact, keyword-only (skips the semantic lanes); unquoted → hybrid. The
   // query is embedded once for all three vector lanes; results group by source.
   const parsed = parseSearchTerm(args);
-  const subscription = await deps.getSubscription(channelId);
-  const language = subscription?.language === 'es' ? 'es' : 'en';
 
   const vector = parsed.exact ? null : await (deps.embedQuery?.(parsed.display).catch(() => null) ?? null);
   const safe = (promise) => (promise ? promise.catch(() => []) : Promise.resolve([]));
@@ -303,7 +299,8 @@ async function runVideo({ args, channelId, body, client, respond, logger }, deps
 async function runWatch({ args, channelId }, deps) {
   const entity = args.trim();
   if (!entity) {
-    return 'Usage: `/gavel watch <entity>` — e.g. `/gavel watch 2000 S 13th St` or `/gavel watch File #260229`.';
+    const language = (await deps.getSubscription(channelId))?.language === 'es' ? 'es' : 'en';
+    return commandCopy(language).usageWatch;
   }
   await deps.addWatch({ channelId, entity });
   const text = `👁 Watching *${entity}* — I’ll alert this channel when it shows up in the official record.`;
@@ -322,7 +319,8 @@ async function runWatch({ args, channelId }, deps) {
 async function runUnwatch({ args, channelId }, deps) {
   const entity = args.trim();
   if (!entity) {
-    return 'Usage: `/gavel unwatch <entity>` — exactly as it appears in `/gavel status`.';
+    const language = (await deps.getSubscription(channelId))?.language === 'es' ? 'es' : 'en';
+    return commandCopy(language).usageUnwatch;
   }
   const removed = await deps.removeWatch({ channelId, entity });
   if (!removed) {
@@ -333,17 +331,16 @@ async function runUnwatch({ args, channelId }, deps) {
 
 async function runStatus(channelId, deps) {
   const [subscription, watches] = await Promise.all([deps.getSubscription(channelId), deps.listWatches(channelId)]);
-  if (!subscription) {
-    return 'This channel is not configured yet — no subscription found. Alerts will not post here until one is set up.';
-  }
+  const language = subscription?.language === 'es' ? 'es' : 'en';
+  const copy = commandCopy(language);
+  if (!subscription) return copy.notConfigured;
   const watchList = watches.length > 0 ? watches.map((w) => `• ${w.entity}`).join('\n') : '_none_';
-  return [
-    '*Gavel status for this channel*',
-    `🏛 Committees: ${formatList(subscription.committees)}`,
-    `🔑 Keywords: ${formatList(subscription.keywords)}`,
-    `🌐 Language: ${subscription.language === 'es' ? 'Español (bilingual cards)' : 'English'}`,
-    `👁 Watches:\n${watchList}`,
-  ].join('\n');
+  return copy.statusLine({
+    committees: formatList(subscription.committees),
+    keywords: formatList(subscription.keywords),
+    language,
+    watchList,
+  });
 }
 
 function formatList(values) {
