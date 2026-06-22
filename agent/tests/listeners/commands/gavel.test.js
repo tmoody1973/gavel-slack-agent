@@ -102,27 +102,42 @@ test('search <term> queries the civic mail and renders a results card', async ()
   assert.match(JSON.stringify(h.calls.responds[0].blocks), /Class B Tavern License/);
 });
 
-test('unquoted search blends in semantic matches (hybrid), deduped', async () => {
+test('unquoted search federates keyword mail + semantic + agendas, deduped', async () => {
   const h = harness({ text: 'search summer fun for kids' });
+  h.deps.embedQuery = async (q) => {
+    assert.equal(q, 'summer fun for kids');
+    return [0.1, 0.2];
+  };
   h.deps.searchNotifications = async () => [
     { messageId: 'k1', category: 'licenses', subject: 'Keyword hit', searchText: 'summer fun for kids' },
   ];
-  h.deps.semanticSearch = async (q) => {
-    assert.equal(q, 'summer fun for kids');
+  h.deps.semanticSearch = async (vector) => {
+    assert.deepEqual(vector, [0.1, 0.2]);
     return [
       { messageId: 'k1', subject: 'dup' },
       { messageId: 's2', category: 'other', subject: 'Safe Summer Kickoff', searchText: '' },
     ];
   };
+  h.deps.searchAgendas = async () => [
+    { title: 'Summer programming grant', eventBodyName: 'Council', eventDate: '2026-06-23' },
+  ];
+  h.deps.searchMinutes = async () => [];
+  h.deps.searchZoning = async () => [];
   await handleGavelCommand(h.args, h.deps);
   const blocks = JSON.stringify(h.calls.responds[0].blocks);
   assert.match(blocks, /Keyword hit/);
   assert.match(blocks, /Safe Summer Kickoff/); // semantic-only result included
+  assert.match(blocks, /Summer programming grant/); // agenda lane included
 });
 
-test('quoted (exact) search does NOT call semantic — literal phrase only', async () => {
+test('quoted (exact) search skips the semantic/vector lanes — literal only', async () => {
   const h = harness({ text: 'search "class b tavern"' });
+  let embedCalled = false;
   let semanticCalled = false;
+  h.deps.embedQuery = async () => {
+    embedCalled = true;
+    return [0.1];
+  };
   h.deps.searchNotifications = async () => [
     { messageId: 'k1', subject: 'RENEWAL Class B Tavern License', searchText: 'renewal class b tavern license' },
   ];
@@ -130,7 +145,9 @@ test('quoted (exact) search does NOT call semantic — literal phrase only', asy
     semanticCalled = true;
     return [];
   };
+  h.deps.searchAgendas = async () => [];
   await handleGavelCommand(h.args, h.deps);
+  assert.equal(embedCalled, false, 'exact phrase does not embed');
   assert.equal(semanticCalled, false, 'exact phrase stays keyword-only');
 });
 

@@ -7,7 +7,13 @@ import {
   tagSearchable,
   videoModal,
 } from '../../blockkit/index.js';
-import { buildSearchResultsCard } from '../../civicmail/search-card.js';
+import {
+  buildFederatedResultsCard,
+  normalizeAgenda,
+  normalizeMail,
+  normalizeMinutes,
+  normalizeZoning,
+} from '../../civicmail/federated-card.js';
 import { mergeSearchResults, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
@@ -19,6 +25,7 @@ const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'v
 // show OR-noise.
 const SEARCH_CANDIDATE_LIMIT = 40;
 const SEARCH_RESULT_LIMIT = 12;
+const PER_SOURCE_LIMIT = 4;
 
 const STORY_LEAD_CAP = 5;
 
@@ -164,23 +171,41 @@ async function runSearch({ args, channelId }, deps) {
   if (!args.trim()) {
     return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search "data center"` (quotes = exact phrase).';
   }
-  // Quotes → exact keyword phrase only. Unquoted → hybrid: a precise keyword lane
-  // (Convex recall + refineResults precision) plus a semantic lane (vector search over
-  // the meaning), merged keyword-first. So "free summer activities" still finds the
-  // safe-summer flyer even though those words aren't in it.
+  // Federated across the civic memory: civic mail (keyword + semantic), upcoming
+  // Legistar agendas (keyword over title), meeting minutes + zoning code (semantic).
+  // Quotes → exact, keyword-only (skips the semantic lanes); unquoted → hybrid. The
+  // query is embedded once for all three vector lanes; results group by source.
   const parsed = parseSearchTerm(args);
   const subscription = await deps.getSubscription(channelId);
   const language = subscription?.language === 'es' ? 'es' : 'en';
 
-  const candidates = await deps.searchNotifications({ term: parsed.display, limit: SEARCH_CANDIDATE_LIMIT });
-  const keyword = refineResults(candidates, parsed);
+  const vector = parsed.exact ? null : await (deps.embedQuery?.(parsed.display).catch(() => null) ?? null);
+  const safe = (promise) => (promise ? promise.catch(() => []) : Promise.resolve([]));
 
-  let results = keyword;
-  if (!parsed.exact && deps.semanticSearch) {
-    const semantic = await deps.semanticSearch(parsed.display).catch(() => []);
-    results = mergeSearchResults(keyword, semantic, { limit: SEARCH_RESULT_LIMIT });
-  }
-  return buildSearchResultsCard({ term: parsed.display, results, language });
+  const [mailCandidates, mailSemantic, agendaHits, minutesHits, zoningHits] = await Promise.all([
+    safe(deps.searchNotifications?.({ term: parsed.display, limit: SEARCH_CANDIDATE_LIMIT })),
+    vector ? safe(deps.semanticSearch?.(vector)) : Promise.resolve([]),
+    safe(deps.searchAgendas?.(parsed.display)),
+    vector ? safe(deps.searchMinutes?.(vector)) : Promise.resolve([]),
+    vector ? safe(deps.searchZoning?.(vector)) : Promise.resolve([]),
+  ]);
+
+  const mailKeyword = refineResults(mailCandidates, parsed);
+  const mail = parsed.exact
+    ? mailKeyword
+    : mergeSearchResults(mailKeyword, mailSemantic, { limit: SEARCH_RESULT_LIMIT });
+  // Mail searchText is long and OR-noisy, so it needs the AND/phrase refine; agenda
+  // titles are short and already keyword-ranked, so only tighten them for an exact
+  // (quoted) phrase — otherwise trust Convex's title ranking.
+  const agendas = parsed.exact ? refineResults(agendaHits, parsed, (row) => row.title) : agendaHits;
+
+  const groups = [
+    { source: 'mail', results: mail.slice(0, PER_SOURCE_LIMIT).map(normalizeMail) },
+    { source: 'agenda', results: agendas.slice(0, PER_SOURCE_LIMIT).map(normalizeAgenda) },
+    { source: 'minutes', results: minutesHits.slice(0, PER_SOURCE_LIMIT).map(normalizeMinutes) },
+    { source: 'zoning', results: zoningHits.slice(0, PER_SOURCE_LIMIT).map(normalizeZoning) },
+  ];
+  return buildFederatedResultsCard({ term: parsed.display, groups, language });
 }
 
 /**

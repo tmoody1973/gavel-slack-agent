@@ -109,6 +109,17 @@ export const listUpcoming = query({
       .collect(),
 });
 
+/** Full-text search over agenda item titles — the agenda lane of federated /gavel
+ * search (MOO-153). Keyword over `title`; titles are descriptive so this reads well. */
+export const searchTitle = query({
+  args: { term: v.string(), client: v.optional(clientValidator), limit: v.optional(v.number()) },
+  handler: (ctx, { term, client, limit }) =>
+    ctx.db
+      .query('detectedAgendaItems')
+      .withSearchIndex('search_title', (q) => q.search('title', term).eq('client', client ?? 'milwaukee'))
+      .take(limit ?? 8),
+});
+
 /** Pending alerts awaiting summarize+post (MOO-44's consumer). */
 export const listPending = query({
   args: { client: v.optional(clientValidator) },

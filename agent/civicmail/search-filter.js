@@ -48,9 +48,9 @@ export function matchesQuery(searchText, parsed) {
  * @param {ReturnType<typeof parseSearchTerm>} parsed
  * @returns {Array<{ searchText?: string }>}
  */
-export function refineResults(results, parsed) {
+export function refineResults(results, parsed, getText = (row) => row.searchText) {
   if (!parsed.exact && parsed.tokens.length <= 1) return results;
-  return results.filter((row) => matchesQuery(row.searchText, parsed));
+  return results.filter((row) => matchesQuery(getText(row), parsed));
 }
 
 /**

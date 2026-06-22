@@ -50,15 +50,19 @@ export function register(app) {
     listRecentMeetingsWithVideo: () => legistar.listRecentMeetingsWithVideo(),
     listIngestedEventIds: () => requireConvex(convex).query(api.transcripts.listIngestedEventIds, {}),
 
-    // MOO-153 civic-mail search (/gavel search) — keyword (full-text) + semantic.
+    // MOO-153 federated /gavel search — civic mail (keyword + semantic), Legistar
+    // agendas (keyword over title), minutes + zoning (semantic). The query is embedded
+    // once (embedQuery) and the three vector lanes share it. No OpenAI key → embedQuery
+    // returns null and the semantic lanes are skipped (keyword still works).
+    embedQuery: async (query) => {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) return null;
+      const [vector] = await embedTexts([query], { apiKey });
+      return vector;
+    },
     searchNotifications: ({ term, limit }) =>
       requireConvex(convex).query(api.civicNotifications.searchText, { term, limit }),
-    // Semantic lane: embed the query, vector-search by_embedding, resolve to rows.
-    // Degrades to [] without an OpenAI key (hybrid falls back to keyword only).
-    semanticSearch: async (query) => {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) return [];
-      const [vector] = await embedTexts([query], { apiKey });
+    semanticSearch: async (vector) => {
       const hits = await requireConvex(convex).action(api.civicNotifications.findSimilar, {
         embedding: vector,
         limit: 12,
@@ -66,6 +70,10 @@ export function register(app) {
       if (hits.length === 0) return [];
       return requireConvex(convex).query(api.civicNotifications.getByIds, { ids: hits.map((hit) => hit._id) });
     },
+    searchAgendas: (term) =>
+      requireConvex(convex).query(api.detectedItems.searchTitle, { term, client: 'milwaukee', limit: 8 }),
+    searchMinutes: (vector) => requireConvex(convex).action(api.transcripts.search, { embedding: vector, limit: 5 }),
+    searchZoning: (vector) => requireConvex(convex).action(api.zoning.search, { embedding: vector, limit: 5 }),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

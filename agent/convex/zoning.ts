@@ -60,12 +60,14 @@ export const fetchChunks = internalQuery({
  * then hydrates docs.
  */
 export const search = action({
-  args: { embedding: v.array(v.float64()), family: v.string(), limit: v.optional(v.number()) },
+  args: { embedding: v.array(v.float64()), family: v.optional(v.string()), limit: v.optional(v.number()) },
   handler: async (ctx, { embedding, family, limit }) => {
+    // A specific family scopes to that family + general; an absent family (federated
+    // /gavel search has no zoning class in mind) searches the whole code.
     const results = await ctx.vectorSearch('zoningChunks', 'by_embedding', {
       vector: embedding,
       limit: limit ?? 8,
-      filter: (q) => q.or(q.eq('family', family), q.eq('family', 'general')),
+      ...(family ? { filter: (q) => q.or(q.eq('family', family), q.eq('family', 'general')) } : {}),
     });
     const ids = results.map((r) => r._id);
     return ctx.runQuery(internal.zoning.fetchChunks, { ids });

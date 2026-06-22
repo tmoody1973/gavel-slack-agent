@@ -80,7 +80,9 @@ export default defineSchema({
     alertStatus: v.union(v.literal('pending'), v.literal('sent')),
   })
     .index('by_client_item', ['client', 'eventItemId'])
-    .index('by_client_status', ['client', 'alertStatus']),
+    .index('by_client_status', ['client', 'alertStatus'])
+    // Full-text over the agenda item title — the keyword lane of federated /gavel search.
+    .searchIndex('search_title', { searchField: 'title', filterFields: ['client'] }),
 
   // Zoning-code semantic layer (MOO-55). One row per Ch.295 code section (or an
   // intact district/use table). PUBLIC RECORD ONLY — the city's published zoning
