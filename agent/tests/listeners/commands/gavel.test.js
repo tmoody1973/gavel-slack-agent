@@ -91,9 +91,8 @@ test('watch with no entity explains usage instead of writing', async () => {
 
 test('search <term> queries the civic mail and renders a results card', async () => {
   const h = harness({ text: 'search cozumel' });
-  h.deps.searchNotifications = async ({ term, limit }) => {
+  h.deps.searchNotifications = async ({ term }) => {
     assert.equal(term, 'cozumel');
-    assert.equal(limit, 12);
     return [
       { category: 'licenses', subject: 'RENEWAL Class B Tavern License', business: 'COZUMEL III, LLC', district: '12' },
     ];

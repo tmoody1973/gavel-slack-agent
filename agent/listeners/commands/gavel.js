@@ -8,12 +8,16 @@ import {
   videoModal,
 } from '../../blockkit/index.js';
 import { buildSearchResultsCard } from '../../civicmail/search-card.js';
+import { parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
 const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video', 'search'];
 
-const SEARCH_RESULT_LIMIT = 12;
+// Fetch a wide candidate set from Convex (recall), then refine to true matches
+// (precision) before the card caps the display — so quoted/multi-word queries don't
+// show OR-noise.
+const SEARCH_CANDIDATE_LIMIT = 40;
 
 const STORY_LEAD_CAP = 5;
 
@@ -156,14 +160,17 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
  *           searchNotifications: (input: {term: string, limit: number}) => Promise<object[]> }} deps
  */
 async function runSearch({ args, channelId }, deps) {
-  const term = args.trim();
-  if (!term) {
-    return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search COZUMEL`.';
+  if (!args.trim()) {
+    return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search "data center"` (quotes = exact phrase).';
   }
+  // Quotes → exact phrase; multiple words → all must match. Convex provides recall;
+  // refineResults provides the precision its OR-semantics lacks.
+  const parsed = parseSearchTerm(args);
   const subscription = await deps.getSubscription(channelId);
   const language = subscription?.language === 'es' ? 'es' : 'en';
-  const results = await deps.searchNotifications({ term, limit: SEARCH_RESULT_LIMIT });
-  return buildSearchResultsCard({ term, results, language });
+  const candidates = await deps.searchNotifications({ term: parsed.display, limit: SEARCH_CANDIDATE_LIMIT });
+  const results = refineResults(candidates, parsed);
+  return buildSearchResultsCard({ term: parsed.display, results, language });
 }
 
 /**
