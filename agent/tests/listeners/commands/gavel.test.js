@@ -185,7 +185,7 @@ test('status reports committees, keywords, language, and watches', async () => {
 test('status without a subscription says the channel is not configured', async () => {
   const h = harness({ text: 'status' });
   await handleGavelCommand(h.args, h.deps);
-  assert.match(h.calls.responds[0].text, /not.*configured|no subscription/i);
+  assert.match(h.calls.responds[0].text, /isn't set up|not.*configured|no subscription/i);
 });
 
 test('digest responds as a registered stub (ships in UX-D)', async () => {
@@ -199,7 +199,8 @@ test('help lists the available subcommands', async () => {
   const h = harness({ text: '' });
   await handleGavelCommand(h.args, h.deps);
   const text = h.calls.responds[0].text;
-  for (const sub of ['watch', 'status', 'unwatch', 'digest']) {
+  // digest is not listed as a help bullet in the new copy (it's a stub responded only when invoked)
+  for (const sub of ['watch', 'status', 'unwatch']) {
     assert.ok(text.includes(sub), `help missing "${sub}"`);
   }
 });
@@ -474,4 +475,23 @@ test('/gavel video renders Spanish for a Spanish channel', async () => {
   const h = videoHarness({ text: 'video', subscription: { language: 'es' } });
   await handleGavelCommand(h.args, h.deps);
   assert.match(JSON.stringify(h.calls.opened[0].view.blocks), /Ver en Granicus|Solo video|Con búsqueda/);
+});
+
+// ---------- UX mastery curve: ES ramp (U3+U4) ----------
+
+test('an ES channel gets Spanish help, usage, and status — no English cliff', async () => {
+  const h = harness({ text: 'search', subscription: { language: 'es' } }); // empty term → usage
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(h.calls.responds[0].text, /Uso: `\/gavel search/); // Spanish usage, English command
+});
+
+test('status renders in the channel language', async () => {
+  const h = harness({
+    text: 'status',
+    subscription: { committees: ['LICENSES COMMITTEE'], keywords: ['rezoning'], language: 'es' },
+    watches: [{ entity: 'Punta Cana LLC' }],
+  });
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(h.calls.responds[0].text, /Estado de Gavel/); // Spanish heading
+  assert.match(h.calls.responds[0].text, /LICENSES COMMITTEE/); // committee stays English
 });
