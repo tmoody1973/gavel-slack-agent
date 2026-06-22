@@ -1,119 +1,133 @@
-# Demo Workspace Information Architecture — Design Spec
+# Demo Workspace Information Architecture — Design Spec (rev 2)
 
 _2026-06-22. Set up the Gavel demo Slack workspace with persona-clean channels and correct
 per-channel alert configuration, so a Milwaukee resident — or a hackathon judge with sandbox
 access — immediately understands what Gavel is and who it's for. Pre-demo polish for MOO-62._
 
+**Rev 2 — after an adversarial Codex review (verified against the code).** Two real bugs in rev 1
+were confirmed and fixed here: (a) the alert matcher is OR-based, so "trim keywords to keep channels
+local" was false; (b) rev-1 districts contradicted Gavel's own neighborhood resolver. Details inline.
+
 ## Problem
 
-The live workspace is incoherent for a cold visitor (state as of 2026-06-22):
-
-| Channel | Reality |
-|---|---|
-| #general | reporter · EN · **no district** · 6 committees · **35 keywords** (kitchen-sink test channel) |
-| #sherman-park | association · EN · **district 15** (corpus says 7) · 27 keywords |
-| #clarke-square | organizer · ES · district 12 · the Punta Cana hero ✅ |
-| #lindsay-heights | **role: none** · EN · district 6 |
-| #zoning | association · EN · no district · a topic channel that maps to no persona |
-| #random | Slack default, unsubscribed |
-
-A judge lands cold and sees noise: a kitchen-sink #general, a topic channel for no one, a roleless
-channel, a wrong district, and no "you are here." The personas don't map to legible, Milwaukee-
-recognizable channels, and the keyword bloat makes neighborhood channels catch citywide noise.
+The live workspace is incoherent for a cold visitor (state 2026-06-22): a kitchen-sink `#general`
+(reporter, 35 keywords), a `#zoning` topic channel that maps to no persona, `#lindsay-heights` with no
+role, `#sherman-park` on the wrong district, `#random` noise, and no "you are here." Personas don't map
+to legible, Milwaukee-recognizable channels.
 
 ## Design principle: Place + Beat
 
 Two real axes; everything else is machinery underneath.
 
-- **Place** (residents / organizers) → **neighborhood-association channels**, named for real Milwaukee
-  neighborhoods. The aldermanic **district is derived** (the `boundary` field), never the channel's
-  identity — a neighborhood channel *is* a district channel with a human name. This is deliberate:
-  the product's job is to hide the district abstraction (cf. the neighborhood→district picker,
-  MOO-131), so naming a channel `#district-7` would push onto the user the very abstraction Gavel
-  removes. "Anyone from Milwaukee" knows *Sherman Park*; few know their district number.
+- **Place** (residents / organizers) → **neighborhood channels**, named for real Milwaukee
+  neighborhoods, with the **district shown in the channel topic** (not hidden, not the channel name).
+  Place-first names so "anyone from Milwaukee" recognizes them; district-visible metadata so a wrong
+  mapping is catchable, not buried (Codex #5).
 - **Beat** (reporter) → **#newsroom**, citywide across all committees. This is where the legitimate
-  "citywide topic/department" need is served — via `/gavel stories` + committee breadth — instead of
-  standalone `#licenses` / `#zoning` department channels that fragment a neighborhood's view.
+  citywide-topic/department need is served. (Codex argued for optional `#beat-*` channels; deferred to
+  real deployment — for a 3-min demo they cost legibility for a need #newsroom covers.)
 
-**No district-number channels. No department/committee channels.** Districts are derived; committees
-are a per-channel subscription knob, not a channel taxonomy.
+**No district-number channels. No department/committee channels in the demo.**
 
-### Integrity rule: a neighborhood channel contains only neighborhood content
+### Geography must match Gavel's own resolver (Codex #2–4, verified)
 
-`#sherman-park` carries only Sherman Park / district-7 / its-topics content — never citywide noise.
-Enforced by a **tight geo + small plain-language topic** subscription. This is the core reason to
-**trim the keyword bloat**: 35 keywords on a neighborhood channel breaks the "this is *my* block"
-feeling; ~3 plain topics keep it clean and local. (The seed corpus already respects this — Sherman
-Park's messages are about Sherman Blvd rezoning and 35th & Center demolition, all local.)
+`geo/neighborhoods.js` `districtForNeighborhood()` is the product's source of truth, and a judge can
+query it. Verified values: **Sherman Park → 15**, **Clarke Square → 8**, **Historic Mitchell Street →
+12**, **Walker's Point → 12**; **"Lindsay Heights" → null** (a real neighborhood the resolver is simply
+missing). Rev 1's districts (7 / 12 / 6) contradicted this. Fixes:
 
-### The "association" framing
+- `#sherman-park` → **district 15** (Ald. Russell W. Stamper II). Resolver-consistent.
+- The hero channel is renamed so name ↔ district ↔ hero-address all agree (see below).
+- **Add "Lindsay Heights" → 6 to the resolver** (it's genuinely Ald. Coggs's district 6). This fixes
+  the root-cause gap and keeps the recognizable channel name, rather than renaming a real neighborhood
+  away (first-principles over a cosmetic rename).
 
-`association` is already one of the three first-class roles (`association | organizer | reporter`).
-Denise is a neighborhood-**association president**, not a random resident — so her channel is the
-**association's** working channel (the board tracking what's coming and deciding who testifies),
-framed as such by name/topic/welcome. Same channel, sharper identity — not a separate 6th channel.
+### Routing reality: the matcher ORs, so "neighborhood = local" is not free (Codex #1/#8, verified)
+
+`agent/alerts/match.js:24` routes on `committeeHit || keywordHit || districtHit`. A channel subscribed
+to a committee receives **every citywide item for that committee** — keyword trimming does not gate
+that. And Legistar detected items carry **no district** in the matcher (`districtHit` is E-Notify only),
+so geo can't gate them today without per-item address extraction (a scope-cut feature).
+
+**Decision (demo-scoped): work around it, don't re-architect now.**
+- **Neighborhood channels drop broad committee subscriptions** and route on **keywords (+ district for
+  E-Notify)** only — so they don't vacuum up citywide committee traffic.
+- **#newsroom keeps the broad committees** — it *should* be citywide, so committee-based routing is
+  correct there.
+- The demo's hero + sample alerts are **staged into channels directly**, so routing correctness isn't
+  load-bearing for the recording.
+- **Logged as a known real-deployment limitation:** true neighborhood locality needs the matcher to
+  gate geo (`geoHit && (topicHit || watchHit)`) + per-item district extraction. Out of scope for MOO-62.
+
+### Identity framing: neighbors + association, not board-only (Codex #7)
+
+Denise is an association president, but the impact story is *residents* finding out before leverage is
+gone. Keep `role=association` in config; visible copy says **"Sherman Park neighbors tracking City
+Hall,"** not "association working channel."
 
 ## The Clean 5
 
-| Channel | Persona | role | lang | district | committees | plain topics (keywords) |
+| Channel | Persona | role | lang | district · alder | committees | topics (keywords) |
 |---|---|---|---|---|---|---|
-| **#start-here** | everyone / judges | — | — | — | — | none (pinned Canvas, no alerts) |
-| **#sherman-park** | Denise — neighborhood association | `association` | en | 7 | ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE · CITY PLAN COMMISSION | rezoning, demolition, development |
-| **#clarke-square** | Marcos — organizer (hero) | `organizer` | **es** | 12 | LICENSES COMMITTEE · ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE | liquor license, rezoning, Punta Cana |
-| **#lindsay-heights** | Marcos — 2nd neighborhood | `organizer` | en | 6 | COMMUNITY & ECONOMIC DEVELOPMENT COMMITTEE · ZONING, NEIGHBORHOODS & DEVELOPMENT COMMITTEE | development, vacant lot, demolition |
-| **#newsroom** | Rachel — reporter | `reporter` | en | — (citywide) | ZND · LICENSES · COMMUNITY & ECONOMIC DEVELOPMENT · CITY PLAN COMMISSION (broad) | (light: rezoning, license revocation, demolition) |
+| **#start-here** | judges / everyone | — | — | — | — | none (Canvas + judge path) |
+| **#sherman-park** | Denise — neighbors + assoc | `association` | en | **15** · Ald. Stamper | — (none; see routing) | rezoning, demolition, development |
+| **#near-south-side-es** _(rename of #clarke-square)_ | Marcos — hero | `organizer` | **es** | **12** · Ald. Pérez (Council Pres) | — (none) | liquor license, Punta Cana, rezoning |
+| **#lindsay-heights** | Marcos — 2nd neighborhood | `organizer` | en | **6** · Ald. Coggs | — (none) | development, vacant lot, demolition |
+| **#newsroom** | Rachel — reporter | `reporter` | en | — citywide | ZND · LICENSES · COMMUNITY & ECONOMIC DEVELOPMENT · CITY PLAN COMMISSION | (light) |
 
-All three personas covered; the **organizer shown across two channels in two languages** (clarke ES +
-lindsay EN) = the multi-neighborhood / community-bridge story made real, not asserted. Committee
-strings are the exact Legistar `EventBodyName` values already used in `agent/sandbox/corpus.js`.
+Each place channel's **topic line** shows "Neighborhood · District N · Ald. Name · topics" so the
+hidden config is visible and checkable. The hero channel is the **existing** `#clarke-square`
+(`C0BAPMK6HE2`, which holds all the seeded Punta Cana content, opposition thread, clip, RTS index) —
+**renamed** to `#near-south-side-es` (district 12 = the real district of 2000 S 13th St, Historic
+Mitchell St area). All seeded content stays in place; only the name + boundary change.
 
-## Division of labor (the `channels:manage` constraint)
+## Division of labor (the `channels:manage` / `pins:write` constraint)
 
-The bot token has **no `channels:manage`, no `pins:write`** (see memory `slack-grid-scopes`), so
-channel lifecycle and topics are manual; content and config are scripted.
-
-**Tarik — manually in Slack (~5 min):**
-1. Create `#start-here` and `#newsroom`; invite `@Gavel` to both.
-2. Archive `#general`, `#zoning`, `#random`.
-3. Set each channel's **topic/purpose** (one human line — e.g. #sherman-park → "Sherman Park
-   neighborhood association · tracking what City Hall is doing to our blocks").
-4. Pin/bookmark the Canvas in `#start-here` once published.
+**Tarik — manually in Slack (~5 min):** create `#start-here` + `#newsroom`; rename `#clarke-square` →
+`#near-south-side-es`; archive `#general` + `#zoning` + `#random`; set each channel's topic line; invite
+`@Gavel` to the new channels; **add the judges to all demo channels up front** (Codex #12 — guests
+don't auto-join); pin the Canvas in `#start-here`.
 
 **Claude — via scripts + Convex (no new scopes):**
-1. **Set all 5 subscriptions** to the table above (fix sherman-park district 15→7; set lindsay role
-   none→organizer; trim every keyword list to the small plain set; ensure committees/language/role).
-   Extend or reuse `agent/sandbox/corpus.js` + the seed path so this is reproducible, not hand-poked.
-2. **Publish the Canvas** (MOO-152 guide, already built — `F0BCXBM57DE`) and share it to `#start-here`
-   + a short "👋 What is this · judges start here" welcome message.
-3. **Stage one representative sample alert per persona channel** (reuse MOO-122 sample-alert +
-   MOO-119 welcome-card generators): sherman → a rezoning/demolition; clarke → the **#260229 Punta
-   Cana** hero; lindsay → a development/vacant-lot; newsroom → story leads. So a judge landing in any
-   channel immediately sees a relevant, on-identity card.
-4. **Verify** against reality (below).
+1. **Set all 5 subscriptions** to the table (correct districts, role, language; **drop committees from
+   neighborhood channels**; trim keywords to the small plain set; #newsroom keeps broad committees).
+2. **Add "Lindsay Heights" → 6 to `geo/neighborhoods.js`** + a resolver test.
+3. **Publish the Canvas** to `#start-here` + a "👋 Judges start here" message that **links the three
+   persona channels and says what to inspect in each** (Denise: a local alert + how-to-be-heard;
+   Marcos: the Spanish hero + owner/watchlist; Rachel: story leads + video). (Codex #12)
+4. **Stage one representative sample alert per persona channel** (reuse MOO-122 / MOO-119), each
+   on-identity; plus **one live alert fired through the real pipeline** with a visible
+   `Sandbox demo alert · generated <time>` label — to prove the *route*, not just the card. (Codex #10)
+5. **Native-Spanish review of the `#near-south-side-es` UX** (alert card, topic, welcome, "how to be
+   heard") — now **in scope**, because it's the one equity feature judges will touch. (Codex #9)
+6. **Write a manifest preflight verifier** (`scripts/workspace-verify.mjs`): expected channels, bot
+   membership, subscription config, topic text, sample-alert presence, Canvas reachability, RTS
+   opposition surfacing. Run it before recording AND before judge access. Manual steps are preflight,
+   not live setup. (Codex #11)
 
 ## Verification
 
-- [ ] `conversations.list` shows the Clean 5 (others archived); bot is a member of each.
-- [ ] Each channel's Convex subscription matches the table (role, language, district, committees,
-      trimmed keywords) — paste the live config.
-- [ ] Dry-run the alert matcher (`agent/alerts/match.js`) against a real upcoming-agenda pull: each
-      channel matches only on-identity items (a Sherman Park rezoning routes to #sherman-park, the
-      Punta Cana license routes to #clarke-square, etc.) — no citywide bleed.
-- [ ] RTS opposition still surfaces in #clarke-square for an opposition-framed query (memory
-      `rts-query-framing`).
-- [ ] Canvas reachable from #start-here; each persona channel shows one representative sample alert.
+- [ ] `scripts/workspace-verify.mjs` passes: Clean 5 present (others archived), bot a member of each,
+      each subscription matches the table, topic lines show district + alder, each persona channel has a
+      sample alert, Canvas reachable, RTS opposition surfaces in the hero channel.
+- [ ] `districtForNeighborhood('Lindsay Heights') === 6` (resolver test green).
+- [ ] Matcher dry-run: a citywide ZND item does **not** route to a neighborhood channel (committees
+      dropped); the hero matches `#near-south-side-es` on its keyword.
+- [ ] One live pipeline alert posted with the sandbox label.
+- [ ] `node --test` green · `biome check` clean.
 
 ## Out of scope
 
-- New features; real (non-staged) alerts firing from the live poller during the demo.
-- More than the Clean 5; any district-number or standalone department/committee channel.
-- Anything needing `channels:manage` / `pins:write` from the bot (those steps are Tarik-manual).
-- Native-Spanish copy review (standing project item, orig. MOO-43).
+- Re-architecting the matcher to gate geo (logged limitation); per-item district extraction.
+- `#beat-*` department channels (real-deployment idea, not the demo).
+- More than the Clean 5; new features; channel ops needing `channels:manage` from the bot.
 
-## Decisions locked (2026-06-22, with Tarik)
+## Decisions locked (2026-06-22, with Tarik + verified Codex review)
 
-- Channel set: **Clean 5**.
-- Spine: **neighborhood (place) + newsroom (beat)** — **no** district# or department channels.
-- Neighborhood channels carry **only neighborhood content** (tight geo+topic subscription; trim keywords).
-- Denise's channel is framed as a **neighborhood-association** channel (not a separate 6th channel).
-- lindsay-heights = **organizer** (Marcos's 2nd neighborhood). sherman-park district = **7** (align to corpus).
+- Channel set: **Clean 5**; spine = neighborhood (place) + #newsroom (beat); no district#/department channels.
+- Geography **aligned to the resolver**: sherman-park=15; hero renamed `#near-south-side-es`=12; add
+  Lindsay Heights→6 to the resolver (keep the name).
+- Matcher: **scope around** the OR-routing for the demo (drop committees from neighborhood channels;
+  newsroom keeps them); log the geo-gating fix as a real-deployment follow-up.
+- Adopted from Codex: district-visible topic metadata; neighbors+association framing; manifest preflight
+  verifier; one live pipeline alert; ES UX review in-scope; judge path in #start-here.
