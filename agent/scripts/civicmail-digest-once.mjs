@@ -34,11 +34,17 @@ import { api } from '../convex/_generated/api.js';
 import { createClaudeGenerate } from '../summarizer/index.js';
 
 const CLIENT = process.env.POLL_CLIENT || 'milwaukee';
-const SNAPSHOT_NOTE = process.env.DIGEST_SNAPSHOT || 'sample week of 2026-06-10';
 
 function arg(name) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.split('=').slice(1).join('=') : undefined;
+}
+
+/** Advance a YYYY-MM-DD string by N days (UTC). */
+function addDaysIso(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 const POST = process.argv.includes('--post');
 const channelId = arg('channel') || process.env.DIGEST_CHANNEL;
@@ -69,12 +75,24 @@ async function main() {
   const district = arg('district') ?? process.env.DIGEST_DISTRICT ?? sub?.boundary?.value ?? null;
   const language = arg('lang') ?? process.env.DIGEST_LANG ?? sub?.language ?? 'en';
 
+  // "This week" = the trailing `--days` (default 7) anchored to the freshest mail in
+  // the store. Anchoring to the data (not `now`) means a dormant snapshot still yields
+  // its own week, and live mail yields a true rolling week — same code both ways.
+  const windowDays = Number(arg('days') ?? process.env.DIGEST_DAYS ?? 7);
+  const dates = notifications
+    .map((n) => (n.receivedAt ?? '').slice(0, 10))
+    .filter(Boolean)
+    .sort();
+  const until = dates[dates.length - 1] ?? now;
+  const since = addDaysIso(until, -(windowDays - 1));
+  const snapshotNote = process.env.DIGEST_SNAPSHOT ?? `sample week ${since} → ${until}`;
+
   // Poller-detected events power the meeting-vs-Legistar dedup (civicmail/dedup.js).
   const legistarItems = upcoming.map((row) => ({ eventId: row.eventId }));
 
-  const aggregate = aggregateCivicMail(notifications, { legistarItems, district });
+  const aggregate = aggregateCivicMail(notifications, { legistarItems, district, since, until });
   const briefing = await generateDigestBriefing(aggregate, { generate });
-  const card = buildFromTheCityCard({ aggregate, briefing, language, snapshotNote: SNAPSHOT_NOTE });
+  const card = buildFromTheCityCard({ aggregate, briefing, language, snapshotNote });
 
   console.log(
     `[${new Date().toISOString()}] ${CLIENT} digest for ${channelId} (${language}${district ? `, district ${district}` : ', citywide'}): ` +

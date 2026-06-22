@@ -99,6 +99,38 @@ describe('buildFromTheCityCard — actionable highlights', () => {
   });
 });
 
+describe('buildFromTheCityCard — civic life beyond permits', () => {
+  const withCivicLife = aggregate({
+    breakdowns: {
+      neighborhood_services: [{ label: 'Code enforcement (DNS)', count: 20 }],
+      licenses: [{ label: 'Class B Tavern License', count: 8 }],
+      civic_life: [
+        { label: 'Community event', count: 5 },
+        { label: 'Public hearing / meeting', count: 5 },
+        { label: 'Press release', count: 2 },
+        { label: 'Bid / RFP', count: 2 },
+      ],
+    },
+    highlights: [
+      { category: 'other', kind: 'Community event', subject: 'Join the safe summer kick off Saturday at Sherman Park' },
+      { category: 'other', kind: 'Public hearing / meeting', subject: 'Public Power Hearing at City Hall June 24' },
+    ],
+  });
+
+  it('renders a civic-life breakdown (press releases, events, RFPs), not just permits', () => {
+    const card = buildFromTheCityCard({ aggregate: withCivicLife, briefing, language: 'en' });
+    assert.match(text(card), /Community event/);
+    assert.match(text(card), /Press release/);
+    assert.match(text(card), /Bid \/ RFP/);
+  });
+
+  it('surfaces a community event / hearing as a highlight line', () => {
+    const card = buildFromTheCityCard({ aggregate: withCivicLife, briefing, language: 'en' });
+    assert.match(text(card), /safe summer kick off/);
+    assert.match(text(card), /Public Power Hearing/);
+  });
+});
+
 describe('buildFromTheCityCard — bilingual + honesty', () => {
   it('English card does NOT include the Spanish section', () => {
     const card = buildFromTheCityCard({ aggregate: aggregate(), briefing, language: 'en' });

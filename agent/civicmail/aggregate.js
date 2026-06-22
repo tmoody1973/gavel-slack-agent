@@ -35,6 +35,37 @@ function foldLabel(notification) {
   return NS_TYPE_LABELS[recordType] ?? recordType;
 }
 
+// The "other"/"newsletter" mail is not noise — it's press releases, community
+// events, informal hearings, bids, and job postings. Classify by subject keyword so
+// they get real counts (and the actionable ones a highlight) instead of one opaque
+// "18 other" tally. Order matters: the first rule that hits wins. Newsletters are
+// classified by category upstream; here a newsletter subject still resolves to one.
+const CIVIC_LIFE_RULES = [
+  { kind: 'Bid / RFP', test: /request for (pricing|proposal|qualification|bid)|\brf[pq]\b|\baddendum\b/i },
+  { kind: 'Job posting', test: /job announcement|career opportunit|\bhiring\b|\bvacanc/i },
+  { kind: 'Newsletter', test: /\bnewsletter\b/i },
+  { kind: 'Press release', test: /news release|media advisory|press release|\bpress\b/i },
+  { kind: 'Public hearing / meeting', test: /\bhearing\b|\bmeeting\b|\bcommission\b|\bboard\b|review board/i },
+  {
+    kind: 'Community event',
+    test: /\bjoin\b|\battend\b|kick ?off|dedication|\bsession\b|conversation|celebrat|\bfestival\b/i,
+  },
+];
+
+// The civic-life kinds a resident can act on / show up to — these earn a highlight.
+const ACTIONABLE_LIFE_KINDS = new Set(['Public hearing / meeting', 'Community event']);
+
+// Per-lane caps so the highlights stay diverse: a wall of identical committee
+// meetings would crowd out the community event or recurring applicant that's the
+// real signal. Headline counts still show every category in full.
+const HIGHLIGHT_LANE_CAPS = { meetings: 3, civicLife: 2, recurringLicenses: 2 };
+
+/** Friendly civic-life kind for an "other"/"newsletter" mail, from its subject. */
+export function civicLifeKind(subject) {
+  const text = subject ?? '';
+  return CIVIC_LIFE_RULES.find((rule) => rule.test.test(text))?.kind ?? 'Notice';
+}
+
 /** Normalize an entity name for recurrence grouping: uppercase, collapse whitespace.
  * Keeps the first-seen original for display. */
 function entityKey(business) {
@@ -70,11 +101,14 @@ function findRecurringEntities(licenses) {
     .sort((a, b) => b.count - a.count || a.entity.localeCompare(b.entity));
 }
 
-/** A compact highlight row for the card / prompt — enough to render one line. */
+/** A compact highlight row for the card / prompt — enough to render one line. For
+ * civic-life mail the friendly kind rides along so the card can pick an emoji. */
 function toHighlight(notification) {
+  const isCivicLife = notification.category === 'other' || notification.category === 'newsletter';
   return {
     category: notification.category,
     subject: notification.subject,
+    ...(isCivicLife ? { kind: civicLifeKind(notification.subject) } : {}),
     ...(notification.business ? { business: notification.business } : {}),
     ...(notification.district ? { district: notification.district } : {}),
     ...(notification.subType ? { subType: notification.subType } : {}),
@@ -83,16 +117,23 @@ function toHighlight(notification) {
 }
 
 /**
- * Pick the highlights: every (deduped) meeting first since meetings are time-boxed,
- * then licenses with recurring entities ahead of one-off licenses, capped at
- * `maxHighlights`. Routine neighborhood-services records never highlight — they fold.
+ * Pick the highlights, capped at `maxHighlights`: formal meetings first (time-boxed),
+ * then actionable civic life (a hearing or community event a resident can attend),
+ * then licenses with recurring entities ahead of one-off licenses. Routine
+ * neighborhood-services records never highlight — they fold into counts.
  */
 function selectHighlights(byCategory, recurringKeys, maxHighlights) {
-  const meetings = byCategory.meetings ?? [];
+  const meetings = (byCategory.meetings ?? []).slice(0, HIGHLIGHT_LANE_CAPS.meetings);
+  const civicActionable = (byCategory.other ?? [])
+    .filter((n) => ACTIONABLE_LIFE_KINDS.has(civicLifeKind(n.subject)))
+    .slice(0, HIGHLIGHT_LANE_CAPS.civicLife);
   const licenses = byCategory.licenses ?? [];
-  const recurringLicenses = licenses.filter((l) => l.business && recurringKeys.has(entityKey(l.business)));
-  const otherLicenses = licenses.filter((l) => !(l.business && recurringKeys.has(entityKey(l.business))));
-  return [...meetings, ...recurringLicenses, ...otherLicenses].slice(0, maxHighlights).map(toHighlight);
+  const isRecurring = (l) => l.business && recurringKeys.has(entityKey(l.business));
+  const recurringLicenses = licenses.filter(isRecurring).slice(0, HIGHLIGHT_LANE_CAPS.recurringLicenses);
+  const otherLicenses = licenses.filter((l) => !isRecurring(l));
+  return [...meetings, ...civicActionable, ...recurringLicenses, ...otherLicenses]
+    .slice(0, maxHighlights)
+    .map(toHighlight);
 }
 
 /**
@@ -113,9 +154,22 @@ function selectHighlights(byCategory, recurringKeys, maxHighlights) {
  * }}
  */
 export function aggregateCivicMail(notifications, options = {}) {
-  const { legistarItems = [], district = null, maxHighlights = DEFAULT_MAX_HIGHLIGHTS } = options;
+  const {
+    legistarItems = [],
+    district = null,
+    since = null,
+    until = null,
+    maxHighlights = DEFAULT_MAX_HIGHLIGHTS,
+  } = options;
 
-  const scoped = district == null ? notifications : notifications.filter((n) => n.district === district);
+  const inWindow = (n) => {
+    const day = (n.receivedAt ?? '').slice(0, 10);
+    if (since && day < since) return false;
+    if (until && day > until) return false;
+    return true;
+  };
+  const districtMatch = (n) => district == null || n.district === district;
+  const scoped = notifications.filter((n) => inWindow(n) && districtMatch(n));
 
   const kept = [];
   let suppressed = 0;
@@ -146,6 +200,9 @@ export function aggregateCivicMail(notifications, options = {}) {
     breakdowns: {
       neighborhood_services: foldByLabel(byCategory.neighborhood_services ?? [], foldLabel),
       licenses: foldByLabel(byCategory.licenses ?? [], foldLabel),
+      civic_life: foldByLabel([...(byCategory.other ?? []), ...(byCategory.newsletter ?? [])], (n) =>
+        civicLifeKind(n.subject),
+      ),
     },
     highlights: selectHighlights(byCategory, recurringKeys, maxHighlights),
     recurringEntities,

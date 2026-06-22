@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { aggregateCivicMail } from '../../civicmail/aggregate.js';
+import { aggregateCivicMail, civicLifeKind } from '../../civicmail/aggregate.js';
 
 // Fixtures mirror the real `civicNotifications` shape (see civicmail/notification.js):
 // neighborhood_services rows carry the city's own `description` label; licenses carry
@@ -106,6 +106,66 @@ describe('aggregateCivicMail — recurring entities (the honest pattern signal)'
   it('does NOT flag a one-off entity', () => {
     const agg = aggregateCivicMail(SAMPLE);
     assert.ok(!agg.recurringEntities.some((e) => /BUNSUKA/.test(e.entity)));
+  });
+});
+
+describe('aggregateCivicMail — date window (the "this week" gate)', () => {
+  const dated = (receivedAt, subType) => ({ ...license('X LLC', subType ?? 'Food Dealer Retail'), receivedAt });
+  const rows = [
+    dated('2026-06-08T10:00:00Z', 'A'),
+    dated('2026-06-10T10:00:00Z', 'B'),
+    dated('2026-06-12T10:00:00Z', 'C'),
+  ];
+
+  it('keeps only rows whose receivedAt falls in [since, until]', () => {
+    const agg = aggregateCivicMail(rows, { since: '2026-06-09', until: '2026-06-11' });
+    assert.equal(agg.total, 1);
+    assert.equal(agg.breakdowns.licenses[0].label, 'B');
+  });
+
+  it('includes the boundary days (inclusive window)', () => {
+    const agg = aggregateCivicMail(rows, { since: '2026-06-08', until: '2026-06-12' });
+    assert.equal(agg.total, 3);
+  });
+
+  it('no window keeps every row regardless of date', () => {
+    assert.equal(aggregateCivicMail(rows).total, 3);
+  });
+});
+
+describe('aggregateCivicMail — civic life (press releases, events, hearings beyond permits)', () => {
+  const other = (subject) => ({ category: 'other', subject });
+  const news = (subject) => ({ category: 'newsletter', subject });
+  const rows = [
+    other('News release from the City of Milwaukee Youth Council'),
+    other('Media advisory with event flyer from Alderman José G. Pérez'),
+    other('Join the safe summer kick off Saturday at Sherman Park'),
+    other('Come join us on June 24th: Public Power Hearing at City Hall!'),
+    other('Port Milwaukee Request for Pricing - Creative Services'),
+    other('City of Milwaukee Job Announcement'),
+    news('MPS Board Director June 2026 Newsletter'),
+  ];
+
+  it('breaks "other" + "newsletter" into civic-life kinds instead of one opaque count', () => {
+    const labels = aggregateCivicMail(rows).breakdowns.civic_life.map((f) => f.label);
+    assert.ok(labels.includes('Press release'), 'press releases get their own kind');
+    assert.ok(labels.includes('Community event'));
+    assert.ok(labels.includes('Bid / RFP'));
+    assert.ok(labels.includes('Newsletter'));
+    assert.ok(labels.includes('Job posting'));
+  });
+
+  it('promotes a community event / hearing to a highlight (actionable, not buried in a count)', () => {
+    const agg = aggregateCivicMail(rows, { maxHighlights: 10 });
+    assert.ok(agg.highlights.some((h) => /Public Power Hearing|safe summer/.test(h.subject)));
+  });
+
+  it('classifies a media advisory as a press release, not an event', () => {
+    assert.equal(civicLifeKind('Media advisory with event flyer from Alderman José G. Pérez'), 'Press release');
+  });
+
+  it('classifies a request for pricing as Bid / RFP', () => {
+    assert.equal(civicLifeKind('Port Milwaukee Request for Pricing - Creative Services'), 'Bid / RFP');
   });
 });
 

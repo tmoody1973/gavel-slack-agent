@@ -20,6 +20,17 @@ const HIGHLIGHT_META = {
   licenses: { emoji: '📋', heard: 'To support or object, contact the License Division before the hearing.' },
 };
 
+// Emoji per civic-life kind so a promoted event/hearing reads at a glance.
+const CIVIC_LIFE_EMOJI = {
+  'Community event': '🎉',
+  'Public hearing / meeting': '🏛️',
+  'Press release': '📰',
+  'Bid / RFP': '📑',
+  'Job posting': '💼',
+  Newsletter: '📰',
+  Notice: '📌',
+};
+
 const ORDER = ['meetings', 'licenses', 'neighborhood_services', 'newsletter', 'other'];
 
 /** "📋 3 licenses · 🏗️ 4 permit records · 🏛️ 2 meetings" — the one-line headline. */
@@ -42,11 +53,13 @@ function renderBreakdown(breakdown, max = 6) {
 
 /** One highlight line: "🏛️ Zoning… Committee 6/16" / "📋 Class B Tavern License — COZUMEL III, LLC (District 12)". */
 function highlightLine(highlight) {
-  const meta = HIGHLIGHT_META[highlight.category] ?? { emoji: '•' };
+  const emoji = highlight.kind
+    ? (CIVIC_LIFE_EMOJI[highlight.kind] ?? '📌')
+    : (HIGHLIGHT_META[highlight.category]?.emoji ?? '•');
   const who = highlight.business ? ` — ${highlight.business}` : '';
   const where = highlight.district ? ` _(District ${highlight.district})_` : '';
   const label = highlight.detailUrl ? `<${highlight.detailUrl}|${highlight.subject}>` : highlight.subject;
-  return `${meta.emoji} ${label}${who}${where}`;
+  return `${emoji} ${label}${who}${where}`;
 }
 
 /**
@@ -82,6 +95,9 @@ export function buildFromTheCityCard({ aggregate, briefing, language = 'en', sna
   if (breakdowns.licenses.length) {
     const meta = CATEGORY_DISPLAY.licenses;
     breakdownLines.push(`${meta.emoji} *${meta.label}:* ${renderBreakdown(breakdowns.licenses)}`);
+  }
+  if (breakdowns.civic_life?.length) {
+    breakdownLines.push(`📣 *Civic life:* ${renderBreakdown(breakdowns.civic_life)}`);
   }
   if (breakdownLines.length) {
     blocks.push({ type: 'divider' }, { type: 'section', text: { type: 'mrkdwn', text: breakdownLines.join('\n') } });
