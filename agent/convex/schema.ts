@@ -133,6 +133,10 @@ export default defineSchema({
     embedding: v.optional(v.array(v.float64())), // 1536-dim, only behind AGENTMAIL_EMBED
     alertStatus: v.union(v.literal('pending'), v.literal('processed')),
     detectedAt: v.number(),
+    // When this row was rolled into a "From the city" digest. Orthogonal to
+    // alertStatus (the interrupt/alert path) — a row can be alert-pending yet already
+    // digested. Unset = not yet digested; the twice-weekly cron sets it for idempotency.
+    digestedAt: v.optional(v.number()),
   })
     .index('by_message', ['messageId'])
     .index('by_received', ['receivedAt'])
