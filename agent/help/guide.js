@@ -79,8 +79,16 @@ const PLANS = {
             '👁',
             T('Watch what matters', 'Sigue lo que importa'),
             T(
-              'Try `/gavel watch 2000 S 13th St` (or a file number or name) — I ping the channel whenever it moves through the record.',
-              'Prueba `/gavel watch 2000 S 13th St` (o un número de expediente o nombre) — aviso al canal cuando avance en el registro.',
+              'Try `/gavel watch 2000 S 13th St` (or a file number or name) — I ping the channel whenever it moves through the record. `/gavel unwatch` stops it.',
+              'Prueba `/gavel watch 2000 S 13th St` (o un número de expediente o nombre) — aviso al canal cuando avance en el registro. `/gavel unwatch` lo detiene.',
+            ),
+          ),
+          item(
+            '🔎',
+            T('Search the record', 'Busca en el registro'),
+            T(
+              'Try `/gavel search 2000 S 13th St` — I search city mail, agendas, minutes, and zoning at once (quotes = exact phrase).',
+              'Prueba `/gavel search 2000 S 13th St` — busco en el correo de la ciudad, agendas, actas y zonificación a la vez (las comillas = frase exacta).',
             ),
           ),
           item(
@@ -150,6 +158,14 @@ const PLANS = {
             ),
           ),
           item(
+            '🔎',
+            T('Search everything', 'Busca en todo'),
+            T(
+              '`/gavel search <term>` spans city mail, agendas, minutes, and zoning code — one query across the whole civic record.',
+              '`/gavel search <término>` abarca el correo de la ciudad, agendas, actas y código de zonificación — una sola búsqueda en todo el registro cívico.',
+            ),
+          ),
+          item(
             '💬',
             T('Ask in any language', 'Pregunta en cualquier idioma'),
             T(
@@ -184,6 +200,14 @@ const PLANS = {
             T(
               'On any lead, hit “Brief me” for a one-screen dossier: angle, sponsor, history, the video moment, and the outcome.',
               'En cualquier pista, pulsa “Resúmeme” para un expediente de una pantalla: ángulo, patrocinador, historial, el momento en video y el resultado.',
+            ),
+          ),
+          item(
+            '🔎',
+            T('Search the record', 'Busca en el registro'),
+            T(
+              '`/gavel search "data center"` digs across city mail, agendas, minutes, and zoning — quotes for an exact phrase, words for a broader hybrid search.',
+              '`/gavel search "data center"` rastrea correo de la ciudad, agendas, actas y zonificación — comillas para una frase exacta, palabras para una búsqueda híbrida más amplia.',
             ),
           ),
         ],

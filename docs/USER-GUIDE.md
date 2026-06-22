@@ -37,6 +37,7 @@ Everything is sourced live from Milwaukee's official Legistar records. What's se
 
 **What to try**
 - **Watch a specific thing:** `/gavel watch 2000 S 13th St` (or a file number, or a developer's name). Gavel pings the channel whenever it moves through the record.
+- **Search the record:** `/gavel search 2000 S 13th St` — Gavel searches city mail, agendas, minutes, and zoning at once (put a phrase in "quotes" for an exact match).
 - **Ask anything in plain language:** reply in an alert's thread or DM Gavel — *"what meetings are coming up this week?"* It answers in your language.
 - **Check your setup:** `/gavel status` shows this channel's committees, topics, and language.
 
@@ -73,10 +74,38 @@ Everything is sourced live from Milwaukee's official Legistar records. What's se
 **What to try**
 - **Story leads:** `/gavel stories [committee|topic]` — ranked by money, accountability, and procedural anomalies (walk-ons, consent-calendar burials), grounded in the record.
 - **The dossier:** **📋 Brief me** assembles angle + sponsor + history + the video moment + the outcome on one screen.
+- **Search the whole record:** `/gavel search "data center"` — one query across city mail, agendas, minutes, and zoning code; quotes for an exact phrase, words for a broader hybrid search.
 - **Receipts:** ask *"what did the committee say about X"* → Gavel returns the **quote**, the **speaker** (named when it can identify a council member), and a **▶ timestamped clip**. `/gavel video` browses what footage exists and what's searchable (🔍).
 - **What could they build?** Ask a zoning question about a parcel — Gavel answers with the relevant code sections.
 
 Gavel cites primary sources and never invents a quote.
+
+---
+
+## Case studies — Gavel in action
+
+Three short walkthroughs of the same product serving three very different people. (The Punta Cana liquor-license item — File #260229, 2000 S 13th St — is a real Milwaukee record seeded into the demo workspace; what's live vs. seeded is disclosed in the project's demo notes.)
+
+### Denise — a resident watching her block (English)
+
+1. A Class B tavern license renewal lands on the Licenses Committee agenda for a property two blocks from Denise's house.
+2. **Before** the hearing, Gavel posts a plain-English alert in her neighborhood channel — what it is, when and where the hearing is, and a *"How to be heard"* footer. No city portal, no legalese.
+3. Denise types `/gavel watch 2000 S 13th St` to follow the address, and replies in the thread — *"what does this mean for the block?"* — getting a plain-language answer.
+4. **Outcome:** she emails the committee before the deadline and shows up to comment. *"I found out too late"* becomes *"I showed up."*
+
+### Marcos — an organizer working in Spanish (Español, #clarke-square)
+
+1. Gavel posts the Punta Cana liquor-license item to **#clarke-square** — *written natively in Spanish*, not machine-translated (file number and address stay in English, as the official record).
+2. Marcos asks in Spanish in the thread what the committee said; Gavel answers **in Spanish** with the quote, who said it, and a ▶ timestamped clip — and bridges the community memory: *"han estado hablando de esto; está esta semana."*
+3. He runs `/gavel search 2000 S 13th St` to pull the full record (mail + agenda + minutes) and `/gavel watch File #260229` to track it toward the final vote.
+4. **Outcome:** a Spanish-speaking block organizes around an official record it never had to translate.
+
+### Rachel — a one-person newsroom (English)
+
+1. Rachel runs `/gavel stories Licenses` — Gavel ranks the newsworthy items on the agenda by money, accountability, and procedural anomalies, surfacing the Punta Cana license as a lead.
+2. She hits **📋 Brief me** for a one-screen dossier (angle, sponsor, history, the video moment, the likely outcome), then `/gavel search "data center"` to dig the whole civic record for a separate beat.
+3. She asks *"what did the committee say about the Punta Cana license?"* → Gavel returns the **quote**, the **named speaker**, and a **▶ timestamped clip**.
+4. **Outcome:** she files with primary-source receipts in minutes, instead of scrubbing a four-hour video with no transcript.
 
 ---
 
@@ -102,6 +131,7 @@ Gavel *indexes the public record* and *queries the private record live* — whic
 | `/gavel status` | This channel's committees, keywords, language, and watches |
 | `/gavel stories [committee\|topic]` | Ranked story leads on the upcoming agenda (reporters) |
 | `/gavel video [committee]` | Browse recent meeting video you can watch (and search) |
+| `/gavel search <term>` | Search across city mail, agendas, minutes & zoning at once — quotes = exact phrase, words = broader hybrid search |
 
 You can also just **talk to Gavel** — reply in any alert's thread or DM it. It answers in the language you write in, and points you at the primary source.
 
