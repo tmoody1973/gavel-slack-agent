@@ -7,10 +7,13 @@ import {
   tagSearchable,
   videoModal,
 } from '../../blockkit/index.js';
+import { buildSearchResultsCard } from '../../civicmail/search-card.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
-const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video'];
+const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video', 'search'];
+
+const SEARCH_RESULT_LIMIT = 12;
 
 const STORY_LEAD_CAP = 5;
 
@@ -30,6 +33,7 @@ const STORIES_COPY = {
 const HELP_TEXT = [
   '*Gavel commands*',
   '• `/gavel watch <entity>` — alert this channel when a file number, address, or name appears',
+  '• `/gavel search <term>` — search the city mail (addresses, owners, license types, record #s)',
   '• `/gavel stories [committee|topic]` — ranked story leads on the upcoming agenda (for reporters)',
   '• `/gavel video [committee]` — browse recent meeting video you can watch (and search)',
   '• `/gavel status` — show this channel’s committees, keywords, language, and watches',
@@ -132,11 +136,34 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
       return runStatus(channelId, deps);
     case 'unwatch':
       return runUnwatch({ args, channelId }, deps);
+    case 'search':
+      return runSearch({ args, channelId }, deps);
     case 'digest':
       return 'The weekly digest is coming in Phase 3.';
     default:
       return HELP_TEXT;
   }
+}
+
+/**
+ * `/gavel search <term>` — full-text search over the ingested civic mail (MOO-153).
+ * The folded routine in the "From the city" digest is not posted per-record; this is
+ * how anyone digs back into an individual notification. Citywide by default; the card
+ * shows each result's district. Render-only (no Claude). Convex search is injected.
+ *
+ * @param {{ args: string, channelId: string }} ctx
+ * @param {{ getSubscription: (channelId: string) => Promise<object|null>,
+ *           searchNotifications: (input: {term: string, limit: number}) => Promise<object[]> }} deps
+ */
+async function runSearch({ args, channelId }, deps) {
+  const term = args.trim();
+  if (!term) {
+    return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search COZUMEL`.';
+  }
+  const subscription = await deps.getSubscription(channelId);
+  const language = subscription?.language === 'es' ? 'es' : 'en';
+  const results = await deps.searchNotifications({ term, limit: SEARCH_RESULT_LIMIT });
+  return buildSearchResultsCard({ term, results, language });
 }
 
 /**

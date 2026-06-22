@@ -48,6 +48,10 @@ export function register(app) {
     // MOO-142 video-discovery boundaries (/gavel video).
     listRecentMeetingsWithVideo: () => legistar.listRecentMeetingsWithVideo(),
     listIngestedEventIds: () => requireConvex(convex).query(api.transcripts.listIngestedEventIds, {}),
+
+    // MOO-153 civic-mail search (/gavel search) — full-text over civicNotifications.
+    searchNotifications: ({ term, limit }) =>
+      requireConvex(convex).query(api.civicNotifications.searchText, { term, limit }),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

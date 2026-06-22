@@ -19,6 +19,10 @@ test('subcommand matching is case-insensitive, args keep their case', () => {
   assert.deepEqual(parseGavelCommand('Watch Punta Cana LLC'), { subcommand: 'watch', args: 'Punta Cana LLC' });
 });
 
+test('parses search with a free-text term', () => {
+  assert.deepEqual(parseGavelCommand('search 2000 S 13th St'), { subcommand: 'search', args: '2000 S 13th St' });
+});
+
 test('empty or unknown input parses as help', () => {
   assert.equal(parseGavelCommand('').subcommand, 'help');
   assert.equal(parseGavelCommand('   ').subcommand, 'help');
@@ -83,6 +87,32 @@ test('watch with no entity explains usage instead of writing', async () => {
   await handleGavelCommand(h.args, h.deps);
   assert.deepEqual(h.calls.added, []);
   assert.match(h.calls.responds[0].text, /watch <entity>/);
+});
+
+test('search <term> queries the civic mail and renders a results card', async () => {
+  const h = harness({ text: 'search cozumel' });
+  h.deps.searchNotifications = async ({ term, limit }) => {
+    assert.equal(term, 'cozumel');
+    assert.equal(limit, 12);
+    return [
+      { category: 'licenses', subject: 'RENEWAL Class B Tavern License', business: 'COZUMEL III, LLC', district: '12' },
+    ];
+  };
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /COZUMEL III, LLC/);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /Class B Tavern License/);
+});
+
+test('search with no term explains usage instead of querying', async () => {
+  const h = harness({ text: 'search' });
+  let queried = false;
+  h.deps.searchNotifications = async () => {
+    queried = true;
+    return [];
+  };
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(queried, false);
+  assert.match(h.calls.responds[0].text, /search <term>/);
 });
 
 test('status reports committees, keywords, language, and watches', async () => {

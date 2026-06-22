@@ -132,7 +132,7 @@ export function buildFromTheCityCard({ aggregate, briefing, language = 'en', sna
       elements: [
         {
           type: 'mrkdwn',
-          text: '🔎 *Following something specific?* `/gavel watch <address, owner, or record #>` pings this channel whenever it comes back through the city.',
+          text: '🔎 *Dig in:* `/gavel search <address, owner, or record #>` pulls any record · 👁 `/gavel watch <…>` pings this channel whenever it comes back.',
         },
       ],
     },
