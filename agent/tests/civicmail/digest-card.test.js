@@ -90,9 +90,12 @@ describe('buildFromTheCityCard — actionable highlights', () => {
     assert.match(text(card), /How to be heard/i);
   });
 
-  it('offers a search / "see all" affordance for the folded routine', () => {
+  it('offers a real, wired affordance (/gavel watch) to follow up on the folded routine', () => {
+    // The folded routine is not posted individually, so the card must point at a
+    // command that actually exists — /gavel watch is wired; /gavel search is NOT.
     const card = buildFromTheCityCard({ aggregate: aggregate(), briefing, language: 'en' });
-    assert.match(text(card).toLowerCase(), /search|see all|\/gavel/);
+    assert.match(text(card), /\/gavel watch/);
+    assert.doesNotMatch(text(card), /\/gavel search/);
   });
 });
 
