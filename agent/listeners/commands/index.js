@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api.js';
 import { createLegistarClient } from '../../poller/legistar.js';
 import { STORY_ANGLE_SCHEMA } from '../../stories/angle.js';
 import { createClaudeGenerate } from '../../summarizer/index.js';
+import { embedTexts } from '../../zoning/embed.js';
 import { handleGavelCommand } from './gavel.js';
 
 /**
@@ -49,9 +50,22 @@ export function register(app) {
     listRecentMeetingsWithVideo: () => legistar.listRecentMeetingsWithVideo(),
     listIngestedEventIds: () => requireConvex(convex).query(api.transcripts.listIngestedEventIds, {}),
 
-    // MOO-153 civic-mail search (/gavel search) — full-text over civicNotifications.
+    // MOO-153 civic-mail search (/gavel search) — keyword (full-text) + semantic.
     searchNotifications: ({ term, limit }) =>
       requireConvex(convex).query(api.civicNotifications.searchText, { term, limit }),
+    // Semantic lane: embed the query, vector-search by_embedding, resolve to rows.
+    // Degrades to [] without an OpenAI key (hybrid falls back to keyword only).
+    semanticSearch: async (query) => {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) return [];
+      const [vector] = await embedTexts([query], { apiKey });
+      const hits = await requireConvex(convex).action(api.civicNotifications.findSimilar, {
+        embedding: vector,
+        limit: 12,
+      });
+      if (hits.length === 0) return [];
+      return requireConvex(convex).query(api.civicNotifications.getByIds, { ids: hits.map((hit) => hit._id) });
+    },
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

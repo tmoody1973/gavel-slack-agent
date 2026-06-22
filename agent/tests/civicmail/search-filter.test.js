@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { matchesQuery, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
+import { matchesQuery, mergeSearchResults, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
 
 describe('parseSearchTerm', () => {
   it('strips surrounding quotes and marks the query exact (a phrase)', () => {
@@ -58,5 +58,31 @@ describe('refineResults — tighten multi-word/quoted, keep single-word typo-tol
     const p = parseSearchTerm('tavern');
     const candidates = [{ searchText: 'unrelated' }];
     assert.equal(refineResults(candidates, p).length, 1, 'single word is not post-filtered');
+  });
+});
+
+describe('mergeSearchResults — hybrid keyword + semantic', () => {
+  const kw = [{ messageId: 'a' }, { messageId: 'b' }];
+  const sem = [{ messageId: 'b' }, { messageId: 'c' }, { messageId: 'd' }];
+
+  it('puts keyword (precise) matches first, then semantic neighbors', () => {
+    const merged = mergeSearchResults(kw, sem);
+    assert.deepEqual(
+      merged.map((r) => r.messageId),
+      ['a', 'b', 'c', 'd'],
+    );
+  });
+
+  it('dedups a row that appears in both lanes (keeps the keyword position)', () => {
+    const merged = mergeSearchResults(kw, sem);
+    assert.equal(merged.filter((r) => r.messageId === 'b').length, 1);
+  });
+
+  it('respects the display limit', () => {
+    const merged = mergeSearchResults(kw, sem, { limit: 3 });
+    assert.deepEqual(
+      merged.map((r) => r.messageId),
+      ['a', 'b', 'c'],
+    );
   });
 });

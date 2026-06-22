@@ -158,6 +158,20 @@ export const setAttachmentText = mutation({
   },
 });
 
+/** Store a row's 1536-dim embedding (semantic search). Idempotent by messageId. */
+export const setEmbedding = mutation({
+  args: { messageId: v.string(), embedding: v.array(v.float64()) },
+  handler: async (ctx, { messageId, embedding }) => {
+    const row = await ctx.db
+      .query('civicNotifications')
+      .withIndex('by_message', (q) => q.eq('messageId', messageId))
+      .unique();
+    if (!row) return null;
+    await ctx.db.patch(row._id, { embedding });
+    return row._id;
+  },
+});
+
 /** Clear the digested flag (all rows, or a given set) — keeps the demo repeatable. */
 export const resetDigested = mutation({
   args: { messageIds: v.optional(v.array(v.string())) },

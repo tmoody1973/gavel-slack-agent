@@ -102,6 +102,38 @@ test('search <term> queries the civic mail and renders a results card', async ()
   assert.match(JSON.stringify(h.calls.responds[0].blocks), /Class B Tavern License/);
 });
 
+test('unquoted search blends in semantic matches (hybrid), deduped', async () => {
+  const h = harness({ text: 'search summer fun for kids' });
+  h.deps.searchNotifications = async () => [
+    { messageId: 'k1', category: 'licenses', subject: 'Keyword hit', searchText: 'summer fun for kids' },
+  ];
+  h.deps.semanticSearch = async (q) => {
+    assert.equal(q, 'summer fun for kids');
+    return [
+      { messageId: 'k1', subject: 'dup' },
+      { messageId: 's2', category: 'other', subject: 'Safe Summer Kickoff', searchText: '' },
+    ];
+  };
+  await handleGavelCommand(h.args, h.deps);
+  const blocks = JSON.stringify(h.calls.responds[0].blocks);
+  assert.match(blocks, /Keyword hit/);
+  assert.match(blocks, /Safe Summer Kickoff/); // semantic-only result included
+});
+
+test('quoted (exact) search does NOT call semantic — literal phrase only', async () => {
+  const h = harness({ text: 'search "class b tavern"' });
+  let semanticCalled = false;
+  h.deps.searchNotifications = async () => [
+    { messageId: 'k1', subject: 'RENEWAL Class B Tavern License', searchText: 'renewal class b tavern license' },
+  ];
+  h.deps.semanticSearch = async () => {
+    semanticCalled = true;
+    return [];
+  };
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(semanticCalled, false, 'exact phrase stays keyword-only');
+});
+
 test('search with no term explains usage instead of querying', async () => {
   const h = harness({ text: 'search' });
   let queried = false;

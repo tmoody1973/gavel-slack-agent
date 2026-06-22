@@ -52,3 +52,26 @@ export function refineResults(results, parsed) {
   if (!parsed.exact && parsed.tokens.length <= 1) return results;
   return results.filter((row) => matchesQuery(row.searchText, parsed));
 }
+
+/**
+ * Merge the keyword lane (precise) and the semantic lane (conceptual) for hybrid
+ * search: keyword matches first, then semantic neighbors, deduped by messageId,
+ * capped at `limit`. The two lanes complement — keyword nails literal queries,
+ * semantic catches "free summer activities" → the safe-summer flyer.
+ *
+ * @param {Array<{messageId?: string}>} keyword
+ * @param {Array<{messageId?: string}>} semantic
+ * @param {{ limit?: number }} [opts]
+ * @returns {Array<object>}
+ */
+export function mergeSearchResults(keyword, semantic, { limit = 12 } = {}) {
+  const seen = new Set();
+  const merged = [];
+  for (const row of [...keyword, ...semantic]) {
+    if (row.messageId && seen.has(row.messageId)) continue;
+    if (row.messageId) seen.add(row.messageId);
+    merged.push(row);
+    if (merged.length >= limit) break;
+  }
+  return merged;
+}

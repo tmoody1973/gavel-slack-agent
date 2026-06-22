@@ -8,7 +8,7 @@ import {
   videoModal,
 } from '../../blockkit/index.js';
 import { buildSearchResultsCard } from '../../civicmail/search-card.js';
-import { parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
+import { mergeSearchResults, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
@@ -18,6 +18,7 @@ const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'v
 // (precision) before the card caps the display — so quoted/multi-word queries don't
 // show OR-noise.
 const SEARCH_CANDIDATE_LIMIT = 40;
+const SEARCH_RESULT_LIMIT = 12;
 
 const STORY_LEAD_CAP = 5;
 
@@ -163,13 +164,22 @@ async function runSearch({ args, channelId }, deps) {
   if (!args.trim()) {
     return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search "data center"` (quotes = exact phrase).';
   }
-  // Quotes → exact phrase; multiple words → all must match. Convex provides recall;
-  // refineResults provides the precision its OR-semantics lacks.
+  // Quotes → exact keyword phrase only. Unquoted → hybrid: a precise keyword lane
+  // (Convex recall + refineResults precision) plus a semantic lane (vector search over
+  // the meaning), merged keyword-first. So "free summer activities" still finds the
+  // safe-summer flyer even though those words aren't in it.
   const parsed = parseSearchTerm(args);
   const subscription = await deps.getSubscription(channelId);
   const language = subscription?.language === 'es' ? 'es' : 'en';
+
   const candidates = await deps.searchNotifications({ term: parsed.display, limit: SEARCH_CANDIDATE_LIMIT });
-  const results = refineResults(candidates, parsed);
+  const keyword = refineResults(candidates, parsed);
+
+  let results = keyword;
+  if (!parsed.exact && deps.semanticSearch) {
+    const semantic = await deps.semanticSearch(parsed.display).catch(() => []);
+    results = mergeSearchResults(keyword, semantic, { limit: SEARCH_RESULT_LIMIT });
+  }
   return buildSearchResultsCard({ term: parsed.display, results, language });
 }
 
