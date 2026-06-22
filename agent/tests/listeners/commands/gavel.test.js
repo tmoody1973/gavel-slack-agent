@@ -200,7 +200,7 @@ test('help lists the available subcommands', async () => {
   await handleGavelCommand(h.args, h.deps);
   const text = h.calls.responds[0].text;
   // digest is not listed as a help bullet in the new copy (it's a stub responded only when invoked)
-  for (const sub of ['watch', 'status', 'unwatch']) {
+  for (const sub of ['watch', 'search', 'stories', 'video', 'status', 'unwatch']) {
     assert.ok(text.includes(sub), `help missing "${sub}"`);
   }
 });

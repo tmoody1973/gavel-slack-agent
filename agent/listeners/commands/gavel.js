@@ -96,9 +96,9 @@ export async function handleGavelCommand({ command, ack, respond, client, body, 
     // an existing channel-language preference when one is already on record.
     if (subcommand === 'help') {
       const subscription = await deps.getSubscription(channelId);
-      const language = subscription?.language === 'es' ? 'es' : 'en';
-      const help = commandCopy(language).help;
       if (!isConfigured(subscription)) {
+        const language = subscription?.language === 'es' ? 'es' : 'en';
+        const help = commandCopy(language).help;
         await respond(nudgeResponse(subscription?.language ?? 'en', help));
         return;
       }
