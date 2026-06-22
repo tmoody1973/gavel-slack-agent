@@ -134,3 +134,23 @@ test('a late-added consent item shows both warnings (MOO-51)', () => {
   assert.ok(all.includes('Added late'));
   assert.ok(all.includes('consent calendar'));
 });
+
+// ---------- UX mastery-curve guard test (U6) ----------
+// Guards that the three expert power actions are direct buttons (one-tap),
+// not buried behind an overflow menu — so a future refactor can't silently
+// regress the power-user path without a failing test.
+
+test('U6 guard: alert_watch / alert_history / alert_ask are direct buttons, not overflow (one-tap depth)', () => {
+  const { blocks } = buildAlertCard(input);
+  const actionsBlock = blocks.find((b) => b.type === 'actions');
+  assert.ok(actionsBlock, 'alert card must have an actions block');
+  const powerActionIds = ['alert_watch', 'alert_history', 'alert_ask'];
+  for (const actionId of powerActionIds) {
+    const element = actionsBlock.elements.find((e) => e.action_id === actionId);
+    assert.ok(element, `${actionId} must be present`);
+    assert.equal(element.type, 'button', `${actionId} must be a direct button, not an overflow or other element`);
+  }
+  // No overflow menu present — ensure no depth is buried
+  const hasOverflow = actionsBlock.elements.some((e) => e.type === 'overflow');
+  assert.equal(hasOverflow, false, 'alert card actions block must not contain an overflow menu');
+});

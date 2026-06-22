@@ -213,3 +213,31 @@ test('a mixed-language workspace renders the Home in English (MOO-128: ES only i
   assert.match(all, /meetings touch your subscriptions/); // English Home
   assert.doesNotMatch(all, /Esta semana/); // not Spanish, despite one ES channel
 });
+
+// ---------- UX mastery-curve guard tests (U5) ----------
+// These lock in the three-section hub structure so a future refactor can't silently
+// remove a mastery-curve rung without a failing test.
+
+test('U5 guard: the hub renders all three mastery-curve sections together (Discover / Watches / Channel alerts)', () => {
+  // All three sections must coexist in a single configured-hub render so users can
+  // progress from beginner-browse (Discover) → intermediate (Watches) → management (Channel alerts).
+  const all = JSON.stringify(homeView({ ...enState, discover: [discoverEntry()] }).blocks);
+  assert.match(all, /Discover this week/, 'beginner-browse section must be present');
+  assert.ok(all.includes('home_add_watch'), 'intermediate Watches section must be present');
+  assert.match(all, /Channel alerts/, 'channel-management section must be present');
+});
+
+test('U5 guard: the hub carries the "How Gavel works" expert-hint button', () => {
+  // The home_help button (role-aware help modal, MOO-152) is the one-tap expert nudge
+  // on the hub — a user who wants depth sees it without scrolling past channel config.
+  const all = JSON.stringify(homeView(enState).blocks);
+  assert.ok(all.includes('home_help'), 'home_help action_id must be present');
+  assert.match(all, /How Gavel works/, 'expert-hint label must be present');
+});
+
+test('U5 guard: the hub footer carries a /gavel command hint (the expert call-to-action)', () => {
+  // The footer context line is the low-pressure expert nudge — it shows the command
+  // surface exists without interrupting the beginner or intermediate flows.
+  const all = JSON.stringify(homeView(enState).blocks);
+  assert.match(all, /\/gavel/, 'footer must include the /gavel command hint');
+});
