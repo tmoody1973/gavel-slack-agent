@@ -107,6 +107,97 @@ export const listPending = query({
 });
 
 /**
+ * The digest queue: notifications not yet rolled into a "From the city" digest.
+ * Orthogonal to listPending (the alert/interrupt queue) — the twice-weekly cron
+ * drains this, marking each row via markDigested for idempotency. Filtered in the
+ * handler (digestedAt is optional, so there's no dedicated index).
+ */
+export const listUndigested = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query('civicNotifications').collect();
+    return rows.filter((row) => row.digestedAt === undefined);
+  },
+});
+
+/** Stamp a set of notifications as digested (by messageId) so the next cron skips them. */
+export const markDigested = mutation({
+  args: { messageIds: v.array(v.string()), at: v.optional(v.number()) },
+  handler: async (ctx, { messageIds, at }) => {
+    const stamp = at ?? Date.now();
+    let marked = 0;
+    for (const messageId of messageIds) {
+      const row = await ctx.db
+        .query('civicNotifications')
+        .withIndex('by_message', (q) => q.eq('messageId', messageId))
+        .unique();
+      if (row && row.digestedAt === undefined) {
+        await ctx.db.patch(row._id, { digestedAt: stamp });
+        marked += 1;
+      }
+    }
+    return marked;
+  },
+});
+
+/**
+ * Store extracted attachment text and the rebuilt search field (MOO-153). The
+ * caller (the attachment-index script) composes searchText from subject + body +
+ * attachment text via the shared pure builder, so the fold logic lives in one place.
+ */
+export const setAttachmentText = mutation({
+  args: { messageId: v.string(), attachmentText: v.string(), searchText: v.string() },
+  handler: async (ctx, { messageId, attachmentText, searchText }) => {
+    const row = await ctx.db
+      .query('civicNotifications')
+      .withIndex('by_message', (q) => q.eq('messageId', messageId))
+      .unique();
+    if (!row) return null;
+    await ctx.db.patch(row._id, { attachmentText, searchText });
+    return row._id;
+  },
+});
+
+/** Store a row's 1536-dim embedding (semantic search). Idempotent by messageId. */
+export const setEmbedding = mutation({
+  args: { messageId: v.string(), embedding: v.array(v.float64()) },
+  handler: async (ctx, { messageId, embedding }) => {
+    const row = await ctx.db
+      .query('civicNotifications')
+      .withIndex('by_message', (q) => q.eq('messageId', messageId))
+      .unique();
+    if (!row) return null;
+    await ctx.db.patch(row._id, { embedding });
+    return row._id;
+  },
+});
+
+/** Clear the digested flag (all rows, or a given set) — keeps the demo repeatable. */
+export const resetDigested = mutation({
+  args: { messageIds: v.optional(v.array(v.string())) },
+  handler: async (ctx, { messageIds }) => {
+    const rows = messageIds
+      ? await Promise.all(
+          messageIds.map((messageId) =>
+            ctx.db
+              .query('civicNotifications')
+              .withIndex('by_message', (q) => q.eq('messageId', messageId))
+              .unique(),
+          ),
+        )
+      : await ctx.db.query('civicNotifications').collect();
+    let cleared = 0;
+    for (const row of rows) {
+      if (row && row.digestedAt !== undefined) {
+        await ctx.db.patch(row._id, { digestedAt: undefined });
+        cleared += 1;
+      }
+    }
+    return cleared;
+  },
+});
+
+/**
  * Filter-first historical query: a district's notifications within a date range,
  * newest first. The dominant civic search shape ("what did District 3 get last
  * month") — a relational index scan, not a vector search.

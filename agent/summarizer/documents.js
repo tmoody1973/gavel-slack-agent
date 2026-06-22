@@ -34,13 +34,12 @@ export function buildDocumentBlocks(documents) {
       skipped.push({ reason: 'over-size-cap' });
       continue;
     }
+    // Images ride as Claude `image` blocks (vision OCR — reads flyer text); everything
+    // else as a `document` block. Same base64 source shape, different block type.
+    const mediaType = doc.mediaType ?? 'application/pdf';
     blocks.push({
-      type: 'document',
-      source: {
-        type: 'base64',
-        media_type: doc.mediaType ?? 'application/pdf',
-        data: doc.base64,
-      },
+      type: mediaType.startsWith('image/') ? 'image' : 'document',
+      source: { type: 'base64', media_type: mediaType, data: doc.base64 },
     });
   }
 

@@ -11,3 +11,12 @@
 # a watch. Dedup (bridgeProposals) makes the daily cadence self-rate-limiting; Slack
 # message content is queried live via RTS and never stored.
 0 15 * * * node /app/scripts/bridge-sweep.mjs
+
+# Gavel "From the city" civic-mail digest (MOO-153) — Tue & Fri at 13:00 UTC (~8am CDT):
+# aggregate the week's AgentMail E-Notify into one card per subscribed channel. --mark
+# stamps the window digested so each run only covers genuinely new mail (idempotent).
+# DISABLED until the live AgentMail webhook is flowing again AND the demo is recorded:
+# the inbox is currently a dormant 2026-06-10 snapshot, so with --mark this would post
+# once then go quiet (consuming the demo data); without --mark it would re-post stale
+# duplicates. Uncomment to go live.
+# 0 13 * * 2,5 node /app/scripts/civicmail-digest-once.mjs --all --post --mark

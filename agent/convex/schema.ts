@@ -80,7 +80,9 @@ export default defineSchema({
     alertStatus: v.union(v.literal('pending'), v.literal('sent')),
   })
     .index('by_client_item', ['client', 'eventItemId'])
-    .index('by_client_status', ['client', 'alertStatus']),
+    .index('by_client_status', ['client', 'alertStatus'])
+    // Full-text over the agenda item title — the keyword lane of federated /gavel search.
+    .searchIndex('search_title', { searchField: 'title', filterFields: ['client'] }),
 
   // Zoning-code semantic layer (MOO-55). One row per Ch.295 code section (or an
   // intact district/use table). PUBLIC RECORD ONLY — the city's published zoning
@@ -101,7 +103,8 @@ export default defineSchema({
     from: v.string(),
     subject: v.string(),
     bodyText: v.string(), // HTML-stripped body (agentmail has no extracted_text)
-    searchText: v.string(), // subject + bodyText, the full-text search field
+    searchText: v.string(), // subject + bodyText (+ attachmentText), the full-text search field
+    attachmentText: v.optional(v.string()), // text extracted from PDF attachments (MOO-153)
     category: v.string(), // curated bucket: meetings | neighborhood_services | licenses | newsletter | other
     categoryRaw: v.optional(v.string()),
     subType: v.optional(v.string()),
@@ -133,6 +136,10 @@ export default defineSchema({
     embedding: v.optional(v.array(v.float64())), // 1536-dim, only behind AGENTMAIL_EMBED
     alertStatus: v.union(v.literal('pending'), v.literal('processed')),
     detectedAt: v.number(),
+    // When this row was rolled into a "From the city" digest. Orthogonal to
+    // alertStatus (the interrupt/alert path) — a row can be alert-pending yet already
+    // digested. Unset = not yet digested; the twice-weekly cron sets it for idempotency.
+    digestedAt: v.optional(v.number()),
   })
     .index('by_message', ['messageId'])
     .index('by_received', ['receivedAt'])

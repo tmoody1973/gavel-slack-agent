@@ -15,6 +15,11 @@ test('defaults media type to application/pdf', () => {
   assert.equal(blocks[0].source.media_type, 'application/pdf');
 });
 
+test('builds an image block (for OCR via Claude vision) when the media type is an image', () => {
+  const { blocks } = buildDocumentBlocks([{ base64: 'QUJD', mediaType: 'image/jpeg' }]);
+  assert.deepEqual(blocks, [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'QUJD' } }]);
+});
+
 test('no documents → empty blocks, never throws', () => {
   assert.deepEqual(buildDocumentBlocks().blocks, []);
   assert.deepEqual(buildDocumentBlocks([]).blocks, []);

@@ -19,7 +19,7 @@ export const SUMMARY_MODEL = 'claude-sonnet-4-6';
  * @returns {import('./summarize.js').Generate}
  */
 export function createClaudeGenerate(options = {}) {
-  const { apiKey, model = SUMMARY_MODEL, client, schema = SUMMARY_OUTPUT_SCHEMA } = options;
+  const { apiKey, model = SUMMARY_MODEL, client, schema = SUMMARY_OUTPUT_SCHEMA, maxTokens = 1024 } = options;
   const anthropic = client ?? new Anthropic(apiKey ? { apiKey } : undefined);
 
   return async function generate({ system, prompt, documents }) {
@@ -30,7 +30,7 @@ export function createClaudeGenerate(options = {}) {
     const content = blocks.length > 0 ? [...blocks, { type: 'text', text: prompt }] : prompt;
     const response = await anthropic.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: maxTokens,
       system,
       messages: [{ role: 'user', content }],
       output_config: { format: { type: 'json_schema', schema } },

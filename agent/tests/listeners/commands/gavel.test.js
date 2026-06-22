@@ -19,6 +19,10 @@ test('subcommand matching is case-insensitive, args keep their case', () => {
   assert.deepEqual(parseGavelCommand('Watch Punta Cana LLC'), { subcommand: 'watch', args: 'Punta Cana LLC' });
 });
 
+test('parses search with a free-text term', () => {
+  assert.deepEqual(parseGavelCommand('search 2000 S 13th St'), { subcommand: 'search', args: '2000 S 13th St' });
+});
+
 test('empty or unknown input parses as help', () => {
   assert.equal(parseGavelCommand('').subcommand, 'help');
   assert.equal(parseGavelCommand('   ').subcommand, 'help');
@@ -83,6 +87,80 @@ test('watch with no entity explains usage instead of writing', async () => {
   await handleGavelCommand(h.args, h.deps);
   assert.deepEqual(h.calls.added, []);
   assert.match(h.calls.responds[0].text, /watch <entity>/);
+});
+
+test('search <term> queries the civic mail and renders a results card', async () => {
+  const h = harness({ text: 'search cozumel' });
+  h.deps.searchNotifications = async ({ term }) => {
+    assert.equal(term, 'cozumel');
+    return [
+      { category: 'licenses', subject: 'RENEWAL Class B Tavern License', business: 'COZUMEL III, LLC', district: '12' },
+    ];
+  };
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /COZUMEL III, LLC/);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /Class B Tavern License/);
+});
+
+test('unquoted search federates keyword mail + semantic + agendas, deduped', async () => {
+  const h = harness({ text: 'search summer fun for kids' });
+  h.deps.embedQuery = async (q) => {
+    assert.equal(q, 'summer fun for kids');
+    return [0.1, 0.2];
+  };
+  h.deps.searchNotifications = async () => [
+    { messageId: 'k1', category: 'licenses', subject: 'Keyword hit', searchText: 'summer fun for kids' },
+  ];
+  h.deps.semanticSearch = async (vector) => {
+    assert.deepEqual(vector, [0.1, 0.2]);
+    return [
+      { messageId: 'k1', subject: 'dup' },
+      { messageId: 's2', category: 'other', subject: 'Safe Summer Kickoff', searchText: '' },
+    ];
+  };
+  h.deps.searchAgendas = async () => [
+    { title: 'Summer programming grant', eventBodyName: 'Council', eventDate: '2026-06-23' },
+  ];
+  h.deps.searchMinutes = async () => [];
+  h.deps.searchZoning = async () => [];
+  await handleGavelCommand(h.args, h.deps);
+  const blocks = JSON.stringify(h.calls.responds[0].blocks);
+  assert.match(blocks, /Keyword hit/);
+  assert.match(blocks, /Safe Summer Kickoff/); // semantic-only result included
+  assert.match(blocks, /Summer programming grant/); // agenda lane included
+});
+
+test('quoted (exact) search skips the semantic/vector lanes — literal only', async () => {
+  const h = harness({ text: 'search "class b tavern"' });
+  let embedCalled = false;
+  let semanticCalled = false;
+  h.deps.embedQuery = async () => {
+    embedCalled = true;
+    return [0.1];
+  };
+  h.deps.searchNotifications = async () => [
+    { messageId: 'k1', subject: 'RENEWAL Class B Tavern License', searchText: 'renewal class b tavern license' },
+  ];
+  h.deps.semanticSearch = async () => {
+    semanticCalled = true;
+    return [];
+  };
+  h.deps.searchAgendas = async () => [];
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(embedCalled, false, 'exact phrase does not embed');
+  assert.equal(semanticCalled, false, 'exact phrase stays keyword-only');
+});
+
+test('search with no term explains usage instead of querying', async () => {
+  const h = harness({ text: 'search' });
+  let queried = false;
+  h.deps.searchNotifications = async () => {
+    queried = true;
+    return [];
+  };
+  await handleGavelCommand(h.args, h.deps);
+  assert.equal(queried, false);
+  assert.match(h.calls.responds[0].text, /search <term>/);
 });
 
 test('status reports committees, keywords, language, and watches', async () => {

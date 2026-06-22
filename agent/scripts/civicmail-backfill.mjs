@@ -27,12 +27,26 @@ const am = async (path) => {
   return r.json();
 };
 
+/** Page through every message (AgentMail caps a page at 100 and returns a
+ * `next_page_token`; the request param that advances is `page_token`). Without this
+ * the backfill silently saw only the first 100 of the inbox. */
+async function listAllMessages() {
+  const all = [];
+  let pageToken;
+  do {
+    const query = `/messages?limit=100${pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : ''}`;
+    const page = await am(query);
+    all.push(...(page.messages ?? []));
+    pageToken = page.next_page_token;
+  } while (pageToken);
+  return all;
+}
+
 async function main() {
   if (!KEY) throw new Error('AGENTMAIL_API_KEY missing');
   console.log(`Backfilling civicNotifications from ${INBOX}…`);
 
-  const list = await am('/messages?limit=100');
-  const messages = list.messages ?? [];
+  const messages = await listAllMessages();
   console.log(`  inbox has ${messages.length} messages`);
 
   let inserted = 0;

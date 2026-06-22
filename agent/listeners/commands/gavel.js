@@ -7,10 +7,25 @@ import {
   tagSearchable,
   videoModal,
 } from '../../blockkit/index.js';
+import {
+  buildFederatedResultsCard,
+  normalizeAgenda,
+  normalizeMail,
+  normalizeMinutes,
+  normalizeZoning,
+} from '../../civicmail/federated-card.js';
+import { mergeSearchResults, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 
-const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video'];
+const KNOWN_SUBCOMMANDS = ['watch', 'unwatch', 'status', 'digest', 'stories', 'video', 'search'];
+
+// Fetch a wide candidate set from Convex (recall), then refine to true matches
+// (precision) before the card caps the display — so quoted/multi-word queries don't
+// show OR-noise.
+const SEARCH_CANDIDATE_LIMIT = 40;
+const SEARCH_RESULT_LIMIT = 12;
+const PER_SOURCE_LIMIT = 4;
 
 const STORY_LEAD_CAP = 5;
 
@@ -30,6 +45,7 @@ const STORIES_COPY = {
 const HELP_TEXT = [
   '*Gavel commands*',
   '• `/gavel watch <entity>` — alert this channel when a file number, address, or name appears',
+  '• `/gavel search <term>` — search the city mail (addresses, owners, license types, record #s)',
   '• `/gavel stories [committee|topic]` — ranked story leads on the upcoming agenda (for reporters)',
   '• `/gavel video [committee]` — browse recent meeting video you can watch (and search)',
   '• `/gavel status` — show this channel’s committees, keywords, language, and watches',
@@ -132,11 +148,64 @@ async function runSubcommand({ subcommand, args, channelId }, deps) {
       return runStatus(channelId, deps);
     case 'unwatch':
       return runUnwatch({ args, channelId }, deps);
+    case 'search':
+      return runSearch({ args, channelId }, deps);
     case 'digest':
       return 'The weekly digest is coming in Phase 3.';
     default:
       return HELP_TEXT;
   }
+}
+
+/**
+ * `/gavel search <term>` — full-text search over the ingested civic mail (MOO-153).
+ * The folded routine in the "From the city" digest is not posted per-record; this is
+ * how anyone digs back into an individual notification. Citywide by default; the card
+ * shows each result's district. Render-only (no Claude). Convex search is injected.
+ *
+ * @param {{ args: string, channelId: string }} ctx
+ * @param {{ getSubscription: (channelId: string) => Promise<object|null>,
+ *           searchNotifications: (input: {term: string, limit: number}) => Promise<object[]> }} deps
+ */
+async function runSearch({ args, channelId }, deps) {
+  if (!args.trim()) {
+    return 'Usage: `/gavel search <term>` — e.g. `/gavel search 2000 S 13th St`, `/gavel search tavern`, or `/gavel search "data center"` (quotes = exact phrase).';
+  }
+  // Federated across the civic memory: civic mail (keyword + semantic), upcoming
+  // Legistar agendas (keyword over title), meeting minutes + zoning code (semantic).
+  // Quotes → exact, keyword-only (skips the semantic lanes); unquoted → hybrid. The
+  // query is embedded once for all three vector lanes; results group by source.
+  const parsed = parseSearchTerm(args);
+  const subscription = await deps.getSubscription(channelId);
+  const language = subscription?.language === 'es' ? 'es' : 'en';
+
+  const vector = parsed.exact ? null : await (deps.embedQuery?.(parsed.display).catch(() => null) ?? null);
+  const safe = (promise) => (promise ? promise.catch(() => []) : Promise.resolve([]));
+
+  const [mailCandidates, mailSemantic, agendaHits, minutesHits, zoningHits] = await Promise.all([
+    safe(deps.searchNotifications?.({ term: parsed.display, limit: SEARCH_CANDIDATE_LIMIT })),
+    vector ? safe(deps.semanticSearch?.(vector)) : Promise.resolve([]),
+    safe(deps.searchAgendas?.(parsed.display)),
+    vector ? safe(deps.searchMinutes?.(vector)) : Promise.resolve([]),
+    vector ? safe(deps.searchZoning?.(vector)) : Promise.resolve([]),
+  ]);
+
+  const mailKeyword = refineResults(mailCandidates, parsed);
+  const mail = parsed.exact
+    ? mailKeyword
+    : mergeSearchResults(mailKeyword, mailSemantic, { limit: SEARCH_RESULT_LIMIT });
+  // Mail searchText is long and OR-noisy, so it needs the AND/phrase refine; agenda
+  // titles are short and already keyword-ranked, so only tighten them for an exact
+  // (quoted) phrase — otherwise trust Convex's title ranking.
+  const agendas = parsed.exact ? refineResults(agendaHits, parsed, (row) => row.title) : agendaHits;
+
+  const groups = [
+    { source: 'mail', results: mail.slice(0, PER_SOURCE_LIMIT).map(normalizeMail) },
+    { source: 'agenda', results: agendas.slice(0, PER_SOURCE_LIMIT).map(normalizeAgenda) },
+    { source: 'minutes', results: minutesHits.slice(0, PER_SOURCE_LIMIT).map(normalizeMinutes) },
+    { source: 'zoning', results: zoningHits.slice(0, PER_SOURCE_LIMIT).map(normalizeZoning) },
+  ];
+  return buildFederatedResultsCard({ term: parsed.display, groups, language });
 }
 
 /**
