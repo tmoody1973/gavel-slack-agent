@@ -108,6 +108,7 @@ function toHighlight(notification) {
   return {
     category: notification.category,
     subject: notification.subject,
+    ...(notification.messageId ? { messageId: notification.messageId } : {}),
     ...(isCivicLife ? { kind: civicLifeKind(notification.subject) } : {}),
     ...(notification.business ? { business: notification.business } : {}),
     ...(notification.district ? { district: notification.district } : {}),

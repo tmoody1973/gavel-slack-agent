@@ -90,6 +90,18 @@ describe('buildFromTheCityCard — actionable highlights', () => {
     assert.match(text(card), /How to be heard/i);
   });
 
+  it('gives each highlight a Read button that opens the record modal', () => {
+    const agg = aggregate({
+      highlights: [{ category: 'licenses', subject: 'RENEWAL Class B Tavern License', messageId: '<m1@city>' }],
+    });
+    const card = buildFromTheCityCard({ aggregate: agg, briefing, language: 'en' });
+    const button = card.blocks
+      .flatMap((b) => (b.accessory ? [b.accessory] : []))
+      .find((el) => el.action_id === 'open_civic_record');
+    assert.ok(button, 'a highlight section carries an open_civic_record button');
+    assert.equal(button.value, '<m1@city>');
+  });
+
   it('offers real, wired affordances (/gavel search + /gavel watch) to dig into the folded routine', () => {
     // The folded routine is not posted individually, so the card points at the two
     // commands that actually exist: search (pull any record) and watch (follow one).

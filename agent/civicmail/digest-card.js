@@ -104,13 +104,22 @@ export function buildFromTheCityCard({ aggregate, briefing, language = 'en', sna
   }
 
   if (highlights.length) {
-    blocks.push(
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: `*Worth a look this week*\n${highlights.map(highlightLine).join('\n')}` },
-      },
-    );
+    blocks.push({ type: 'divider' }, { type: 'section', text: { type: 'mrkdwn', text: '*Worth a look this week*' } });
+    // One section per highlight so each can carry a "Read" button that opens the
+    // in-Slack record modal (email body + PDF text + flyer image). Highlights without
+    // a messageId (older callers) render as a plain line.
+    for (const highlight of highlights) {
+      const section = { type: 'section', text: { type: 'mrkdwn', text: highlightLine(highlight) } };
+      if (highlight.messageId) {
+        section.accessory = {
+          type: 'button',
+          action_id: 'open_civic_record',
+          text: { type: 'plain_text', text: '📖 Read' },
+          value: highlight.messageId,
+        };
+      }
+      blocks.push(section);
+    }
     const heard = HIGHLIGHT_META[highlights.find((h) => HIGHLIGHT_META[h.category])?.category]?.heard;
     if (heard) {
       blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `🗣️ *How to be heard:* ${heard}` }] });

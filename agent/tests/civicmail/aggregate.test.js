@@ -169,6 +169,14 @@ describe('aggregateCivicMail — civic life (press releases, events, hearings be
   });
 });
 
+describe('aggregateCivicMail — highlights carry the messageId (so a card can open the record)', () => {
+  it('includes messageId on each highlight when present', () => {
+    const rows = [{ ...meeting('A hearing'), messageId: '<m1@city>' }];
+    const agg = aggregateCivicMail(rows);
+    assert.equal(agg.highlights[0].messageId, '<m1@city>');
+  });
+});
+
 describe('aggregateCivicMail — Legistar dedup', () => {
   it('suppresses a meeting whose legistarMeetingId matches a detected poller event', () => {
     const agg = aggregateCivicMail(SAMPLE, { legistarItems: [{ eventId: 1348260 }] });

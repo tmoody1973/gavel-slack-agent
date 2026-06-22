@@ -20,6 +20,7 @@ import {
   makeHomeWatchRemove,
 } from './home-buttons.js';
 import { makeParcelWatch } from './parcel-buttons.js';
+import { makeOpenCivicRecord, makeRecordWatch } from './record-buttons.js';
 import { makeStoryAsk, makeStoryBrowse, makeStoryLeadOverflow, makeStoryModalFilter } from './story-buttons.js';
 import { makeVideoBrowse, makeVideoFilter } from './video-buttons.js';
 
@@ -48,6 +49,29 @@ export function register(app) {
     addWatch: ({ channelId, entity }) => requireConvex(convex).mutation(api.watches.addWatch, { channelId, entity }),
   };
 
+  // Resolve fresh presigned download URLs for a record's attachments (MOO-153). The
+  // AgentMail endpoint returns a JSON envelope with a short-lived download_url; any
+  // failure (missing key, expired, network) degrades to a null URL so the modal still
+  // opens with the extracted text.
+  const agentmailKey = process.env.AGENTMAIL_API_KEY;
+  const agentmailBase = `https://api.agentmail.to/v0/inboxes/${process.env.AGENTMAIL_INBOX_ID || 'mke-alerts@agentmail.to'}`;
+  const resolveAttachmentUrls = async (record) => {
+    const attachments = record.attachments ?? [];
+    const blank = (a) => ({ filename: a.filename, contentType: a.contentType, url: null });
+    if (!agentmailKey || attachments.length === 0) return attachments.map(blank);
+    return Promise.all(
+      attachments.map(async (a) => {
+        try {
+          const url = `${agentmailBase}/messages/${encodeURIComponent(record.messageId)}/attachments/${encodeURIComponent(a.attachmentId)}`;
+          const envelope = await (await fetch(url, { headers: { Authorization: `Bearer ${agentmailKey}` } })).json();
+          return { filename: a.filename, contentType: a.contentType, url: envelope.download_url ?? null };
+        } catch {
+          return blank(a);
+        }
+      }),
+    );
+  };
+
   app.action('feedback', handleFeedbackButton);
   app.action('alert_watch', makeAlertWatch(deps));
   app.action('alert_history', makeAlertHistory(deps));
@@ -55,6 +79,21 @@ export function register(app) {
 
   app.action('parcel_watch', makeParcelWatch(deps));
   app.action('parcel_open_map', async ({ ack }) => ack());
+
+  // MOO-153: the civic-record modal. A "Read" button on a digest highlight or a
+  // /gavel search result opens the in-Slack record (email body + extracted PDF text +
+  // flyers rendered inline). Attachment URLs are presigned and expire, so they're
+  // resolved fresh from AgentMail on open; a missing key/fetch degrades to filenames.
+  const recordDeps = {
+    getNotification: (messageId) => requireConvex(convex).query(api.civicNotifications.getByMessageId, { messageId }),
+    getSubscription: (channelId) =>
+      channelId ? requireConvex(convex).query(api.subscriptions.getSubscription, { channelId }) : Promise.resolve(null),
+    resolveAttachmentUrls,
+    addWatch: deps.addWatch,
+  };
+  app.action('open_civic_record', makeOpenCivicRecord(recordDeps));
+  app.action('record_watch', makeRecordWatch(recordDeps));
+  app.action('record_source', async ({ ack }) => ack());
 
   const homeDeps = createHomeDeps(app.client);
   app.action('home_add_watch', makeHomeAddWatch(homeDeps));

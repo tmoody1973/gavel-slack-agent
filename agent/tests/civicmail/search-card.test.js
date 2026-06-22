@@ -41,6 +41,15 @@ describe('buildSearchResultsCard', () => {
     assert.match(text(card), /\+7 more/);
   });
 
+  it('gives each result a Read button that opens the record modal', () => {
+    const card = buildSearchResultsCard({ term: 'cozumel', results: [result({ messageId: '<m9@city>' })] });
+    const button = card.blocks
+      .flatMap((b) => (b.accessory ? [b.accessory] : []))
+      .find((el) => el.action_id === 'open_civic_record');
+    assert.ok(button, 'a result section carries an open_civic_record button');
+    assert.equal(button.value, '<m9@city>');
+  });
+
   it('has a non-empty plain-text fallback', () => {
     const card = buildSearchResultsCard({ term: 'cozumel', results: [result()] });
     assert.ok(card.text.length > 0);

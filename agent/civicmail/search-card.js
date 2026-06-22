@@ -63,10 +63,20 @@ export function buildSearchResultsCard({ term, results, language = 'en', max = 8
 
   const shown = results.slice(0, max);
   const remainder = results.length - shown.length;
-  const blocks = [
-    { type: 'section', text: { type: 'mrkdwn', text: `*${copy.header(term)}*` } },
-    { type: 'section', text: { type: 'mrkdwn', text: shown.map(resultLine).join('\n') } },
-  ];
+  const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: `*${copy.header(term)}*` } }];
+  // One section per result so each can carry a "Read" button into the record modal.
+  for (const row of shown) {
+    const section = { type: 'section', text: { type: 'mrkdwn', text: resultLine(row) } };
+    if (row.messageId) {
+      section.accessory = {
+        type: 'button',
+        action_id: 'open_civic_record',
+        text: { type: 'plain_text', text: '📖 Read' },
+        value: row.messageId,
+      };
+    }
+    blocks.push(section);
+  }
   if (remainder > 0) {
     blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: copy.more(remainder) }] });
   }
