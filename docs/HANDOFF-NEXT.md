@@ -1,129 +1,121 @@
-# Build Handoff — next session (continue from a clear context window)
+# Build Handoff — next session (clean context window)
 
-_Clean-context handoff. Written **2026-06-21** after a big session that shipped **MOO-142** (video
-discovery), **MOO-125** (the community-memory bridge — the signature differentiator), and
-**MOO-129** (reporter dossier), and spec'd **MOO-143** (speaker naming). `main` is at **`4f6be97`**;
-all three features are merged + deployed._
+_Written **2026-06-22**. `main` @ **`0d3f168`**. Freeze **July 9**, submit **July 13**._
 
-**Read first, in order:** this doc → `CLAUDE.md` (per-issue loop + Linear sync protocol) →
-re-auth Linear (browser flow once, verify with "list my Gavel issues") → then either run the
-**demo dry-run** (recommended) or `build MOO-143`. Deadline: **freeze July 9, submit July 13.**
+**Read first:** this doc → `CLAUDE.md` (per-issue loop + Linear sync) → re-auth Linear (browser flow,
+verify "list my Gavel issues") → then build the **AgentMail "From the city" digest** (the immediate
+work below).
 
 ---
 
-## Where the project stands (2026-06-21)
+## THE IMMEDIATE BUILD — AgentMail aggregated digest (MOO-153 core, demo-scoped)
 
-The build is **deep and mature**. `main` @ `4f6be97`. Deployed:
-- **`gavel-app`** (Fly, Socket Mode, machine `e8202d9a7d1078`, `shared-cpu-2x`/4GB — 4GB required,
-  OOMs at 512MB/2GB) — all interactions: alerts, App Home, `/gavel`, story modal + dossier, video
-  browse. Agent model pinned to `claude-sonnet-4-6` in `agent/agent/agent.js` (override `GAVEL_AGENT_MODEL`).
-  Deploy from **repo root**: `fly deploy -c fly.app.toml --remote-only`. Confirm a deploy actually
-  took via `fly logs -a gavel-app` → `[INFO] bolt-app Gavel is running!` (Fly's "good state" lies for
-  Socket Mode). **Do NOT deploy gavel-app from `agent/`** — `agent/fly.toml` is the *gavel-poller* config.
-- **`gavel-poller`** (Fly, supercronic on `agent/crontab`, machine `48e7d9ef2330e8`) — `*/5` poll,
-  Sunday digest (`0 14 * * 0`), watch sweep (`0 13`), escalation (`0 */6`), and **NEW: the
-  community-memory bridge daily at `0 15 * * *`**. Deploy from **`agent/`**: `fly deploy --remote-only`.
-- **Convex dev `vivid-weasel-903`** — one shared deployment across worktrees (last-writer-wins).
-- Secrets on both apps: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CONVEX_URL`, `SLACK_BOT/APP/USER_TOKEN`,
-  `DEEPGRAM_API_KEY`. (Standing item: rotate the chat-pasted Slack tokens.)
+**Why:** Tarik wants AgentMail as a demo beat — it shows Gavel watches the city's whole **email
+firehose** (permits, licenses, raze orders), not just meeting agendas. Decided 2026-06-22:
+**aggregate by default** (one "📬 From the city" digest), not one-card-per-email.
 
-**Shipped this session (all Done in Linear, merged, deployed, screenshot-verified):**
-- **MOO-142** — Video discovery: `videoModal` browse (committee dropdown built from committees-with-video),
-  reporter-gated App Home "🎥 Meeting video" section, `/gavel video [committee]`. 🔍 Searchable vs
-  🎥 Video-only tags. New Convex `transcripts.listIngestedEventIds`. PR #43.
-- **MOO-125** — The bridge: agenda→RTS→LLM-judge → "you've been discussing this, it's on the agenda"
-  proposals. Compliance-clean (Slack message content NEVER stored; only `{channelId, eventItemId}` in
-  the new `bridgeProposals` table). Daily cron on gavel-poller. PR #44.
-- **MOO-129** — Reporter dossier: "📋 Brief me" on a story lead → modal fusing 💡 angle + 📞 sponsor +
-  🕓 history + 🎥 transcript moment + 🗳️ outcome + Watch/Send. PR #45.
-- Also: ran a **live Deepgram ingest** → meeting **13370** (Community & Economic Development, clip 5200)
-  is now 🔍 Searchable alongside **13441** (ZONING, clip 5210). Canceled **MOO-141** (a dup of 142).
+**Data foundation is DONE — don't redo it.** `scripts/civicmail-backfill.mjs` already re-ingested the
+AgentMail inbox into Convex: **`civicNotifications` holds 100 real Milwaukee E-Notify rows** (50
+neighborhood_services · 29 licenses · 6 meetings · 6 newsletter · 9 other). It's a **2026-06-10
+snapshot** (the live source is dormant — see gotchas) — disclose as "sample week" in the demo. Verify:
+`listPending` returns 100.
 
-**The pieces now compose:** a 🔍 Searchable meeting (142) opens into the dossier (129); the dossier's 🎥
-receipt is where MOO-143 (speaker naming) pays off; the bridge (125) fuses community + civic memory.
-The "three-memory" thesis is demonstrably real on the deployed app.
+**What to build (the MOO-153 *core* only — defer the cron + watchlist-interrupt repurpose):**
+1. **Pure aggregator** — input: `civicNotifications` rows (+ optionally a channel's subscription for
+   geo/topic filtering). Group by **category + district + entity**; rank; **fold routine into counts**
+   ("50 neighborhood-services → 12 permits · 3 raze orders · 1 dev plan @ X"). Suppress Legistar
+   overlaps via existing `civicmail/dedup.js`. Pure + table-tested.
+2. **One batch bilingual summary** — a single Claude call over the clustered set → a concise EN/ES
+   briefing (reuse `summarizer/` + `createClaudeGenerate({schema})`; mirror `stories/angle.js`; static
+   ES glossary). NOT per-email.
+3. **"📬 From the city" Block Kit card** — counts + a few highlighted actionable items (licenses,
+   hearings get the "How to be heard" footer) + a "see all / search" affordance. Pure builder.
+4. **Post script** — `scripts/civicmail-digest-once.mjs`: read rows → aggregate → summarize → post one
+   digest card to a channel (start with `#newsroom` or the hero channel). Mark rows digested
+   (`markProcessed`, or add a `digestedAt` field if you want digest-vs-alert separation).
+5. **Verify live:** post one real digest to a channel; paste the EN+ES card; `node --test` green;
+   `biome check` clean.
 
-## The immediate decision — what to do next
+**Reuse map (all on `main`):** `agent/civicmail/{notification,extract,dedup,card,process}.js` ·
+`agent/convex/civicNotifications.ts` (`listPending`/`searchByDistrictDate(district,fromDate)`/
+`getByTaxkey`/`markProcessed`/`insertNotification`) · `summarizer/` · digest-card pattern in
+`scripts/digest-once.mjs`. Full design + acceptance: **Linear MOO-153** (In Progress).
 
-**Recommended: a demo dry-run, not another feature (yet).** At ~18 days to freeze with a mature build,
-the highest-leverage move is to walk the brief's **8-beat demo script** against the *live deployed app*,
-beat by beat, and let what's broken/weak/cached become the punch-list. The only P0 is **MOO-62 (the
-3-min demo video)** — de-risk it before building blind. (Tarik leaned toward building over the dry-run
-last two times; offer it again now that 142/125/129 are all in.)
+**Do it in a worktree** off `main` (TDD like MOO-143/152) — see worktree setup at the bottom.
 
-**If building instead, ranked options (all unblocked):**
-1. **MOO-143 — Speaker naming** (High, *spec ready*): map Deepgram "Speaker 2" → council members via
-   spoken cues + the `councilMembers` directory. Turns the 🎥 receipt from "useful" to *publishable*
-   (the journalist's whole value). Cheap to verify — 13370 + 13441 already transcribed, their
-   transcripts full of "Alderman Russell/Chambers/Moore" cues. **Best feature-pick if shipping.**
-2. **MOO-132 — Neighborhood + alderperson enrichment** (Medium): make every "District 6" human;
-   personalize the "How to be heard" footer. Smaller, broad polish.
-3. **MOO-124 — Ask "what's coming up?"** (Medium): conversational agenda discovery.
-4. **MOO-68 — Permit & license alerts** (High): extend proactive alerts beyond legislation (CKAN sweep).
+**After the card works:** (a) fold the "From the city" surface into the workspace IA spec; (b) add an
+AgentMail "civic breadth" beat to `docs/DEMO-SCRIPT.md` (or fold into the Architecture beat).
 
-Submission-critical, human-driven: **MOO-62** (demo video, P0) + **MOO-63** (Devpost; needs judge
-sandbox access to slackhack@salesforce.com).
+---
 
-## Per-issue loop (unchanged — see CLAUDE.md)
+## THE OTHER TWO OPEN THREADS (don't lose these)
 
-`linear-build` is the engine: `build MOO-XX` → read contract → (brainstorm only if fuzzy) → worktree
-off `main` → TDD → live-verify against real data → PR → Linear In Review → screenshot → Done. Honor each
-issue's "Out of scope." **Tarik's working preference (saved to memory `momentum-over-long-brainstorm`):**
-make the reasonable call and keep moving — one load-bearing question only when an architecture fork
-genuinely needs his input, then lock defaults and proceed. Still confirm before outward/irreversible
-actions (prod deploys that enable proactive posting).
+**1. Workspace IA spec — AWAITING TARIK'S APPROVAL.** `docs/superpowers/specs/2026-06-22-demo-
+workspace-ia-design.md` (rev 2). This was a `superpowers:brainstorming` session; the terminal step is
+`writing-plans` once Tarik approves. It got an adversarial **Codex review** that found two *verified*
+bugs (fixed in rev 2):
+- The alert matcher is **OR-based** (`match.js:24` = `committeeHit || keywordHit || districtHit`), so
+  "trim keywords to keep a neighborhood channel local" is false. Rev 2 scopes around it (drop
+  committees from neighborhood channels; #newsroom keeps them); the real fix (gate geo) is logged.
+- Rev-1 districts contradicted Gavel's own resolver (`geo/neighborhoods.js`). Verified truth: **Sherman
+  Park=15, Clarke Square=8, Historic Mitchell St=12, "Lindsay Heights"=null**. Rev 2 aligns: sherman=15,
+  rename hero `#clarke-square`→`#near-south-side-es` (d12 = the real 2000 S 13th St district), **add
+  "Lindsay Heights"→6 to the resolver**.
+- **Channel ops are Tarik-manual** (bot has no `channels:manage`/`pins:write`): create #start-here +
+  #newsroom, rename the hero channel, archive #general/#zoning/#random, set topics, invite @Gavel, add
+  judges. Open question for Tarik: confirm the hero rename (maybe `#historic-mitchell-st`, also d12).
 
-## Worktree + env setup (every new worktree needs this)
+**2. Demo video — MOO-62 (In Progress, P0).** Production script written: `docs/DEMO-SCRIPT.md` —
+single-story on the hero (**Punta Cana liquor license #260229, 2000 S 13th St, RT4 residential, open
+violation, neighbors opposed**). All beats verified real; the RTS wow needs an **opposition-framed**
+question (see memory `rts-query-framing`). The cached 90s clips are in `demo-assets/`. Recording is the
+human step. The AgentMail digest adds one more beat.
 
-`.env`, `.env.local`, `node_modules`, `convex/_generated` are gitignored and live only in the main
-checkout `agent/`. For a fresh worktree off `main`:
-1. `git worktree add .claude/worktrees/moo-XXX -b tarikjmoody/moo-XXX origin/main`
-2. `cd agent` then: **symlink** node_modules (`ln -s <main>/agent/node_modules node_modules`),
-   **copy** `convex/_generated` as a REAL dir (`rm -rf convex/_generated && cp -R <main>/agent/convex/_generated convex/_generated` — NOT a symlink, or `convex dev`/codegen pollutes the main checkout), and `cp` `.env` + `.env.local`.
-3. Commit files **explicitly** (never `git add -A`) — the node_modules symlink shows as untracked and
-   must not be committed.
-4. After PR squash-merges: `git -C <main> merge --ff-only origin/main` to advance local main, then
-   `git worktree remove … --force` + `git branch -D …`. Squash merges leave the branch "unmerged" to
-   `git branch --merged` — confirm via `git ls-remote origin main` before deleting.
+**Submission (human-driven):** MOO-62 (record) · MOO-63 (Devpost + judge sandbox access to
+slackhack@salesforce.com + testing@devpost.com).
 
-Commands (from `agent/`): tests `node --test` (bare) · lint `npx @biomejs/biome check .` (`--write <files>`
-to format your own; one pre-existing error in `tests/alerts/match.test.js` — ignore it) · Convex
-`npx convex dev --once` (pushes schema+functions; safe from a main-branched worktree — additive only).
-Full suite is **682 tests** as of `4f6be97`.
+---
 
-## Gotchas discovered this session (durable — don't re-derive)
+## DECISIONS LOCKED THIS SESSION (don't relitigate)
+- **Demo workspace = "Clean 5":** #start-here · #sherman-park (Denise/association/EN/d15) ·
+  #near-south-side-es (Marcos/hero/ES/d12) · #lindsay-heights (Marcos 2nd/organizer/EN/d6) · #newsroom
+  (Rachel/reporter/citywide). **Place + Beat** spine; no district#/department channels.
+- **AgentMail = aggregated "From the city" digest** (not per-email); MOO-153 core for the demo, cron +
+  interrupt deferred.
+- **Geography aligned to `geo/neighborhoods.js`**; add Lindsay Heights→6.
 
-- **`expired_trigger_id` on slow modals (MOO-129).** Slack trigger_ids expire in **~3s**. Any modal
-  doing slow work on click (Claude call, multi-fetch) MUST push a **loading modal instantly**, then
-  `views.update` it once ready — never assemble-then-push. The dossier (`openDossier`) does this.
-  **`dossier_watch` / `dossier_send` were NOT UI-tested** — lighter work (no Claude), likely fine, but
-  if Watch shows delay-then-nothing it's the identical fix.
-- **Legistar `EventMedia` is a string on BOTH endpoints** (list + single), e.g. `"5210"` — handoffs
-  wrongly said number-on-list. Always `Number()`-coerce (`videoClipId`); no `$select` needed. (Memory:
-  `legistar-eventmedia-string-both-endpoints`.)
-- **Bridge candidate selection is by channel relevance, not salience (MOO-125).** The live agenda is
-  mostly local items (appeals, namings, dept policies) with great entities but no money/legislation
-  "salience" signal — gate on `matchSubscriptions`, use salience only to order within.
-- **RTS is query-driven** (`assistant.search.context(query)` — no "fetch all messages"), which is *why*
-  the bridge runs agenda→RTS. New seeded messages get indexed within ~20s (tested live).
-- **Transcript ingest is a manual script today:** `node scripts/transcript-ingest.mjs <eventId> [windowSeconds]`
-  (yt-dlp + ffmpeg + Deepgram Nova-3 diarized + OpenAI embed → `transcriptChunks`). yt-dlp/ffmpeg present
-  on the dev box. On-demand-from-Slack transcription is an explicit non-built follow-up (see the chat
-  analysis: lazy/item-scoped is the right model).
+## GOTCHAS DISCOVERED (durable — don't re-derive)
+- **AgentMail dormant:** inbox dry since 2026-06-10; `civicNotifications` was 0 before the backfill; no
+  drain cron; the **`agentmail` SDK is missing from node_modules** (local scripts that `import
+  'agentmail'` fail — use the **REST API** directly: `GET https://api.agentmail.to/v0/inboxes/<inbox>/
+  messages` with `Authorization: Bearer $AGENTMAIL_API_KEY`; message GET returns `html`/`extracted_html`,
+  `from`, `subject`, `timestamp`, `message_id`).
+- **`insertNotification` takes `{ record }`** (wrapped), not the record directly.
+- **`searchByDistrictDate` arg is `fromDate`** (not `since`); it only returns rows that HAVE a district.
+- **Matcher is OR-based** (see thread 1).
+- **RTS ranks by query framing** (memory `rts-query-framing`): opposition/sentiment queries surface
+  opinions; fact queries surface the record. Demo wow needs an opposition-framed question.
+- **Slack scopes:** bot now has `canvases:read/write` (reinstalled); still NO `channels:manage`,
+  `pins:write`, `groups:read`, `files:read`. Canvas guide is live (`F0BCXBM57DE`); see memory
+  `slack-canvas-publishing`.
 
-## Open items / latent risks
+## DEPLOYED / ENV STATE
+- **`gavel-app`** (Fly, Socket Mode, machine `e8202d9a7d1078`, 4GB) — alerts/App Home/`/gavel`/help
+  modal/video/dossier. Deploy from **repo root**: `fly deploy -c fly.app.toml --remote-only`; confirm
+  via `fly logs -a gavel-app` → `Gavel is running!` (Fly "good state" lies for Socket Mode). Last live
+  16:17Z 2026-06-21 with MOO-152.
+- **`gavel-poller`** (Fly, supercronic on `agent/crontab`) — crontab on main = **poll `*/5` · digest
+  `0 14 * * 0` · bridge `0 15`**. (Escalation/watch-sweep are NOT merged — open PRs #23/#24.)
+- **Convex dev `vivid-weasel-903`** — shared across worktrees; `civicNotifications` now holds 100 rows.
+- Commands (from `agent/`): tests `node --test` · lint `npx @biomejs/biome check .` · Convex
+  `npx convex dev --once`. Full suite ~727 tests.
+- **Open-PR worktrees left intact** (not cleanup): moo-52/53/61/63/112 (PRs #22-26, real unmerged work).
 
-- **Dossier `dossier_watch` / `dossier_send`** — unit-tested, NOT clicked live (trigger-latency risk above).
-- **Bilingual ES copy** on the new surfaces (video modal, bridge card, dossier) is in place but wants a
-  **native-speaker review** — standing project open item (originally MOO-43).
-- **Bridge posts proactively daily now** (15:00 UTC). Sandbox has one dedup row (eventItem 492235); to
-  re-demo that exact item, clear its `bridgeProposals` row.
-- **Demo data thin:** only two meetings are 🔍 Searchable (13370, 13441). For a richer demo, ingest a few
-  more so the dossier 🎥 section and `/gavel video` tags don't look sparse.
+## WORKTREE SETUP (every new worktree)
+1. `git worktree add .claude/worktrees/moo-153-digest -b tarikjmoody/moo-153-civic-mail-digest-aggregated-from-the-city-briefing-tuefri origin/main`
+2. `cd agent` then: `ln -s <main>/agent/node_modules node_modules` · `rm -rf convex/_generated && cp -R <main>/agent/convex/_generated convex/_generated` · `cp <main>/agent/.env .env` + `.env.local`
+3. Commit files **explicitly** (never `git add -A` — the node_modules symlink is untracked).
+4. After squash-merge: advance main (`git -C <main> merge --ff-only origin/main`), `git worktree remove … --force`, `git branch -D …`.
 
-## Linear (team Moodyco, project "Gavel") — state
-
-Discovery milestone "From Push to Pull" is nearly complete (127/128/130/131/142/125/129 Done). Open/
-unblocked: **MOO-143** (speaker naming, spec ready), **MOO-132**, **MOO-124**, **MOO-68**, **MOO-66**,
-**MOO-67**. Submission: **MOO-62** (demo video, P0), **MOO-63** (Devpost). Every shipped issue carries a
-full evidence trail in its Linear comments (live output, screenshots, deferred items).
+## MEMORIES WRITTEN THIS SESSION
+`demo-hero-item-260229` · `slack-canvas-publishing` · `rts-query-framing` (see `MEMORY.md`).
