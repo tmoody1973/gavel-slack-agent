@@ -44,6 +44,15 @@ describe('helpForRole — role-tailored, bilingual capability content', () => {
     assert.ok(/alert|heard|watch/.test(text));
   });
 
+  it('surfaces /gavel search for every persona, in both languages (no missing headline command)', () => {
+    for (const role of ROLES) {
+      for (const lang of ['en', 'es']) {
+        const text = JSON.stringify(helpForRole(role, lang));
+        assert.match(text, /\/gavel search/, `${role}/${lang} must teach /gavel search`);
+      }
+    }
+  });
+
   it('renders Spanish copy that differs from English', () => {
     const en = helpForRole('organizer', 'en');
     const es = helpForRole('organizer', 'es');
