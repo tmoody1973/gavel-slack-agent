@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-// Index PDF attachment text into civicNotifications.searchText (MOO-153), so
-// `/gavel search` reaches inside agendas, meeting packets, and statements — not just
-// the email subject/body. For each row carrying a PDF: pull the attachment via the
-// AgentMail API (a JSON envelope with a presigned download_url), fetch the bytes,
-// extract searchable text with Claude (the summarizer's document-block path, no
-// pdf-parse dependency), then rebuild searchText via the shared pure composer.
+// Index attachment text into civicNotifications.searchText (MOO-153), so `/gavel
+// search` reaches inside agendas, meeting packets, statements — and flyers. For each
+// row with a PDF or image: pull the attachment via the AgentMail API (a JSON envelope
+// with a presigned download_url), fetch the bytes, extract searchable text with Claude
+// (PDFs as document blocks, images OCR'd via Claude vision — no pdf-parse/tesseract
+// dependency), then rebuild searchText via the shared pure composer.
 //
-//   node scripts/civicmail-attachments-index.mjs            # index all rows with PDFs
+//   node scripts/civicmail-attachments-index.mjs            # index all rows with attachments
 //   node scripts/civicmail-attachments-index.mjs --limit=3  # just the first N (smoke test)
 //
-// Idempotent: re-running re-extracts and overwrites. Images (flyers) are skipped.
+// Idempotent: re-running re-extracts and overwrites.
 
 import { ConvexHttpClient } from 'convex/browser';
 import { config } from 'dotenv';
@@ -38,8 +38,11 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL);
 // truncated mid-string (the 1024-token default cuts a full agenda short).
 const generate = createClaudeGenerate({ schema: ATTACHMENT_TEXT_SCHEMA, maxTokens: 8192 });
 
-/** Resolve an attachment to base64 PDF bytes via its presigned download_url. */
-async function fetchPdfBase64(messageId, attachment) {
+// PDFs (text) and images (OCR via Claude vision — flyers carry the real content).
+const isSupported = (a) => a.contentType === 'application/pdf' || a.contentType?.startsWith('image/');
+
+/** Resolve an attachment to base64 bytes via its presigned download_url. */
+async function fetchAttachmentBase64(messageId, attachment) {
   const envelopeUrl = `${BASE}/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachment.attachmentId)}`;
   const envelope = await (await fetch(envelopeUrl, { headers: { Authorization: `Bearer ${KEY}` } })).json();
   if (!envelope.download_url) throw new Error(`no download_url for ${attachment.filename}`);
@@ -48,14 +51,21 @@ async function fetchPdfBase64(messageId, attachment) {
 }
 
 async function indexRow(row) {
-  const pdfs = (row.attachments ?? []).filter((a) => a.contentType === 'application/pdf').slice(0, MAX_DOCUMENTS);
-  if (pdfs.length === 0) return { skipped: 'no-pdf' };
+  const supported = (row.attachments ?? []).filter(isSupported).slice(0, MAX_DOCUMENTS);
+  if (supported.length === 0) return { skipped: 'no-doc' };
 
   const documents = [];
-  for (const pdf of pdfs) {
-    documents.push({ base64: await fetchPdfBase64(row.messageId, pdf), mediaType: 'application/pdf' });
+  for (const attachment of supported) {
+    documents.push({
+      base64: await fetchAttachmentBase64(row.messageId, attachment),
+      mediaType: attachment.contentType,
+    });
   }
-  const attachmentText = await extractAttachmentText({ documents, filenames: pdfs.map((p) => p.filename), generate });
+  const attachmentText = await extractAttachmentText({
+    documents,
+    filenames: supported.map((a) => a.filename),
+    generate,
+  });
   if (!attachmentText) return { skipped: 'no-text' };
 
   const searchText = composeSearchText({ subject: row.subject, bodyText: row.bodyText, attachmentText });
@@ -70,10 +80,10 @@ async function indexRow(row) {
 async function main() {
   if (!KEY) throw new Error('AGENTMAIL_API_KEY missing');
   const rows = (await convex.query(api.civicNotifications.listPending, {})).filter((r) =>
-    (r.attachments ?? []).some((a) => a.contentType === 'application/pdf'),
+    (r.attachments ?? []).some(isSupported),
   );
   const targets = rows.slice(0, LIMIT);
-  console.log(`Indexing attachment text for ${targets.length}/${rows.length} rows with PDFs…`);
+  console.log(`Indexing attachment text for ${targets.length}/${rows.length} rows with PDFs/images…`);
 
   let indexed = 0;
   for (const row of targets) {
