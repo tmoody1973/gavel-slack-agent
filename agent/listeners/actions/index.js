@@ -1,4 +1,3 @@
-import { AgentMailClient } from 'agentmail';
 import { ConvexHttpClient } from 'convex/browser';
 
 import { enrichForAlert } from '../../alerts/enrich.js';
@@ -157,22 +156,44 @@ export function register(app) {
   app.action('help_full_guide', async ({ ack }) => ack());
 
   // MOO-171: "✍️ Make my voice heard" — open the comment modal (action) and file it
-  // (view_submission). One shared deps bundle. The send boundary is AgentMail;
-  // CIVIC_COMMENT_TEST_INBOX forces demo-safe routing so a recording never hits a real clerk.
+  // (view_submission). One shared deps bundle. Sends via the AgentMail REST API (the same
+  // fetch+Bearer pattern as resolveAttachmentUrls, not the SDK); CIVIC_COMMENT_TEST_INBOX
+  // forces demo-safe routing so a recording never reaches a real clerk.
   const civicCommentSend = agentmailKey
-    ? ({ to, subject, text }) =>
-        new AgentMailClient({ apiKey: agentmailKey }).inboxes.messages.send(
-          process.env.AGENTMAIL_INBOX_ID || 'mke-alerts@agentmail.to',
-          { to, subject, text },
-        )
+    ? async ({ to, subject, text }) => {
+        const response = await fetch(`${agentmailBase}/messages/send`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${agentmailKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: [to], subject, text }),
+        });
+        if (!response.ok) throw new Error(`AgentMail send failed: ${response.status}`);
+        return response.json().catch(() => ({}));
+      }
     : async () => {
         throw new Error('AGENTMAIL_API_KEY not set — cannot send civic comment');
       };
   const civicCommentDeps = {
     getSubscription: recordDeps.getSubscription,
-    // TODO(MOO-171, live): resolve fileNumber → {title, bodyName, contactEmail}. Until then the
-    // modal title falls back to "File #<n>" and recipient comes from the body directory / test inbox.
-    getItem: async () => null,
+    // Resolve the file number → {title, bodyName} from Legistar (no auth for Milwaukee). The
+    // title makes the modal real; bodyName feeds recipient resolution on the non-demo path.
+    getItem: async (fileNumber) => {
+      if (!fileNumber) return null;
+      try {
+        const url = `https://webapi.legistar.com/v1/milwaukee/matters?$filter=MatterFile%20eq%20'${encodeURIComponent(fileNumber)}'&$top=1`;
+        const rows = await (
+          await fetch(url, { headers: { 'User-Agent': 'gavel-slack-agent (tarik@radiomilwaukee.org)' } })
+        ).json();
+        const matter = Array.isArray(rows) ? rows[0] : null;
+        if (!matter) return null;
+        return {
+          title: matter.MatterTitle || matter.MatterName || `File #${fileNumber}`,
+          bodyName: matter.MatterBodyName ?? null,
+          contactEmail: null,
+        };
+      } catch {
+        return null;
+      }
+    },
     draftComment: (input) => draftComment(input, { generate: createClaudeGenerate({}) }),
     send: civicCommentSend,
     recentByUserFile: ({ userId, fileNumber }) =>
