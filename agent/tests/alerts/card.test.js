@@ -55,9 +55,25 @@ test('card has the footer and the three action buttons carrying the eventItemId'
   const actions = blocks.find((b) => b.type === 'actions');
   assert.deepEqual(
     actions.elements.map((e) => e.action_id),
-    ['alert_watch', 'alert_history', 'alert_ask'],
+    ['alert_watch', 'alert_history', 'alert_ask', 'civic_comment_open'],
   );
-  assert.ok(actions.elements.every((e) => e.value === '490695'));
+  // the three record actions carry the eventItemId; the comment button carries the file number
+  assert.ok(
+    ['alert_watch', 'alert_history', 'alert_ask'].every(
+      (id) => actions.elements.find((e) => e.action_id === id).value === '490695',
+    ),
+  );
+  assert.equal(actions.elements.find((e) => e.action_id === 'civic_comment_open').value, '241554');
+});
+
+test('the comment button is bilingual and omitted when there is no file number', () => {
+  const es = buildAlertCard({ ...input, language: 'es' });
+  const esBtn = es.blocks.find((b) => b.type === 'actions').elements.find((e) => e.action_id === 'civic_comment_open');
+  assert.match(esBtn.text.text, /Haz oír tu voz/);
+  const ids = buildAlertCard({ ...input, matter: {} })
+    .blocks.find((b) => b.type === 'actions')
+    .elements.map((e) => e.action_id);
+  assert.ok(!ids.includes('civic_comment_open'));
 });
 
 const memberFixture = {

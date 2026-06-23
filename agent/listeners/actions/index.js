@@ -1,6 +1,8 @@
+import { AgentMailClient } from 'agentmail';
 import { ConvexHttpClient } from 'convex/browser';
 
 import { enrichForAlert } from '../../alerts/enrich.js';
+import { draftComment } from '../../civicmail/comment-draft.js';
 import { api } from '../../convex/_generated/api.js';
 import { createHomeDeps } from '../../home/deps.js';
 import { createLegistarClient } from '../../poller/legistar.js';
@@ -9,6 +11,7 @@ import { findMatterMoment } from '../../stories/dossier.js';
 import { createClaudeGenerate } from '../../summarizer/index.js';
 import { embedQuery } from '../../zoning/embed.js';
 import { makeAlertAsk, makeAlertHistory, makeAlertWatch } from './alert-buttons.js';
+import { makeCivicCommentSubmit, makeOpenCivicComment } from './civic-comment-buttons.js';
 import { makeDossierSend, makeDossierWatch } from './dossier-buttons.js';
 import { handleFeedbackButton } from './feedback-buttons.js';
 import { makeHelpRoleSwitch, makeHomeHelp } from './help-buttons.js';
@@ -152,6 +155,38 @@ export function register(app) {
   app.action('home_help', makeHomeHelp(homeDeps));
   app.action(/^help_role:/, makeHelpRoleSwitch());
   app.action('help_full_guide', async ({ ack }) => ack());
+
+  // MOO-171: "✍️ Make my voice heard" — open the comment modal (action) and file it
+  // (view_submission). One shared deps bundle. The send boundary is AgentMail;
+  // CIVIC_COMMENT_TEST_INBOX forces demo-safe routing so a recording never hits a real clerk.
+  const civicCommentSend = agentmailKey
+    ? ({ to, subject, text }) =>
+        new AgentMailClient({ apiKey: agentmailKey }).inboxes.messages.send(
+          process.env.AGENTMAIL_INBOX_ID || 'mke-alerts@agentmail.to',
+          { to, subject, text },
+        )
+    : async () => {
+        throw new Error('AGENTMAIL_API_KEY not set — cannot send civic comment');
+      };
+  const civicCommentDeps = {
+    getSubscription: recordDeps.getSubscription,
+    // TODO(MOO-171, live): resolve fileNumber → {title, bodyName, contactEmail}. Until then the
+    // modal title falls back to "File #<n>" and recipient comes from the body directory / test inbox.
+    getItem: async () => null,
+    draftComment: (input) => draftComment(input, { generate: createClaudeGenerate({}) }),
+    send: civicCommentSend,
+    recentByUserFile: ({ userId, fileNumber }) =>
+      requireConvex(convex).query(api.civicComments.recentByUserFile, { userId, fileNumber }),
+    logComment: (row) => requireConvex(convex).mutation(api.civicComments.logComment, row),
+    confirm: ({ userId, channelId, text }) =>
+      app.client.chat
+        .postEphemeral({ channel: channelId, user: userId, text })
+        .catch(() => app.client.chat.postMessage({ channel: userId, text })),
+    testInbox: process.env.CIVIC_COMMENT_TEST_INBOX,
+    bodyDirectory: {},
+  };
+  app.action('civic_comment_open', makeOpenCivicComment(civicCommentDeps));
+  app.view('civic_comment_modal', makeCivicCommentSubmit(civicCommentDeps));
 }
 
 function requireConvex(convex) {

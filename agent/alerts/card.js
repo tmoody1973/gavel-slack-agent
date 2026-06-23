@@ -121,6 +121,20 @@ export function buildAlertCard({ row, matter, event, summary, footer, language =
         text: { type: 'plain_text', text: '💬 Ask Gavel', emoji: true },
         value,
       },
+      ...(matter.fileNumber
+        ? [
+            {
+              type: 'button',
+              action_id: 'civic_comment_open',
+              text: {
+                type: 'plain_text',
+                text: language === 'es' ? '✍️ Haz oír tu voz' : '✍️ Make my voice heard',
+                emoji: true,
+              },
+              value: matter.fileNumber,
+            },
+          ]
+        : []),
     ],
   });
 

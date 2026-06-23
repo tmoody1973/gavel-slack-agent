@@ -40,6 +40,17 @@ export default defineSchema({
     .index('by_channel', ['channelId'])
     .index('by_channel_entity', ['channelId', 'entity']),
 
+  // Civic comment submissions (MOO-171): audit + per-user-per-file daily cap for the
+  // "Make my voice heard" tool. Records WHO filed on WHAT and WHERE it went (incl. demo
+  // mode); stores no message content beyond the audit fields.
+  civicComments: defineTable({
+    fileNumber: v.string(),
+    userId: v.string(),
+    recipient: v.string(),
+    demoMode: v.boolean(),
+    createdAt: v.number(),
+  }).index('by_user_file', ['userId', 'fileNumber']),
+
   // Council-member directory (MOO-72): public city.milwaukee.gov contact data
   // (headshot, phone, email, webpage) keyed by district + normalized last name,
   // joined to Legistar sponsor names at alert time. Public officials only.
