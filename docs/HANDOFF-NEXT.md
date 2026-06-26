@@ -1,72 +1,97 @@
 # Build Handoff — next session (clean context window)
 
-_Written **2026-06-22**. `main` @ **`45d7015`**. Freeze ~**July 9**, submit **July 13**._
+_Written **2026-06-26**. `main` @ **`57a6ace`** · **873 tests green**. Freeze ~**July 9**, submit **July 13**._
 
-**Read first:** this doc → `CLAUDE.md` (per-issue loop + commands) → the plan + spec linked below → re-auth Linear (browser flow; verify "list my Gavel issues") → then execute the UX plan **subagent-driven**.
-
----
-
-## THE IMMEDIATE BUILD — "Win the Last Mile: UX Mastery Curve"
-
-**Goal:** lift the main-track **Design** score (Agent for Good) + contest **Best UX**, and double-score **Impact** via bilingual completeness — all UX polish, **no new features**. The build is over-built for a 3-min judging window; remaining points are won in **legibility**, not code.
-
-**Execute this plan (subagent-driven, chosen 2026-06-22):**
-- **Plan:** `docs/superpowers/plans/2026-06-22-win-the-last-mile-ux-mastery-curve.md` — 4 tasks, each TDD with exact code + commits.
-- **Spec (the why):** `docs/superpowers/specs/2026-06-22-win-the-last-mile-ux-design.md`.
-- **Run with:** `superpowers:subagent-driven-development` — fresh subagent per task, two-stage review between tasks.
-
-**Key discovery that shaped the plan (don't re-derive):**
-- **U1 (first-contact card) already exists** — `agent/blockkit/onboarding.js` `memberWelcomeCard(language)`, posted once per channel via `markWelcomePosted` (FD-C). Task 3 *verifies* it, doesn't build it.
-- **The real centerpiece is U3+U4 merged** = a **bilingual command-copy module** (Task 1) + wiring `/gavel` help/usage/status/errors to the channel language (Task 2). That's the actual English cliff on the Spanish ramp. Reuse the `COPY = {en, es}` + required-keys pattern from `agent/onboarding/copy.js`.
-- **U2** (one-next-step audit) is mostly satisfied already (this session's affordances on digest/modal/search) — Task 3 locks it in as a guard test. **U5/U6** are clearly **stretch** (verify/tighten, don't rebuild).
-- Sequence **Task 1 → Task 2 first** (the bilingual surface — double-scores Design+Impact, most demo-visible).
-
-**Worktree (one per effort — the moo-153 worktree is gone, cleaned up):**
-1. `git worktree add .claude/worktrees/ux-curve -b tarikjmoody/ux-mastery-curve origin/main`
-2. `cd agent` then: `ln -s <main>/agent/node_modules node_modules` · `rm -rf convex/_generated && cp -R <main>/agent/convex/_generated convex/_generated` · `cp <main>/agent/.env .env` + `.env.local`
-3. Commit files **explicitly** (never `git add -A` — the node_modules symlink is untracked).
-4. After merge: advance main (`git -C <main> merge --ff-only origin/main`), `git worktree remove … --force`, `git branch -D …`.
-5. **Deploy after merge:** `fly deploy -c fly.app.toml --remote-only` (UX changes are app code — gavel-app needs a redeploy to go live); confirm via `fly logs -a gavel-app` (Fly "good state" lies for Socket Mode). Optionally make a MOO issue to track this if you want it in Linear.
+**Read first:** this doc → `CLAUDE.md` (per-issue loop + commands) → the spec linked in "THE IMMEDIATE NEXT" → re-auth Linear (browser flow; verify "list my Gavel issues").
 
 ---
 
-## WHY THIS — the judge's frame (don't lose the strategy)
+## THE IMMEDIATE NEXT — two tracks, pick per priority
 
-Judged a mock review against the real rubric (4 equal axes: Tech Impl · Design · Impact · Quality of Idea; must use ≥1 of Slack AI / MCP / RTS — **Gavel uses all three**; Agent for Good track; $8k/$4k per track + three $2k cross-cutting prizes; 3-min video + arch diagram + sandbox; first 60s decide engagement).
+**Track A (recommended before anything else): the demo + submission.** The build is over-built for a 3-min
+window; the score now moves in **packaging**, not features. The single highest-leverage action is recording
+the demo (MOO-62). The demo pivoted to the **Midtown data center** — see `docs/DEMO-SCRIPT.md` (v2). All its
+facts are **verified real**: June 29 **City Plan Commission** agenda (Final) has #260142 (citywide data-center
+ordinance) + #260029/#260030 (the 5825 W Hope site); parcel = **AFS MILWAUKEE LLC, RB2, open violation**. The
+Punta Cana fallback is preserved at `docs/DEMO-SCRIPT-fallback-puntacana.md` (don't delete until v2 is recorded).
 
-**Scorecard:** Tech Impl **9** · Impact **9** · Idea **8.5** · Design **7.5** → overall ~**8.5**, a top-tier Agent-for-Good contender. **Most winnable prizes: Best Technological Implementation (~30–40%)** and an **Agent for Good track placement (~30–45%)**. Design is the softest axis → hence this UX work.
-
-**The biggest swing factors (the OTHER half of "win the last mile" — not yet spec'd):**
-1. **The first-60s RTS wow must be legible to a stranger** (the Punta Cana #260229 opposition-framed query). #1 risk.
-2. **Front-load the tech story** — "all three eligible Slack techs + three-memory model" in the first 30s, not at 2:00.
-3. **Airtight Devpost packaging** — honest real-vs-cached table + the open-source MCP repo + the Plan-Commissioner credibility.
-4. **A bulletproof seeded judge sandbox** (slackhack@salesforce.com + testing@devpost.com).
-→ **Next spec to write:** "Win the Last Mile — Demo & Packaging" (the legibility half). Pairs with this UX plan.
+**Track B (a fresh feature, spec'd + approved, NOT yet planned): Civic News Enrichment.**
+- **Spec:** `docs/superpowers/specs/2026-06-26-civic-news-enrichment-design.md` (brainstormed + approved this session).
+- **Next step:** invoke `superpowers:writing-plans` to turn it into a TDD task plan, then build. No code yet.
+- **What it is:** one news-fetch service behind a `NewsSource` interface (Google News RSS now, Exa adapter
+  later), **query + Claude relevance gate** for matching, surfaced two ways — enrich the alert card + a 5th
+  `news` lane in `/gavel search`. Read-through Convex cache, real-links-only, graceful degrade on alerts.
+- **Honest call:** it's good, but it competes with the demo. Slot it **after** the submission is locked unless
+  you specifically want news in the demo.
 
 ---
 
-## OTHER OPEN THREADS (don't lose these)
+## WHAT SHIPPED THIS SESSION (all merged to main)
 
-- **MOO-153 — In Review, one item left for Done:** the **watchlist-interrupt path** (a single E-Notify posts its own card only on a watch hit; everything else flows to the digest). The "From the city" digest + federated `/gavel search` + record modal + OCR + hybrid/semantic search all shipped this session (PR #48, merged → `main` `d013cd9`). Cron is built but the crontab line is **disabled** — enable post-demo.
-- **MOO-62 (demo video, P0, In Progress):** `docs/DEMO-SCRIPT.md` — single-story on the hero (Punta Cana liquor license #260229, #clarke-square ES). All beats verified real; RTS wow needs an opposition-framed question (memory `rts-query-framing`). Recording is the human step.
-- **MOO-63 (submission):** Devpost text + judge sandbox access. Fold the AgentMail civic-breadth + federated-search beats in.
-- **Workspace IA spec** (`docs/superpowers/specs/2026-06-22-demo-workspace-ia-design.md`, rev 2) — channel ops are **Tarik-manual** (bot has no `channels:manage`).
+1. **UX Mastery Curve** (PR #49 → `fabc5ac`): bilingual `/gavel` command surface (no English cliffs),
+   one-next-step audit (fixed a zero-nudge gap in federated-card), App Home / one-tap guard tests.
+2. **Help-search coverage** (PR #50): `/gavel search` added to the role-aware help modal + USER-GUIDE +
+   per-persona case studies (the modal/guide were missing the headline `search` command).
+3. **Civic Comment Submission tool — "✍️ Make my voice heard"** (MOO-171, PR #51 → `cbe8dd4`, deployed):
+   from an alert, a resident drafts a bilingual public comment, reviews it, and files it. **Live-verified
+   end-to-end** (real click in #general → modal with real Legistar title → submit → delivered to the test
+   inbox). Guardrails: never fabricate a constituent, daily cap, demo-safe test-inbox override, safe-degrade.
+4. **Demo pivot** to the Midtown data center + the resident-sentiment beat (DEMO-SCRIPT v2).
+5. **Marketing copy** in `docs/marketing/linkedin-post.md` (LinkedIn launch post + a tech-stack companion post).
 
 ---
 
 ## DEPLOYED / ENV STATE
 
-- **`gavel-app`** (Fly, Socket Mode, machine `e8202d9a7d1078`) — **v44**, runs the merged MOO-153 code. Secrets incl. AGENTMAIL_API_KEY/INBOX, OPENAI_API_KEY, ANTHROPIC, CONVEX_URL, SLACK_*. Deploy from **repo root**: `fly deploy -c fly.app.toml --remote-only`.
-- **`gavel-poller`** (Fly, supercronic on `agent/crontab`) — poll `*/5` · digest `0 14 Sun` · bridge `0 15`. The civic-mail Tue/Fri line is committed **disabled**.
-- **Convex dev `vivid-weasel-903`** — `civicNotifications` holds **135** rows (subject+body+PDF/OCR text), **all 135 embedded** (1536-dim, `by_embedding`). `detectedAgendaItems` has a new `search_title` index. Push with `npx convex dev --once`.
-- Commands (from `agent/`): tests `node --test` (**825 green**) · lint `npx @biomejs/biome check .` · Convex `npx convex dev --once`.
+- **`gavel-app`** (Fly, Socket Mode) — **v47**. Runs the interactive agent incl. the civic-comment handlers.
+  Secret **`CIVIC_COMMENT_TEST_INBOX=tarik@agentmail.to`** is set (all comment sends go there, never a real
+  clerk). Deploy from **repo root**: `fly deploy -c fly.app.toml --remote-only`.
+- **`gavel-poller`** (Fly, supercronic on `agent/crontab`) — **v10**. Posts alert cards via `poll-once.mjs`
+  every `*/5`. **It now includes the ✍️ button** (was the bug this session: only gavel-app had been
+  redeployed). Deploy from **`agent/`**: `cd agent && fly deploy --remote-only` (uses `agent/fly.toml`, app =
+  gavel-poller). **Two apps — redeploy BOTH when alert-card or shared code changes.**
+- **Convex dev `vivid-weasel-903`** — has the new `civicComments` table (audit + daily cap). `_generated` is
+  gitignored but **image-baked** from the build context, so run `npx convex dev --once` before any deploy that
+  touches a new table/function.
+- Commands (from `agent/`): tests `node --test` (**873 green**) · lint `npx @biomejs/biome check .` · Convex `npx convex dev --once`.
 
-## DECISIONS LOCKED / GOTCHAS (durable)
+## OPEN THREADS
 
-- **Don't narrow the build** — the research's "narrow or don't submit" is greenfield advice; Gavel's breadth (three-memory + bilingual + civic mail) is the moat. Narrow the **demo/pitch**, not the build.
-- **AgentMail inbox = 135 messages** (paginate via `page_token`, not `last_key`). The "3 raze orders" demo line is **not in the data** — use **recurring applicants** (Foley & Lardner ×3) for the civic-breadth beat (memory `civicmail-digest-recurring-not-raze`).
-- **`/gavel search` is federated** (mail keyword+semantic · agendas keyword · minutes+zoning vector); quotes = exact phrase, unquoted = hybrid. OCR + PDF text via Claude (no pdf-parse/tesseract dep).
-- **Civic identifiers stay English in the ES block** (committee names, file #s, addresses, channel handles, slash syntax) — only prose is translated.
+- **MOO-171 stays In Review** for one demo-polish item: the modal opens on a **template** comment, then the
+  Claude draft swaps in via `views.update` a beat later. In the live test the user submitted before the
+  repaint, so the email carried the template. **Fix:** open with a "✨ Gavel is drafting…" placeholder
+  (non-editable) → swap in the Claude draft, so a bare template can't be submitted. ~20 min TDD. The Beat 7 wow
+  depends on it.
+- **Real-recipient wiring (MOO-171 follow-up, not built):** comments currently only go to the test inbox.
+  To actually reach the city you'd wire a per-committee clerk directory + pull the contact from the agenda,
+  then remove the test-inbox override. Safe-degrade (no recipient → no send) is already built.
+- **MOO-62 (demo video, P0):** record DEMO-SCRIPT v2. The human bottleneck. RTS wow needs an opposition-framed
+  question (memory `rts-query-framing`).
+- **MOO-63 (submission):** Devpost text + judge sandbox (slackhack@salesforce.com + testing@devpost.com). Fold
+  in the civic-comment + data-center beats.
+- **Civicmail Tue/Fri cron** is committed **disabled** — enable post-demo.
+- **Test posts left in channels** (#general, #sherman-park, #clarke-square): button-bearing data-center alerts
+  posted for screenshots. Delete them when done (the user has the bot token / I can chat.delete by ts).
 
-## MEMORIES WRITTEN (see `MEMORY.md`)
-`civicmail-digest-recurring-not-raze`, `agentmail-enotify-real-shape` (updated: page_token/135), plus prior `demo-hero-item-260229`, `rts-query-framing`, `slack-canvas-publishing`.
+## DECISIONS / GOTCHAS (durable)
+
+- **Two Fly apps, redeploy both.** `gavel-app` (interactive) and `gavel-poller` (posts the cards). A change to
+  a shared card builder (e.g. `alerts/card.js`) needs **both** redeployed or the live cards lag behind.
+- **Subagent cwd leaks to main** (memory `subagent-cwd-leaks-to-main`): in worktree subagent-driven dev,
+  implementer commits land on `main` unless you chain the absolute `cd` per command + a post-commit branch check.
+- **AgentMail is REST, not the SDK in the app.** The `agentmail` npm package is in package.json but the app
+  sends/reads via `fetch` to `https://api.agentmail.to/v0/inboxes/{inbox}/messages/send` (`{to:[...],subject,text}`,
+  Bearer). The SDK import would crash boot. Inboxes: `mke-alerts@agentmail.to` (civic-mail), `tarik@agentmail.to` (test).
+- **Org-wide Slack install** needs `team_id=T0B8KS540G4` on `users.conversations`/`conversations.list`; bot
+  lacks `groups:read` (public channels only). Bot is in #general #random #lindsay-heights #clarke-square
+  #sherman-park #zoning.
+- **Story Radar covers all upcoming agendas (all committees), not minutes.** `/gavel stories` scores
+  newsworthiness over `detectedAgendaItems` (un-subscription-gated). A retrospective minutes/transcript story
+  analyzer is NOT built (plausible post-hackathon extension).
+- **Demo facts** verified: data center = File #260030 (+#260029, +citywide ordinance #260142), CPC June 29
+  Final; parcel 5825 W Hope = AFS MILWAUKEE LLC, RB2, $3.5M, open violation.
+
+## MEMORIES (see `MEMORY.md`)
+`subagent-cwd-leaks-to-main`, plus prior `demo-hero-item-260229`, `rts-query-framing`,
+`civicmail-digest-recurring-not-raze`, `agentmail-enotify-real-shape`, `convex-codegen-before-deploy`,
+`slack-grid-scopes`.
