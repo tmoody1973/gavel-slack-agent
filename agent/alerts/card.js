@@ -49,7 +49,16 @@ function memberContext(member) {
  * }} input
  * @returns {{ text: string, blocks: object[] }}
  */
-export function buildAlertCard({ row, matter, event, summary, footer, language = 'en', member = null }) {
+export function buildAlertCard({
+  row,
+  matter,
+  event,
+  summary,
+  footer,
+  language = 'en',
+  member = null,
+  newsLinks = [],
+}) {
   const value = String(row.eventItemId);
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: headerText(row.title), emoji: true } },
@@ -98,6 +107,18 @@ export function buildAlertCard({ row, matter, event, summary, footer, language =
   }
 
   blocks.push({ type: 'divider' }, { type: 'section', text: { type: 'mrkdwn', text: footer.text } });
+
+  // 📰 Local news enrichment — only when ≥1 gated article. Real links only, no Gavel summary.
+  if (Array.isArray(newsLinks) && newsLinks.length > 0) {
+    const lines = newsLinks
+      .slice(0, 3)
+      .map((a) => `• <${a.url}|${a.title}>${a.source ? ` · ${a.source}` : ''}`)
+      .join('\n');
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: `📰 *In the local news*\n${lines}` }],
+    });
+  }
 
   blocks.push({
     type: 'actions',
