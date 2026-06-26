@@ -15,6 +15,7 @@ const COPY = {
     positionLabel: 'Your position',
     positions: { support: 'Support', oppose: 'Oppose', neutral: 'Neutral', question: 'Just a question' },
     bodyLabel: 'Your comment (edit freely)',
+    drafting: ':sparkles: Gavel is drafting your comment… one moment.',
     nameLabel: 'Your name (required for the public record)',
     addressLabel: 'Your address (optional)',
     demo: (inbox) => `:test_tube: Demo mode — this is sent to a test inbox (${inbox || 'test'}), *not* the city.`,
@@ -27,6 +28,7 @@ const COPY = {
     positionLabel: 'Tu postura',
     positions: { support: 'A favor', oppose: 'En contra', neutral: 'Neutral', question: 'Solo una pregunta' },
     bodyLabel: 'Tu comentario (edítalo libremente)',
+    drafting: ':sparkles: Gavel está redactando tu comentario… un momento.',
     nameLabel: 'Tu nombre (requerido para el registro público)',
     addressLabel: 'Tu dirección (opcional)',
     demo: (inbox) => `:test_tube: Modo demo — se envía a un buzón de prueba (${inbox || 'test'}), *no* a la ciudad.`,
@@ -46,13 +48,32 @@ function positionElement(copy) {
   };
 }
 
+// While Gavel drafts, the comment is a read-only placeholder — there is no editable input to
+// submit, so a bare template can never be filed before the Claude draft swaps in (MOO-171).
+const draftingBlock = (copy) => section(copy.drafting);
+
+const commentInputBlock = (copy, draftText) => ({
+  type: 'input',
+  block_id: 'civic_comment_body',
+  label: plain(copy.bodyLabel),
+  element: { type: 'plain_text_input', action_id: 'body', multiline: true, initial_value: draftText },
+});
+
 /**
  * Build the comment review/edit modal.
  * @param {{ fileNumber: string, title: string, draftText?: string, language?: string,
- *           demoMode?: boolean, testInbox?: string }} input
+ *           demoMode?: boolean, testInbox?: string, drafting?: boolean }} input
  * @returns {object} a Block Kit modal view
  */
-export function buildCommentModal({ fileNumber, title, draftText = '', language, demoMode = false, testInbox } = {}) {
+export function buildCommentModal({
+  fileNumber,
+  title,
+  draftText = '',
+  language,
+  demoMode = false,
+  testInbox,
+  drafting = false,
+} = {}) {
   const lang = language === 'es' ? 'es' : 'en';
   const copy = copyFor(lang);
 
@@ -65,12 +86,7 @@ export function buildCommentModal({ fileNumber, title, draftText = '', language,
       label: plain(copy.positionLabel),
       element: positionElement(copy),
     },
-    {
-      type: 'input',
-      block_id: 'civic_comment_body',
-      label: plain(copy.bodyLabel),
-      element: { type: 'plain_text_input', action_id: 'body', multiline: true, initial_value: draftText },
-    },
+    drafting ? draftingBlock(copy) : commentInputBlock(copy, draftText),
     {
       type: 'input',
       block_id: 'civic_comment_name',

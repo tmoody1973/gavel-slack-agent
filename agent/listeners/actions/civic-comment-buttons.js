@@ -36,30 +36,30 @@ export function makeOpenCivicComment(deps) {
       const item = (await deps.getItem?.(fileNumber).catch(() => null)) ?? {};
       const title = item.title ?? `File #${fileNumber}`;
       const demoMode = Boolean(deps.testInbox);
+      const willDraft = Boolean(deps.draftComment);
+      const editable = (draftText) =>
+        buildCommentModal({ fileNumber, title, draftText, language, demoMode, testInbox: deps.testInbox });
 
+      // With a Claude boundary, open a read-only "drafting…" modal first — no submittable comment
+      // exists until the real draft swaps in, so a fast submit can't file a bare template. Without
+      // a boundary, open the editable template directly (nothing will ever swap in).
       const opened = await client.views.open({
         trigger_id: body.trigger_id,
-        view: buildCommentModal({
-          fileNumber,
-          title,
-          draftText: templateDraft(fileNumber, language),
-          language,
-          demoMode,
-          testInbox: deps.testInbox,
-        }),
+        view: willDraft
+          ? buildCommentModal({ fileNumber, title, language, demoMode, testInbox: deps.testInbox, drafting: true })
+          : editable(templateDraft(fileNumber, language)),
       });
 
-      // Optional Claude polish, after the modal is already up (no trigger_id risk).
-      if (deps.draftComment && opened?.view?.id) {
+      if (willDraft && opened?.view?.id) {
         const draftText = await deps
           .draftComment({ fileNumber, title, position: 'neutral', language })
           .catch(() => null);
-        if (draftText) {
-          await client.views.update({
-            view_id: opened.view.id,
-            view: buildCommentModal({ fileNumber, title, draftText, language, demoMode, testInbox: deps.testInbox }),
-          });
-        }
+        // Either the polished draft or the template fallback — always an editable comment, so the
+        // user is never stranded in the drafting placeholder if Claude is slow or unavailable.
+        await client.views.update({
+          view_id: opened.view.id,
+          view: editable(draftText || templateDraft(fileNumber, language)),
+        });
       }
     } catch (err) {
       logger?.error?.(`open civic comment failed: ${err.message}`);
