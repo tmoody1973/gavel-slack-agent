@@ -14,7 +14,7 @@ function harness({ fetched = [], gateKeepAll = true, cached = null } = {}) {
   };
   const generate = async () => {
     calls.generate++;
-    return { relevant: gateKeepAll ? fetched.map((_, i) => i) : [] };
+    return { relevant: gateKeepAll ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] : [] };
   };
   const store = new Map();
   if (cached) store.set(cached.key, cached.articles);
@@ -81,6 +81,32 @@ describe('createNewsService.enrichForAlert', () => {
       addresses: ['5825 W Hope Ave'],
     });
     assert.deepEqual(out, []);
+  });
+
+  it('returns [] (never throws) when getCached rejects', async () => {
+    const h = harness({ fetched: [ART(1)] });
+    h.deps.getCached = async () => {
+      throw new Error('convex read down');
+    };
+    const out = await createNewsService(h.deps).enrichForAlert({
+      fileNumber: '260030',
+      title: 'Data center at 5825 W Hope Ave',
+      addresses: ['5825 W Hope Ave'],
+    });
+    assert.ok(Array.isArray(out));
+  });
+
+  it('still returns the gated articles when putCached rejects', async () => {
+    const h = harness({ fetched: [ART(1), ART(2)] });
+    h.deps.putCached = async () => {
+      throw new Error('convex write down');
+    };
+    const out = await createNewsService(h.deps).enrichForAlert({
+      fileNumber: '260030',
+      title: 'Data center at 5825 W Hope Ave',
+      addresses: ['5825 W Hope Ave'],
+    });
+    assert.equal(out.length, 2);
   });
 });
 

@@ -32,8 +32,10 @@ export function createNewsService(deps) {
     try {
       const cached = await getCached(key).catch(() => null);
       if (cached) return cached.slice(0, cap);
-      const raw = (await source.fetchNews({ query })).slice(0, rawLimit);
-      const gated = (await filterRelevant(subject, raw, { generate })).slice(0, cap);
+      const fetchedRaw = await source.fetchNews({ query });
+      const raw = (Array.isArray(fetchedRaw) ? fetchedRaw : []).slice(0, rawLimit);
+      const gatedRaw = await filterRelevant(subject, raw, { generate });
+      const gated = (Array.isArray(gatedRaw) ? gatedRaw : []).slice(0, cap);
       await putCached(key, gated).catch(() => {});
       return gated;
     } catch {
@@ -51,7 +53,7 @@ export function createNewsService(deps) {
   async function searchNews({ term, limit = DEFAULT_RAW_LIMIT }) {
     const normalized = normalizeTerm(term);
     if (!normalized) return [];
-    return resolve(`search:${normalized}`, `${term} Milwaukee`, term, limit);
+    return resolve(`search:${normalized}`, `${normalized} Milwaukee`, normalized, limit);
   }
 
   return { enrichForAlert, searchNews };
