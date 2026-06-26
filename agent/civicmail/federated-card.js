@@ -19,8 +19,9 @@ const SOURCE_META = {
   agenda: { emoji: '🏛️', label: { en: 'Upcoming agendas', es: 'Agendas próximas' } },
   minutes: { emoji: '🎙️', label: { en: 'Meeting minutes', es: 'Actas de reuniones' } },
   zoning: { emoji: '📖', label: { en: 'Zoning code', es: 'Código de zonificación' } },
+  news: { emoji: '📰', label: { en: 'Local news', es: 'Noticias locales' } },
 };
-const SOURCE_ORDER = ['mail', 'agenda', 'minutes', 'zoning'];
+const SOURCE_ORDER = ['mail', 'agenda', 'minutes', 'zoning', 'news'];
 
 const COPY = {
   en: {

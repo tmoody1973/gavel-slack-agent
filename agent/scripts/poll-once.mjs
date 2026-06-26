@@ -14,6 +14,9 @@ config();
 
 import { buildFooter, enrichForAlert, processPendingAlerts } from '../alerts/index.js';
 import { api } from '../convex/_generated/api.js';
+import { NEWS_GATE_SCHEMA } from '../news/relevance.js';
+import { createNewsService } from '../news/service.js';
+import { createGoogleNewsSource } from '../news/source.js';
 import { createLegistarClient, runPoll } from '../poller/index.js';
 import { BILINGUAL_OUTPUT_SCHEMA, createClaudeGenerate, summarizeMatterBilingual } from '../summarizer/index.js';
 
@@ -32,6 +35,15 @@ const legistar = createLegistarClient({ fetch, client: CLIENT, userAgent: USER_A
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN || process.env.SLACK_USER_TOKEN);
 const generate = createClaudeGenerate({ schema: BILINGUAL_OUTPUT_SCHEMA });
 
+const newsSource = createGoogleNewsSource({ fetch, userAgent: USER_AGENT });
+const newsGate = createClaudeGenerate({ schema: NEWS_GATE_SCHEMA });
+const newsService = createNewsService({
+  source: newsSource,
+  generate: newsGate,
+  getCached: (key) => convex.query(api.newsCache.getCached, { key }),
+  putCached: (key, articles) => convex.mutation(api.newsCache.upsertCache, { key, articles }),
+});
+
 async function main() {
   const poll = await runPoll({
     client: CLIENT,
@@ -47,6 +59,7 @@ async function main() {
     listSubscriptions: (client) => convex.query(api.subscriptions.listSubscriptions, { client }),
     listCouncilMembers: () => convex.query(api.councilMembers.listMembers, { client: CLIENT }),
     enrich: (row) => enrichForAlert(row, legistar),
+    enrichNews: (input) => newsService.enrichForAlert(input),
     generateBilingual: (matter) => summarizeMatterBilingual(matter, { generate }),
     buildFooterText: (event, person) => buildFooter(event, person),
     postCard: (channel, card) => slack.chat.postMessage({ channel, text: card.text, blocks: card.blocks }),

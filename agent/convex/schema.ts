@@ -51,6 +51,23 @@ export default defineSchema({
     createdAt: v.number(),
   }).index('by_user_file', ['userId', 'fileNumber']),
 
+  // Read-through cache for civic news (MOO-179). Keyed by file number (alert path) or normalized
+  // query (search path). 24h TTL — a stale row reads as a miss so the caller refetches.
+  // PUBLIC-RECORD-SOURCED content only — news articles indexed from public reporting.
+  newsCache: defineTable({
+    key: v.string(),
+    articles: v.array(
+      v.object({
+        title: v.string(),
+        url: v.string(),
+        source: v.optional(v.string()),
+        publishedAt: v.optional(v.string()),
+      }),
+    ),
+    fetchedAt: v.number(),
+    expiresAt: v.number(),
+  }).index('by_key', ['key']),
+
   // Council-member directory (MOO-72): public city.milwaukee.gov contact data
   // (headshot, phone, email, webpage) keyed by district + normalized last name,
   // joined to Legistar sponsor names at alert time. Public officials only.

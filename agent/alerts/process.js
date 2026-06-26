@@ -14,6 +14,7 @@ import { matchSubscriptions } from './match.js';
  *   listSubscriptions: (client: string) => Promise<object[]>,
  *   enrich: (row: object) => Promise<{matter: object, event: object, person: object|null}>,
  *   generateBilingual: (matter: object) => Promise<object>,
+ *   enrichNews?: (input: {fileNumber: string, title: string, addresses: string[]}) => Promise<object[]>,
  *   buildFooterText: (event: object, person: object|null) => {text: string},
  *   postCard: (channel: string, card: {text: string, blocks: object[]}) => Promise<void>,
  *   markSent: (client: string, eventItemId: number) => Promise<unknown>,
@@ -27,6 +28,7 @@ export async function processPendingAlerts(deps) {
     listSubscriptions,
     enrich,
     generateBilingual,
+    enrichNews = async () => [],
     buildFooterText,
     postCard,
     markSent,
@@ -42,6 +44,11 @@ export async function processPendingAlerts(deps) {
       const ctx = await enrich(row);
       const matter = { fileNumber: ctx.matter.fileNumber, title: row.title, matterText: '', attachments: [] };
       const summary = await generateBilingual(matter);
+
+      const addresses = Array.isArray(summary?.addresses) ? summary.addresses : [];
+      const newsLinks = await enrichNews({ fileNumber: ctx.matter.fileNumber, title: row.title, addresses }).catch(
+        () => [],
+      );
 
       // Council directory enrichment (MOO-72): a matched member gets a headshot
       // block on the card, replacing the footer's plain-text contact line.
@@ -62,6 +69,7 @@ export async function processPendingAlerts(deps) {
             footer,
             language,
             member,
+            newsLinks,
           });
           cardByLanguage.set(language, built);
         }

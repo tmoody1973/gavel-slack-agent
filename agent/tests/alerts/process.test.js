@@ -126,3 +126,28 @@ test('an enrichment failure leaves the row pending (not marked sent)', async () 
   await processPendingAlerts(h.deps);
   assert.deepEqual(h.sent, []);
 });
+
+test('passes enriched news links into the posted card', async () => {
+  const posted = [];
+  const h = harness({ pending: [row], subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }] });
+  await processPendingAlerts({
+    ...h.deps,
+    enrichNews: async () => [{ title: 'Data center planned', url: 'https://x', source: 'TMJ4', publishedAt: 'x' }],
+    postCard: (_channel, card) => posted.push(card),
+  });
+  assert.match(JSON.stringify(posted.at(-1)?.blocks ?? []), /In the local news/);
+});
+
+test('still posts the alert when news enrichment rejects', async () => {
+  const posted = [];
+  const h = harness({ pending: [row], subscriptions: [{ channelId: 'C1', committees: ['ZONING'], keywords: [] }] });
+  await processPendingAlerts({
+    ...h.deps,
+    enrichNews: async () => {
+      throw new Error('news down');
+    },
+    postCard: (_channel, card) => posted.push(card),
+  });
+  assert.ok(posted.length > 0, 'alert posted despite news failure');
+  assert.doesNotMatch(JSON.stringify(posted.at(-1).blocks), /In the local news/);
+});

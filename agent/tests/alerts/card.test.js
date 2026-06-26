@@ -151,6 +151,25 @@ test('a late-added consent item shows both warnings (MOO-51)', () => {
   assert.ok(all.includes('consent calendar'));
 });
 
+// ---------- MOO-179: 📰 Local news enrichment ----------
+
+test('adds a 📰 In the local news block with linked headlines when articles pass', () => {
+  const card = buildAlertCard({
+    ...input,
+    newsLinks: [{ title: 'Data center planned', url: 'https://tmj4.com/x', source: 'TMJ4', publishedAt: '2026-06-25' }],
+  });
+  const json = JSON.stringify(card.blocks);
+  assert.match(json, /In the local news/);
+  assert.match(json, /<https:\/\/tmj4\.com\/x\|Data center planned>/);
+});
+
+test('omits the news block entirely when there are no articles (card unchanged)', () => {
+  const withNews = buildAlertCard({ ...input, newsLinks: [] });
+  const withoutParam = buildAlertCard({ ...input });
+  assert.equal(JSON.stringify(withNews.blocks), JSON.stringify(withoutParam.blocks));
+  assert.doesNotMatch(JSON.stringify(withNews.blocks), /In the local news/);
+});
+
 // ---------- UX mastery-curve guard test (U6) ----------
 // Guards that the three expert power actions are direct buttons (one-tap),
 // not buried behind an overflow menu — so a future refactor can't silently
