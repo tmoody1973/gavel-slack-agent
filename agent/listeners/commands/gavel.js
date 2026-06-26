@@ -15,6 +15,7 @@ import {
   normalizeZoning,
 } from '../../civicmail/federated-card.js';
 import { mergeSearchResults, parseSearchTerm, refineResults } from '../../civicmail/search-filter.js';
+import { normalizeNews } from '../../news/normalize.js';
 import { composeLeadAngles, filterByCommitteeOrTopic, selectStoryLeads } from '../../stories/leads.js';
 import { isConfigured, nudgeResponse } from '../onboarding/nudge.js';
 import { commandCopy } from './copy.js';
@@ -178,12 +179,13 @@ async function runSearch({ args, channelId }, deps) {
   const vector = parsed.exact ? null : await (deps.embedQuery?.(parsed.display).catch(() => null) ?? null);
   const safe = (promise) => (promise ? promise.catch(() => []) : Promise.resolve([]));
 
-  const [mailCandidates, mailSemantic, agendaHits, minutesHits, zoningHits] = await Promise.all([
+  const [mailCandidates, mailSemantic, agendaHits, minutesHits, zoningHits, newsHits] = await Promise.all([
     safe(deps.searchNotifications?.({ term: parsed.display, limit: SEARCH_CANDIDATE_LIMIT })),
     vector ? safe(deps.semanticSearch?.(vector)) : Promise.resolve([]),
     safe(deps.searchAgendas?.(parsed.display)),
     vector ? safe(deps.searchMinutes?.(vector)) : Promise.resolve([]),
     vector ? safe(deps.searchZoning?.(vector)) : Promise.resolve([]),
+    safe(deps.searchNews?.({ term: parsed.display, limit: 5 })),
   ]);
 
   const mailKeyword = refineResults(mailCandidates, parsed);
@@ -200,6 +202,7 @@ async function runSearch({ args, channelId }, deps) {
     { source: 'agenda', results: agendas.slice(0, PER_SOURCE_LIMIT).map(normalizeAgenda) },
     { source: 'minutes', results: minutesHits.slice(0, PER_SOURCE_LIMIT).map(normalizeMinutes) },
     { source: 'zoning', results: zoningHits.slice(0, PER_SOURCE_LIMIT).map(normalizeZoning) },
+    { source: 'news', results: newsHits.slice(0, PER_SOURCE_LIMIT).map(normalizeNews) },
   ];
   return buildFederatedResultsCard({ term: parsed.display, groups, language });
 }

@@ -2,9 +2,12 @@ import { ConvexHttpClient } from 'convex/browser';
 
 import { enrichForAlert } from '../../alerts/enrich.js';
 import { api } from '../../convex/_generated/api.js';
+import { NEWS_GATE_SCHEMA } from '../../news/relevance.js';
+import { createNewsService } from '../../news/service.js';
+import { createGoogleNewsSource } from '../../news/source.js';
 import { createLegistarClient } from '../../poller/legistar.js';
 import { STORY_ANGLE_SCHEMA } from '../../stories/angle.js';
-import { createClaudeGenerate } from '../../summarizer/index.js';
+import { createClaudeGenerate } from '../../summarizer/client.js';
 import { embedTexts } from '../../zoning/embed.js';
 import { handleGavelCommand } from './gavel.js';
 
@@ -28,6 +31,16 @@ export function register(app) {
   // The story-angle Claude call (MOO-127), constructed once and constrained to the
   // {hook, whyStory} schema. Only invoked on `/gavel stories`, never on the Home path.
   const generateAngle = createClaudeGenerate({ schema: STORY_ANGLE_SCHEMA });
+
+  // MOO-179 news enrichment — Google News RSS → Claude relevance gate → cache.
+  const USER_AGENT =
+    'GavelCivicAgent/0.1 (+https://github.com/tmoody1973/gavel-slack-agent; contact tarik@radiomilwaukee.org)';
+  const newsService = createNewsService({
+    source: createGoogleNewsSource({ fetch: globalThis.fetch, userAgent: USER_AGENT }),
+    generate: createClaudeGenerate({ schema: NEWS_GATE_SCHEMA }),
+    getCached: (key) => requireConvex(convex).query(api.newsCache.getCached, { key }),
+    putCached: (key, articles) => requireConvex(convex).mutation(api.newsCache.upsertCache, { key, articles }),
+  });
 
   const deps = {
     addWatch: ({ channelId, entity }) => requireConvex(convex).mutation(api.watches.addWatch, { channelId, entity }),
@@ -74,6 +87,9 @@ export function register(app) {
       requireConvex(convex).query(api.detectedItems.searchTitle, { term, client: 'milwaukee', limit: 8 }),
     searchMinutes: (vector) => requireConvex(convex).action(api.transcripts.search, { embedding: vector, limit: 5 }),
     searchZoning: (vector) => requireConvex(convex).action(api.zoning.search, { embedding: vector, limit: 5 }),
+
+    // MOO-179 news lane — keyword search, unconditional (not vector-gated).
+    searchNews: (input) => newsService.searchNews(input),
   };
 
   app.command('/gavel', (args) => handleGavelCommand(args, deps));

@@ -151,6 +151,19 @@ test('quoted (exact) search skips the semantic/vector lanes — literal only', a
   assert.equal(semanticCalled, false, 'exact phrase stays keyword-only');
 });
 
+test('includes a news group when searchNews returns gated articles', async () => {
+  const h = harness({ text: 'search data center' });
+  h.deps.searchNotifications = async () => [];
+  h.deps.searchAgendas = async () => [];
+  h.deps.searchMinutes = async () => [];
+  h.deps.searchZoning = async () => [];
+  h.deps.searchNews = async () => [
+    { title: 'Data center planned', url: 'https://x', source: 'TMJ4', publishedAt: '2026-06-24' },
+  ];
+  await handleGavelCommand(h.args, h.deps);
+  assert.match(JSON.stringify(h.calls.responds[0].blocks), /Local news/);
+});
+
 test('search with no term explains usage instead of querying', async () => {
   const h = harness({ text: 'search' });
   let queried = false;

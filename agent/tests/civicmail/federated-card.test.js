@@ -110,4 +110,28 @@ describe('buildFederatedResultsCard — grouped by source', () => {
     const card = buildFederatedResultsCard({ term: 'nothing', groups: [{ source: 'mail', results: [] }] });
     assert.match(text(card).toLowerCase(), /no records|nothing/);
   });
+
+  it('renders a 📰 Local news group from news results', () => {
+    const card = buildFederatedResultsCard({
+      term: 'data center',
+      language: 'en',
+      groups: [
+        {
+          source: 'news',
+          results: [
+            {
+              source: 'news',
+              headline: '<https://x|Data center planned>',
+              meta: 'TMJ4 · 2026-06-24',
+              snippet: null,
+              messageId: null,
+            },
+          ],
+        },
+      ],
+    });
+    const json = JSON.stringify(card.blocks);
+    assert.match(json, /Local news/);
+    assert.match(json, /<https:\/\/x\|Data center planned>/);
+  });
 });
