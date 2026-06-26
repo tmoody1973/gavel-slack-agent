@@ -64,4 +64,17 @@ describe('buildCommentModal — review/edit before filing', () => {
     const off = buildCommentModal({ ...base, language: 'en', demoMode: false });
     assert.doesNotMatch(JSON.stringify(off.blocks).toLowerCase(), /demo mode|test inbox/);
   });
+
+  it('drafting state shows a non-editable placeholder, not a submittable comment input', () => {
+    const v = buildCommentModal({ ...base, language: 'en', drafting: true });
+    assert.ok(!findInput(v, 'civic_comment_body'), 'no editable comment input while drafting');
+    assert.match(JSON.stringify(v.blocks).toLowerCase(), /drafting/);
+  });
+
+  it('drafting state in Spanish localizes the placeholder, file number stays English', () => {
+    const v = buildCommentModal({ ...base, language: 'es', drafting: true });
+    assert.ok(!findInput(v, 'civic_comment_body'), 'no editable comment input while drafting');
+    assert.match(JSON.stringify(v.blocks).toLowerCase(), /redactando/);
+    assert.match(JSON.stringify(v.blocks), /260030/);
+  });
 });
