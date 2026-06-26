@@ -108,6 +108,20 @@ describe('createNewsService.enrichForAlert', () => {
     });
     assert.equal(out.length, 2);
   });
+
+  it('strips nullish source/publishedAt before caching (Convex optional != null)', async () => {
+    const h = harness({ fetched: [{ title: 'No source story', url: 'https://x', source: null, publishedAt: null }] });
+    const out = await createNewsService(h.deps).enrichForAlert({
+      fileNumber: '260030',
+      title: 'Data center at 5825 W Hope Ave',
+      addresses: ['5825 W Hope Ave'],
+    });
+    const cachedArticle = h.calls.put[0].articles[0];
+    assert.ok(!('source' in cachedArticle), 'null source dropped before cache write');
+    assert.ok(!('publishedAt' in cachedArticle), 'null publishedAt dropped before cache write');
+    assert.equal(out[0].title, 'No source story');
+    assert.ok(!('source' in out[0]), 'returned article also has no null source');
+  });
 });
 
 describe('createNewsService.searchNews', () => {

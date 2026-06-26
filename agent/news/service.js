@@ -14,6 +14,15 @@ const normalizeTerm = (term) =>
     .toLowerCase()
     .replace(/\s+/g, ' ');
 
+// Convex's v.optional(v.string()) accepts string|undefined but NOT null; drop nullish
+// optional fields so a source-less / date-less article still caches.
+const cleanArticle = (a) => {
+  const out = { title: a.title, url: a.url };
+  if (a.source != null) out.source = a.source;
+  if (a.publishedAt != null) out.publishedAt = a.publishedAt;
+  return out;
+};
+
 /**
  * @param {{
  *   source: { fetchNews: (input: { query: string }) => Promise<object[]> },
@@ -35,7 +44,7 @@ export function createNewsService(deps) {
       const fetchedRaw = await source.fetchNews({ query });
       const raw = (Array.isArray(fetchedRaw) ? fetchedRaw : []).slice(0, rawLimit);
       const gatedRaw = await filterRelevant(subject, raw, { generate });
-      const gated = (Array.isArray(gatedRaw) ? gatedRaw : []).slice(0, cap);
+      const gated = (Array.isArray(gatedRaw) ? gatedRaw : []).slice(0, cap).map(cleanArticle);
       await putCached(key, gated).catch(() => {});
       return gated;
     } catch {
