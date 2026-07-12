@@ -150,8 +150,15 @@ Undo with `/gavel unwatch 5825 W Hope Ave`.
 /gavel video
 ```
 
-**What to look for:** recent council meeting video, with transcript-backed deep links so you can jump
-to the moment an item was actually discussed.
+**What to look for:** Gavel discovers **every** recent city meeting that has video (35+ right now) by
+reading Legistar's media records — and marks which ones are **transcript-searchable**.
+
+> **Honest note:** discovery is automatic; **transcription is batch-ingested**, because Deepgram bills
+> per hour of audio and Milwaukee publishes hundreds of hours. So a meeting will either be marked
+> searchable (transcript indexed → speaker-attributed quotes + timestamped deep links back into the
+> video) or it will honestly tell you it has video but no transcript yet. **Pick one marked searchable**
+> to see the receipts. On-demand "transcribe this meeting" from Slack is the next step on our roadmap —
+> see *What's next*.
 
 ---
 
