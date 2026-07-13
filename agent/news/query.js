@@ -38,6 +38,17 @@ const STOPWORDS = new Set([
   'directing',
   'authorizing',
   'approving',
+  // Sentence-start capitals the proper-noun regex mistakes for entities. Civic titles open with
+  // these constantly, and one of them is not harmless: "Conditional" alone took a real query from
+  // 10 articles to 0, hiding the coverage that the data center had been dropped.
+  'conditional',
+  'proposed',
+  'former',
+  'existing',
+  'certain',
+  'changes',
+  'request',
+  'use',
 ]);
 
 const ADDRESS_RE =

@@ -1,6 +1,6 @@
 // agent/tests/news/query.test.js
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it, test } from 'node:test';
 
 import { buildNewsQuery } from '../../news/query.js';
 
@@ -33,4 +33,17 @@ describe('buildNewsQuery', () => {
     assert.equal(buildNewsQuery({ title: '', addresses: [] }), null);
     assert.equal(buildNewsQuery({}), null);
   });
+});
+
+// Regression: "Conditional" (a sentence-start capital, not an entity) leaked into the query and
+// took a real search from 10 articles to 0 — which hid the reporting that the data center had been
+// dropped. Civic titles open with words like this constantly.
+test('sentence-start civic adjectives do not leak into the query as entities', () => {
+  const q = buildNewsQuery({
+    title: 'Conditional use for a data center at the former Midtown Walmart, 5825 W Hope Ave',
+    addresses: ['5825 W Hope Ave'],
+  });
+  assert.ok(!q.terms.includes('Conditional'), `"Conditional" must not be a search term: ${JSON.stringify(q.terms)}`);
+  assert.doesNotMatch(q.query, /Conditional/);
+  assert.ok(q.terms.includes('data center'), 'the real entity survives');
 });
