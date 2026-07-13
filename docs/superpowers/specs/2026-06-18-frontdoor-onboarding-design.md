@@ -196,4 +196,4 @@ card (dedup via `welcomePostedAt`). First `addWatch` → grow proposal.
 - Thinking Steps in the Ask-Gavel thread (`chat.*Stream`, Plan/Timeline, URL Sources).
 - Power-user query primer (Rachel's ask-anything onboarding).
 - Auto-creating channels (blocked by Grid scopes).
-- Any re-architecture of existing alert/poller/summarizer logic.
+  - Any re-architecture of existing alert/poller/summarizer logic.

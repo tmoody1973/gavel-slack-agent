@@ -178,13 +178,17 @@ const SHOTS = {
     await body.waitFor({ timeout: 120000 });
     await page.waitForTimeout(2500); // let the draft be readable before we touch it
 
-    await clickLocator(page, modal.locator('text=En contra').first()); // position: Oppose
+    await clickLocator(page, page.getByRole('radio', { name: 'En contra' })); // position: Oppose
+    await page.waitForTimeout(800);
+
     await clickLocator(page, body);
     await page.keyboard.press('End');
     await page.keyboard.type(' Gracias por escucharnos.', { delay: 55 }); // human in the loop
     await page.waitForTimeout(1200);
 
-    await clickLocator(page, modal.locator('input').first()); // "Tu nombre"
+    // input[type="text"], NOT input — the radio buttons are <input type="radio">, so a bare
+    // input.first() grabs a radio and the name types straight into the comment body instead.
+    await clickLocator(page, modal.locator('input[type="text"]').first()); // "Tu nombre"
     await page.keyboard.type('María López', { delay: 55 });
     await page.waitForTimeout(1500); // the 🧪 demo-mode notice is visible here — zoom cue
 

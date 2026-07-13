@@ -7,51 +7,69 @@
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
-      body { font-family: "Inter", "Helvetica Neue", sans-serif; }
+      body { font-family: "Inter", "Helvetica Neue", Helvetica, sans-serif; }
 
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
       .bg { position: absolute; inset: 0; background: #0e0f13; }
 
-      /* Kinetic type */
       .kt {
         position: absolute; inset: 0; display: flex; flex-direction: column;
         align-items: center; justify-content: center; text-align: center;
         color: #f4f4f5; padding: 0 160px;
       }
       .kt .line { font-size: 76px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
-      .kt .line.small { font-size: 46px; font-weight: 600; color: #a1a1aa; }
+      .kt .line.small { font-size: 44px; font-weight: 600; color: #a1a1aa; line-height: 1.35; }
       .kt .line.accent { color: #a78bfa; }
-      .kt .line.huge { font-size: 110px; font-weight: 900; }
-      .kt .quote { font-size: 88px; font-weight: 900; color: #a78bfa; font-style: italic; }
-      .wordmark { font-size: 140px; font-weight: 900; letter-spacing: -0.03em; color: #fff; }
+      .kt .line.huge { font-size: 112px; font-weight: 900; }
+      .kt .quote { font-size: 84px; font-weight: 900; color: #a78bfa; font-style: italic; line-height: 1.2; }
+      .wordmark { font-size: 132px; font-weight: 900; letter-spacing: -0.03em; color: #fff; }
       .wordmark .gavel { color: #a78bfa; }
 
-      /* Screen-capture videos: fill frame, transform animated on the main timeline */
+      /* Screen captures: fill the frame; motion is authored on the main timeline. */
       video.shot { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; transform-origin: 50% 50%; }
       #clipfull { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: contain; background: #000; }
 
-      #arch { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: contain; background: #0e0f13; transform-origin: 50% 50%; }
-      .ring {
-        position: absolute; border: 6px solid #a78bfa; border-radius: 18px;
-        box-shadow: 0 0 40px rgba(167,139,250,.5); opacity: 0;
+      /* The "before" frame — Milwaukee's real public record. */
+      #legistar { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; object-position: 50% 30%; transform-origin: 50% 40%; }
+      /* A scrim: the caption is white type over a dense beige table and is unreadable without it. */
+      #legistar-cap {
+        position: absolute; left: 0; right: 0; bottom: 0; padding: 46px 0 54px;
+        text-align: center; font-size: 42px; font-weight: 800; color: #fff; letter-spacing: -0.01em;
+        background: linear-gradient(to top, rgba(8,8,10,.96) 55%, rgba(8,8,10,0));
       }
+      #legistar-cap span { color: #f0abfc; }
+
+      #arch { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: contain; background: #0e0f13; transform-origin: 50% 50%; }
+      .ring { position: absolute; border: 6px solid #a78bfa; border-radius: 18px; box-shadow: 0 0 40px rgba(167,139,250,.5); opacity: 0; }
     </style>
   </head>
   <body>
     <!--
-      Timeline (butt-joined, from vo/out durations after atempo 1.05):
-      s1 type   0.0 – 27.7   | s2 video 27.7 – 49.4 | s3 video 49.4 – 70.2
-      s4 video 70.2 – 79.4   | s5a video 79.4 – 101.2 | clip 101.2 – 113.2
-      s5c type 113.2 – 120.2 | s7 video 120.2 – 139.2 | s8 arch 139.2 – 160.8
-      s9 type 160.8 – 177.5  | total 177.5s (2:57.5). s6 cut per budget gate.
+      Timeline (VO durations after atempo 1.05 drive every length):
+        s1  type      0.0 –  27.7   (Legistar "before" frame lives inside, 12.2–16.6)
+        s2  video    27.7 –  49.4
+        s3  video    49.4 –  70.2
+        s4  video    70.2 –  79.4
+        s5a video    79.4 – 101.2
+        clip        101.2 – 113.2   (own audio, VO silent)
+        s5c type    113.2 – 120.2
+        s7a video   120.2 – 126.2   (Spanish answer)
+        s7b video   126.2 – 139.2   (comment modal → send)
+        s8  arch    139.2 – 160.8
+        s9  type    160.8 – 177.5
+      Total 177.5s = 2:57.5. Beat 4 (s6) cut at the budget gate.
+
+      data-media-start is load-bearing: every capture is far longer than its segment, and the
+      payoff (the agent's answer) is at the END of the recording. Playing from 0 would show
+      typing and waiting and cut away before Gavel ever replies.
     -->
     <div id="root" data-composition-id="main" data-start="0" data-duration="177.5" data-width="1920" data-height="1080">
       <div class="bg"></div>
 
-      <!-- ============ SEG 1 — cold open, kinetic type (0 – 27.7) ============ -->
+      <!-- ===== SEG 1 — cold open (0 – 27.7) ===== -->
       <div id="kt1a" class="clip kt" data-start="0" data-duration="5.5" data-track-index="1">
         <div class="line">City Hall publishes <span style="color:#a78bfa">everything</span>.</div>
-        <div class="line" id="kt1a2" style="margin-top:24px">Nobody reads it.</div>
+        <div class="line" style="margin-top:24px">Nobody reads it.</div>
       </div>
       <div id="kt1b" class="clip kt" data-start="5.5" data-duration="3.5" data-track-index="1">
         <div class="line">The vote happens.</div>
@@ -60,11 +78,16 @@
       <div id="kt1c" class="clip kt" data-start="9" data-duration="3.2" data-track-index="1">
         <div class="line small">I sit on Milwaukee's City Plan Commission.</div>
       </div>
-      <div id="kt1d" class="clip kt" data-start="12.2" data-duration="3.8" data-track-index="1">
-        <div class="line">A data center, headed for a vacant Walmart —</div>
-        <div class="line small" style="margin-top:20px">right next to homes. The filing never called it that.</div>
+
+      <!-- The real Legistar calendar: 46 records, ALL-CAPS committees, and column after column
+           of "Not available". This is the public record a resident actually meets. -->
+      <img id="legistar" class="clip" src="assets/legistar-calendar.png" data-start="12.2" data-duration="4.4" data-track-index="1" />
+      <div id="legistar-cap" class="clip" data-start="13.2" data-duration="3.4" data-track-index="3">
+        This is the public record. <span>Minutes: not available. Video: not available.</span>
       </div>
-      <div id="kt1e" class="clip kt" data-start="16" data-duration="5" data-track-index="1">
+
+      <div id="kt1e" class="clip kt" data-start="16.6" data-duration="4.4" data-track-index="1">
+        <div class="line small" style="margin-bottom:26px">The city's own filing never called it a data center.</div>
         <div class="quote">"computational research facility"</div>
       </div>
       <div id="kt1f" class="clip kt" data-start="21" data-duration="2.4" data-track-index="1">
@@ -78,39 +101,41 @@
         <div class="line small" style="margin-top:18px">so the next block doesn't have to fight in the dark</div>
       </div>
 
-      <!-- ============ SEG 2 — the alert lands (27.7 – 49.4) ============ -->
-      <video id="v2" class="shot" src="assets/s2.mp4" data-start="27.7" data-duration="21.7" data-track-index="0" muted playsinline></video>
+      <!-- ===== SEG 2 — the alert lands (27.7 – 49.4) ===== -->
+      <video id="v2" class="shot" src="assets/s2.mp4" data-start="27.7" data-duration="21.7" data-media-start="14" data-track-index="0" muted playsinline></video>
 
-      <!-- ============ SEG 3 — RTS wow (49.4 – 70.2) ============ -->
-      <video id="v3" class="shot" src="assets/s3.mp4" data-start="49.4" data-duration="20.8" data-track-index="0" muted playsinline></video>
+      <!-- ===== SEG 3 — ⭐ RTS: the community's own memory (49.4 – 70.2) ===== -->
+      <video id="v3" class="shot" src="assets/s3.mp4" data-start="49.4" data-duration="20.8" data-media-start="74" data-track-index="0" muted playsinline></video>
 
-      <!-- ============ SEG 4 — who owns it (70.2 – 79.4) ============ -->
-      <video id="v4" class="shot" src="assets/s4.mp4" data-start="70.2" data-duration="9.2" data-track-index="0" muted playsinline></video>
+      <!-- ===== SEG 4 — who owns it (70.2 – 79.4) ===== -->
+      <video id="v4" class="shot" src="assets/s4.mp4" data-start="70.2" data-duration="9.2" data-media-start="41" data-track-index="0" muted playsinline></video>
 
-      <!-- ============ SEG 5a — transcript find (79.4 – 101.2) ============ -->
-      <video id="v5" class="shot" src="assets/s5.mp4" data-start="79.4" data-duration="21.8" data-track-index="0" muted playsinline></video>
+      <!-- ===== SEG 5a — the transcript find (79.4 – 101.2) ===== -->
+      <video id="v5" class="shot" src="assets/s5.mp4" data-start="79.4" data-duration="21.8" data-media-start="64.5" data-track-index="0" muted playsinline></video>
 
-      <!-- ============ SEG 5b — THE CLIP, own audio (101.2 – 113.2) ============ -->
+      <!-- ===== SEG 5b — ⭐ THE CLIP, its own audio (101.2 – 113.2) ===== -->
       <video id="clipfull" src="assets/clip-source.mp4" data-start="101.2" data-duration="12" data-media-start="8" data-track-index="2" muted playsinline></video>
 
-      <!-- ============ SEG 5c — the phrase, type echo (113.2 – 120.2) ============ -->
+      <!-- ===== SEG 5c — the phrase (113.2 – 120.2) ===== -->
       <div id="kt5a" class="clip kt" data-start="113.2" data-duration="3.2" data-track-index="1">
         <div class="quote">"computational research facility"</div>
       </div>
       <div id="kt5b" class="clip kt" data-start="116.4" data-duration="3.8" data-track-index="1">
-        <div class="line">You can't fight a thing<br />nobody will call by its name.</div>
+        <div class="line">You can't fight a thing</div>
+        <div class="line" style="margin-top:14px">nobody will call by its name.</div>
       </div>
 
-      <!-- ============ SEG 7 — act, Spanish + comment (120.2 – 139.2) ============ -->
-      <video id="v7" class="shot" src="assets/s7.mp4" data-start="120.2" data-duration="19" data-track-index="0" muted playsinline></video>
+      <!-- ===== SEG 7 — ⭐ ACT (120.2 – 139.2). Two windows of one capture. ===== -->
+      <video id="v7a" class="shot" src="assets/s7.mp4" data-start="120.2" data-duration="6" data-media-start="64" data-track-index="0" muted playsinline></video>
+      <video id="v7b" class="shot" src="assets/s7.mp4" data-start="126.2" data-duration="13" data-media-start="92" data-track-index="0" muted playsinline></video>
 
-      <!-- ============ SEG 8 — architecture (139.2 – 160.8) ============ -->
+      <!-- ===== SEG 8 — architecture (139.2 – 160.8) ===== -->
       <img id="arch" class="clip" src="assets/three-memory-architecture.png" data-start="139.2" data-duration="21.6" data-track-index="0" />
       <div id="ring-mcp" class="clip ring" data-start="143" data-duration="5" data-track-index="3" style="left:310px; top:330px; width:420px; height:220px"></div>
       <div id="ring-rts" class="clip ring" data-start="149" data-duration="5" data-track-index="3" style="left:1190px; top:330px; width:420px; height:220px"></div>
       <div id="ring-compliance" class="clip ring" data-start="155" data-duration="5" data-track-index="3" style="left:360px; top:850px; width:1200px; height:140px"></div>
 
-      <!-- ============ SEG 9 — close, kinetic type (160.8 – 177.5) ============ -->
+      <!-- ===== SEG 9 — close (160.8 – 177.5) ===== -->
       <div id="kt9a" class="clip kt" data-start="160.8" data-duration="3.6" data-track-index="1">
         <div class="line">They decoded it. They showed up.</div>
         <div class="line huge" style="margin-top:20px">They won.</div>
@@ -127,7 +152,7 @@
         <div class="line" style="margin-top:22px">Find out <span class="accent">before</span>.</div>
       </div>
 
-      <!-- ============ VO audio (track 10) + clip audio (track 11) ============ -->
+      <!-- ===== Audio: VO on track 10, the clip's own sound on track 11 ===== -->
       <audio id="vo1" src="assets/vo/s1.mp3" data-start="0" data-duration="27.7" data-track-index="10"></audio>
       <audio id="vo2" src="assets/vo/s2.mp3" data-start="27.7" data-duration="21.7" data-track-index="10"></audio>
       <audio id="vo3" src="assets/vo/s3.mp3" data-start="49.4" data-duration="20.8" data-track-index="10"></audio>
@@ -144,39 +169,47 @@
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
 
-      // ---- Seg 1: type entrances (global time = clip data-start) ----
-      const ktIn = (sel, at) => tl.from(sel + " > *", { opacity: 0, y: 40, duration: 0.55, stagger: 0.5, ease: "power3.out" }, at);
-      ktIn("#kt1a", 0.1); ktIn("#kt1b", 5.6); ktIn("#kt1c", 9.1); ktIn("#kt1d", 12.3);
-      tl.from("#kt1e .quote", { opacity: 0, scale: 0.85, duration: 0.7, ease: "power3.out" }, 16.1);
+      const ktIn = (sel, at) =>
+        tl.from(sel + " > *", { opacity: 0, y: 40, duration: 0.55, stagger: 0.5, ease: "power3.out" }, at);
+
+      // ---- Seg 1 ----
+      ktIn("#kt1a", 0.1); ktIn("#kt1b", 5.6); ktIn("#kt1c", 9.1);
+
+      // Legistar: slow push toward the CITY PLAN COMMISSION 7/20 row and the "Not available" columns.
+      tl.fromTo("#legistar", { scale: 1.0, x: 0, y: 0 }, { scale: 1.18, x: -120, y: -40, duration: 4.4, ease: "power1.inOut" }, 12.2);
+      tl.from("#legistar-cap", { opacity: 0, y: 24, duration: 0.6, ease: "power3.out" }, 13.3);
+
+      tl.from("#kt1e > *", { opacity: 0, y: 30, duration: 0.6, stagger: 0.7, ease: "power3.out" }, 16.7);
       ktIn("#kt1f", 21.05);
       tl.from("#kt1g .huge", { opacity: 0, scale: 0.7, duration: 0.6, ease: "back.out(1.6)" }, 23.5);
       ktIn("#kt1h", 25.7);
 
-      // ---- Screen shots: gentle push-ins. Targets are tunable after real captures land. ----
-      // Slack layout at 1920x1080: channel content sits center; thread pane occupies the right ~38%.
-      const push = (sel, at, dur, scale, x, y) => {
+      // ---- Screen shots: gentle push-ins timed to the VO's claims ----
+      const push = (sel, at, dur, scale, x, y) =>
         tl.to(sel, { scale, x, y, duration: dur, ease: "power1.inOut" }, at);
-      };
-      // Seg 2: full card view, then push toward the ES section (upper-middle of the card)
-      push("#v2", 29.5, 4, 1.0, 0, 0);
-      push("#v2", 36.5, 3.5, 1.22, -60, 120);   // "and in Spanish" → ES block
-      push("#v2", 43.5, 3.5, 1.18, -60, -40);   // news block
-      // Seg 3: watch typing full-frame, then push into the thread pane (right side)
-      push("#v3", 56, 4, 1.25, -380, 60);
-      // Seg 4: straight into the answer
-      push("#v4", 72, 3, 1.28, -380, 40);
-      // Seg 5a: thread answer with timestamp/link
-      push("#v5", 86, 4, 1.25, -380, 60);
-      tl.to("#v5", { scale: 1.0, x: 0, y: 0, duration: 2.5, ease: "power1.inOut" }, 96);
-      // Seg 7: full frame for the Spanish stream, then center-push for the modal
-      push("#v7", 128, 3.5, 1.15, 0, 40);
-      // Seg 8: architecture slow drift + rings
+
+      // Seg 2 — hold on the landing card, then the Spanish section, then the news block.
+      push("#v2", 36.0, 4.0, 1.20, -40, 60);   // "…and in Spanish"
+      push("#v2", 43.5, 3.5, 1.16, -40, -80);  // "…the local reporting, right on the card"
+      // Seg 3 — into the thread pane (right side) where the community memory renders.
+      push("#v3", 55.0, 5.0, 1.30, -400, 40);
+      // Seg 4 — onto the owner line.
+      push("#v4", 72.0, 4.0, 1.32, -400, 20);
+      // Seg 5a — the transcript answer, then pull back before the clip.
+      push("#v5", 85.0, 5.0, 1.28, -400, 40);
+      tl.to("#v5", { scale: 1.0, x: 0, y: 0, duration: 2.5, ease: "power1.inOut" }, 97.5);
+      // Seg 7 — Spanish answer, then the modal.
+      push("#v7a", 121.0, 4.0, 1.22, -380, 30);
+      push("#v7b", 127.5, 5.0, 1.18, 0, 20);   // modal is centered
+      push("#v7b", 134.0, 4.0, 1.28, 0, 90);   // down onto the 🧪 demo-mode notice + send
+
+      // ---- Seg 8 — architecture drift + highlight rings ----
       tl.fromTo("#arch", { scale: 1.02, x: 20 }, { scale: 1.1, x: -30, duration: 21.6, ease: "none" }, 139.2);
       tl.to("#ring-mcp", { opacity: 1, duration: 0.5 }, 143.2);
       tl.to("#ring-rts", { opacity: 1, duration: 0.5 }, 149.2);
       tl.to("#ring-compliance", { opacity: 1, duration: 0.5 }, 155.2);
 
-      // ---- Seg 5c + 9: type entrances ----
+      // ---- Seg 5c + 9 ----
       tl.from("#kt5a .quote", { opacity: 0, scale: 0.85, duration: 0.6, ease: "power3.out" }, 113.3);
       ktIn("#kt5b", 116.5);
       ktIn("#kt9a", 160.9); ktIn("#kt9b", 164.5); ktIn("#kt9c", 167.9); ktIn("#kt9d", 172.5);

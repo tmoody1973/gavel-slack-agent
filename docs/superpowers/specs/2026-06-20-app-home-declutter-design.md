@@ -75,11 +75,11 @@ Rules:
 ### `agent/blockkit/story-leads.js` (modify) + `home-view.js` (modify)
 
 - `storyLeadsSection(entries, language)` now consumes `clusterLeads(...)` output (clusters + singles), not raw leads.
-- **Cluster block:** a section with the deterministic label `{emoji} {Theme} — {N} {items} · {committee}` carrying the shared tag(s) + a 📍 District chip when shared, once; member titles listed compactly beneath (context/section lines), each with its own `story_watch`; a cluster-level overflow (`👁 Watch all · 🔎 stories`).
-- **Single block:** title + context line `🏛️ {committee} · 📍 District {N} (when present) · {tags}` + watch, via the existing path.
+- **Cluster block:** a section header `*{emoji} {Theme}* — {N} {items}` + a context line `🏛️ {committee} · 📍 District {N} (when shared) · {shared tags}` carrying the shared signal **once**; member titles beneath as section lines (`• {title}`), each with its own existing `story_watch` button.
+- **Single block:** title + context line `🏛️ {committee} · 📍 District {N} (when present) · {tags}` + the existing `story_watch`, via the current path.
 - **District chip:** rendered from `districtOf(title)` (MOO-123) wherever a lead/cluster carries a district; the alder *name* (MOO-72 directory) is deferred to the dossier (MOO-129) to keep the Home fetch-free.
-- **Hierarchy:** render the top **N_EXPANDED = 3** entries fully; remaining entries collapse behind a `▾ Ver N pistas más` affordance (a button → `/gavel stories`, since the App Home can't lazy-expand in place).
-- **Per-item actions → overflow** where more than Watch applies, to stop the one-fat-button repetition.
+- **Hierarchy:** render the top **N_EXPANDED = 3** entries fully; remaining entries collapse behind a `➕ N pistas más — /gavel stories para verlas todas` **context-line instruction** (no button → no new action handler; the App Home can't lazy-expand in place).
+- **Per-item actions:** keep the existing `story_watch` button per item — **no new Slack action handlers in this issue**. The declutter win is clustering + hierarchy, not new buttons; richer overflow/dossier actions land with MOO-129.
 - **Language fix:** move the hardcoded-English strip line in `home-view.js` into a localized `STRIP_COPY[language]` table so the entire Home renders in the resolved language.
 
 ### Constraints preserved
