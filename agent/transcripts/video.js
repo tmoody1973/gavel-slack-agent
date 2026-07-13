@@ -43,9 +43,10 @@ export function archiveMp4Url(streamUrl) {
 
 /**
  * ffmpeg args to cut [start, start+duration] (≥ 30s) straight out of the archive MP4. Seeking
- * before -i makes this a byte-range fetch, so a 90s clip costs seconds regardless of how deep into
- * a three-hour webcast the moment sits. Re-encoded (not stream-copied) so the clip opens on a clean
- * keyframe and plays inline in Slack.
+ * before -i makes this a byte-range fetch, so the cut costs seconds no matter how deep into a
+ * three-hour webcast the moment sits. Stream-copied, not re-encoded: -ss lands on a keyframe, so
+ * the clip is already valid MP4 and Slack plays it inline. Re-encoding a 90s clip cost ~85s of CPU
+ * — far too slow to run inside a resident's request; copying it costs ~3s.
  */
 export function buildClipArgs({ mp4Url, startSeconds, durationSeconds = DEFAULT_CLIP_SECONDS, outPath }) {
   const start = Math.max(0, Math.floor(startSeconds));
@@ -62,10 +63,8 @@ export function buildClipArgs({ mp4Url, startSeconds, durationSeconds = DEFAULT_
     String(duration),
     '-i',
     mp4Url,
-    '-c:v',
-    'libx264',
-    '-c:a',
-    'aac',
+    '-c',
+    'copy',
     '-movflags',
     '+faststart',
     outPath,
@@ -88,20 +87,26 @@ export async function clipVideoMoment(
   { run },
 ) {
   const { stdout } = await run('yt-dlp', ['--no-warnings', '-g', mediaPlayerUrl(eventMedia, subdomain)]);
-  const mp4Url = archiveMp4Url(String(stdout ?? '').trim().split('\n')[0]);
+  const mp4Url = archiveMp4Url(
+    String(stdout ?? '')
+      .trim()
+      .split('\n')[0],
+  );
   if (!mp4Url) throw new Error(`could not resolve an archive MP4 for Granicus clip ${eventMedia}`);
   await run('ffmpeg', buildClipArgs({ mp4Url, startSeconds, durationSeconds, outPath }));
   return outPath;
 }
 
 /** Map a clip on disk to `files.uploadV2` arguments (filename derived from the path). */
-export function buildUploadParams({ channel, filePath, title, initialComment, filename }) {
+export function buildUploadParams({ channel, filePath, title, initialComment, filename, thread_ts: threadTs }) {
   return {
     channel_id: channel,
     file: filePath,
     filename: filename ?? filePath.split('/').pop(),
     title,
     initial_comment: initialComment,
+    // Keep the clip in the thread the resident asked in, not the channel root.
+    ...(threadTs ? { thread_ts: threadTs } : {}),
   };
 }
 

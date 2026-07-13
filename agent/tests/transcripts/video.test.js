@@ -37,7 +37,12 @@ test('archiveMp4Url returns null for anything that is not a Granicus archive str
 });
 
 test('buildClipArgs seeks the archive MP4 to [start, start+duration] with a browser UA', () => {
-  const args = buildClipArgs({ mp4Url: 'https://cdn/x.mp4', startSeconds: 770, durationSeconds: 90, outPath: '/tmp/c.mp4' });
+  const args = buildClipArgs({
+    mp4Url: 'https://cdn/x.mp4',
+    startSeconds: 770,
+    durationSeconds: 90,
+    outPath: '/tmp/c.mp4',
+  });
   const joined = args.join(' ');
   assert.match(joined, /-ss 770/);
   assert.match(joined, /-t 90/);
@@ -47,7 +52,12 @@ test('buildClipArgs seeks the archive MP4 to [start, start+duration] with a brow
 });
 
 test('a short item still gets a sane minimum clip length', () => {
-  const args = buildClipArgs({ mp4Url: 'https://cdn/x.mp4', startSeconds: 100, durationSeconds: 2, outPath: '/tmp/c.mp4' });
+  const args = buildClipArgs({
+    mp4Url: 'https://cdn/x.mp4',
+    startSeconds: 100,
+    durationSeconds: 2,
+    outPath: '/tmp/c.mp4',
+  });
   assert.match(args.join(' '), /-t 30/); // floored to 30s
 });
 

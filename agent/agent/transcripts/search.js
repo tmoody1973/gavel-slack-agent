@@ -76,6 +76,60 @@ async function loadSpeakerMaps(hits, getSpeakerMap) {
  * }} deps
  * @returns {Promise<string>}
  */
+/**
+ * Cut the moment out of the webcast and post it as a playable clip in the thread.
+ *
+ * Milwaukee publishes meeting VIDEO but no transcripts, so the record of what was actually said is
+ * effectively unsearchable. This is the payoff of indexing it: a resident asks, and gets the footage
+ * itself — not a two-hour webcast to scrub through.
+ *
+ * @param {{eventItemId?:number, eventId:number, startSeconds?:number, durationSeconds?:number}} input
+ * @param {{getEventItem:Function, getEvent:Function, postClip:Function}} deps
+ * @returns {Promise<string>} what Claude should say (the clip posts itself into the thread)
+ */
+export async function runClipMoment({ eventItemId, eventId, startSeconds, durationSeconds }, deps) {
+  if (eventId == null) {
+    return 'information_unavailable: tell me which meeting (its EventId) to clip — Legistar only exposes an item within its meeting.';
+  }
+
+  let start = startSeconds;
+  let label = 'this moment';
+  if (start == null) {
+    if (eventItemId == null) {
+      return 'information_unavailable: give me either a startSeconds or the EventItemId of the agenda item to clip.';
+    }
+    const item = await deps.getEventItem(eventId, eventItemId);
+    if (item?.EventItemVideoIndex == null) {
+      return `information_unavailable: agenda item ${eventItemId} has no video index, so there is no moment to clip.`;
+    }
+    start = item.EventItemVideoIndex;
+    label = item.EventItemAgendaNumber ? `agenda item ${item.EventItemAgendaNumber}` : `item ${eventItemId}`;
+  }
+
+  const event = await deps.getEvent(eventId);
+  const eventMedia = Number(event?.EventMedia); // the single-event endpoint returns a string
+  if (!Number.isFinite(eventMedia) || eventMedia <= 0) {
+    return 'information_unavailable: that meeting has no published video, so there is nothing to clip.';
+  }
+
+  const committee = event?.EventBodyName ?? 'Committee';
+  const eventDate = (event?.EventDate ?? '').slice(0, 10);
+  try {
+    await deps.postClip({
+      eventMedia,
+      eventId,
+      startSeconds: start,
+      durationSeconds,
+      title: `${committee} — moment at ${hms(start)}`,
+      comment: `:arrow_forward: *${committee}* — ${label}, ${hms(start)} into the ${eventDate} meeting.`,
+    });
+  } catch (err) {
+    // Never strand the resident: fall back to the deep link, which always works.
+    return `I couldn't cut the clip (${err.message}). Watch it in the city's player instead:\n▶ ${deps.deepLink(eventMedia, start)}`;
+  }
+  return `Posted the clip of ${label} (${hms(start)} into the ${committee} meeting) in this thread — it plays right here. Tell the user to press play; do not paste a link as well.`;
+}
+
 export async function runVideoMoment({ eventItemId, eventId }, deps) {
   if (eventId == null) {
     return `information_unavailable: tell me which meeting (its EventId) agenda item ${eventItemId} is from — Legistar only exposes an item within its meeting.`;

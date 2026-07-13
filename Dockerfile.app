@@ -5,6 +5,16 @@
 FROM node:20-slim
 WORKDIR /app
 
+# clip_video_moment cuts the real footage out of the Granicus webcast and posts it into the
+# thread: ffmpeg range-seeks the archive MP4, and yt-dlp resolves the archive URL (it is only
+# the extractor — its downloader is broken on Granicus's player page). Static yt-dlp binary,
+# so no Python in the image.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+  && curl -fsSL -o /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
+  && chmod a+rx /usr/local/bin/yt-dlp \
+  && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 # Install prod deps for both packages first, for layer caching.
 COPY agent/package*.json ./agent/
 COPY mcp-server/package*.json ./mcp-server/

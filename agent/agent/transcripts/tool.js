@@ -1,13 +1,18 @@
+import { execFile } from 'node:child_process';
+import { rmSync } from 'node:fs';
+import { promisify } from 'node:util';
+
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { ConvexHttpClient } from 'convex/browser';
 import { z } from 'zod';
 
 import { api } from '../../convex/_generated/api.js';
-import { videoMomentDeepLink } from '../../transcripts/video.js';
+import { clipVideoMoment, uploadClipToSlack, videoMomentDeepLink } from '../../transcripts/video.js';
 import { embedQuery } from '../../zoning/embed.js';
-import { runTranscriptSearch, runVideoMoment } from './search.js';
+import { runClipMoment, runTranscriptSearch, runVideoMoment } from './search.js';
 
 const LEGISTAR = 'https://webapi.legistar.com/v1/milwaukee';
+const run = promisify(execFile);
 
 const SEARCH_DESCRIPTION = `\
 Search what was actually SAID and DECIDED in Milwaukee committee meetings — the public \
@@ -24,12 +29,31 @@ webcast. Give the Legistar EventItemId AND the EventId of its meeting (both come
 get_event_agenda). Returns a Granicus deep link positioned at that second. Use it to point \
 a resident straight to the footage of an item they care about.`;
 
+const CLIP_DESCRIPTION = `\
+Cut the actual FOOTAGE of a moment out of the meeting webcast and post it as a short video that \
+plays right in this Slack thread. Use this when a resident wants to SEE or HEAR what was said — \
+"show me", "play it", "can I watch that", "clip that" — or when a quote is contested and the \
+footage settles it. Give the EventId, plus EITHER the EventItemId of the agenda item OR the exact \
+startSeconds (the timestamp on a search_transcripts receipt). The clip posts itself into the \
+thread: tell the user to press play, and do NOT also paste a link. Milwaukee publishes video but \
+no transcripts, so this footage is otherwise unsearchable.`;
+
 /**
- * In-process MCP server exposing search_transcripts + get_video_moment. Real
- * boundaries wired here; the pure orchestrators (search.js) are unit-tested.
- * @param {{convexUrl:string, openaiApiKey:string, userAgent?:string, fetchFn?:typeof fetch}} options
+ * In-process MCP server exposing search_transcripts + get_video_moment, and — when a Slack channel
+ * is wired — clip_video_moment, which posts the real footage into the thread. Real boundaries wired
+ * here; the pure orchestrators (search.js) are unit-tested.
+ * @param {{convexUrl:string, openaiApiKey:string, userAgent?:string, fetchFn?:typeof fetch,
+ *          slack?:import('@slack/web-api').WebClient, channelId?:string, threadTs?:string}} options
  */
-export function createTranscriptsServer({ convexUrl, openaiApiKey, userAgent = 'gavel-slack-agent', fetchFn = fetch }) {
+export function createTranscriptsServer({
+  convexUrl,
+  openaiApiKey,
+  userAgent = 'gavel-slack-agent',
+  fetchFn = fetch,
+  slack = undefined,
+  channelId = undefined,
+  threadTs = undefined,
+}) {
   const convex = new ConvexHttpClient(convexUrl);
   const headers = { 'User-Agent': userAgent };
   const legistar = async (path) => (await fetchFn(LEGISTAR + path, { headers })).json();
@@ -40,6 +64,23 @@ export function createTranscriptsServer({ convexUrl, openaiApiKey, userAgent = '
     deepLink: videoMomentDeepLink,
     getEventItem: (eventId, itemId) => legistar(`/events/${eventId}/eventitems/${itemId}`),
     getEvent: (eventId) => legistar(`/events/${eventId}`),
+    // Cuts the window out of the archive webcast and uploads it, so it plays inline in the thread.
+    // Requires ffmpeg + yt-dlp on the host; the clip tool is only registered when Slack is wired.
+    postClip: async ({ eventMedia, eventId, startSeconds, durationSeconds, title, comment }) => {
+      const outPath = `/tmp/gavel-clip-${eventId}-${Math.floor(startSeconds)}.mp4`;
+      try {
+        await clipVideoMoment({ eventMedia, startSeconds, durationSeconds, outPath }, { run });
+        await uploadClipToSlack(slack, {
+          channel: channelId,
+          thread_ts: threadTs,
+          filePath: outPath,
+          title,
+          initialComment: comment,
+        });
+      } finally {
+        rmSync(outPath, { force: true });
+      }
+    },
   };
 
   const searchTool = tool(
@@ -69,5 +110,29 @@ export function createTranscriptsServer({ convexUrl, openaiApiKey, userAgent = '
     },
   );
 
-  return createSdkMcpServer({ name: 'transcripts', version: '0.1.0', tools: [searchTool, momentTool] });
+  const clipTool = tool(
+    'clip_video_moment',
+    CLIP_DESCRIPTION,
+    {
+      eventId: z.number().describe('The Legistar EventId of the meeting (from get_event_agenda)'),
+      eventItemId: z
+        .number()
+        .optional()
+        .describe('The agenda item to clip — its video index is the start. Omit if giving startSeconds.'),
+      startSeconds: z
+        .number()
+        .optional()
+        .describe('Exact second to start the clip, e.g. the timestamp on a search_transcripts receipt'),
+      durationSeconds: z.number().optional().describe('Clip length in seconds (default 90, minimum 30)'),
+    },
+    async ({ eventId, eventItemId, startSeconds, durationSeconds }) => {
+      const text = await runClipMoment({ eventId, eventItemId, startSeconds, durationSeconds }, deps);
+      return { content: [{ type: 'text', text }] };
+    },
+  );
+
+  // Clipping needs a Slack channel to upload into (and ffmpeg on the host). Without one, the
+  // agent still gets search + the timestamped deep link.
+  const tools = slack && channelId ? [searchTool, momentTool, clipTool] : [searchTool, momentTool];
+  return createSdkMcpServer({ name: 'transcripts', version: '0.1.0', tools });
 }

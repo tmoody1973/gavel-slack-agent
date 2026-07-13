@@ -81,15 +81,22 @@ information_unavailable or no sections, say so plainly and point to milwaukee.go
 invent code text or section numbers.`;
 
 const TRANSCRIPTS_PROMPT = `\
-## MEETING TRANSCRIPTS (search_transcripts, get_video_moment)
+## MEETING TRANSCRIPTS (search_transcripts, get_video_moment, clip_video_moment)
 When a user asks what was SAID or the reasoning behind a decision — "what did the committee \
 say about X", who argued what, how a debate went — call search_transcripts. It returns real \
 speaker quotes from the public webcast with the agenda item and a ▶ timestamped video link. \
 Quote ONLY what it returns, attribute it to the speaker, and include the link; never invent a \
 quote. Present it as a "🎙️ What they said" section. To point someone at the footage of a \
 specific agenda item, call get_video_moment with its EventItemId and the meeting's EventId \
-(both from get_event_agenda). If either returns information_unavailable, say so plainly — \
-don't fabricate a quote or a link.`;
+(both from get_event_agenda).
+When the user wants to SEE or HEAR it rather than read it — "show me", "play that", "can I \
+watch it", "clip that" — call clip_video_moment instead: it cuts the real footage and posts a \
+short video that plays right in the thread. Pass the startSeconds from a search_transcripts \
+receipt when you have one, otherwise the EventItemId. After it posts, tell them to press play \
+and do NOT also paste a link. Milwaukee publishes meeting video but no transcripts, so this \
+footage is otherwise unsearchable — that is the point.
+If any of them returns information_unavailable, say so plainly — don't fabricate a quote, a \
+link, or a clip.`;
 
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
@@ -154,7 +161,14 @@ export function buildAgentOptions(deps = undefined, env = process.env) {
     allowedTools.push('mcp__zoning__*');
     systemPrompt = `${systemPrompt}\n\n${ZONING_PROMPT}`;
 
-    mcpServers.transcripts = createTranscriptsServer({ convexUrl: env.CONVEX_URL, openaiApiKey: env.OPENAI_API_KEY });
+    mcpServers.transcripts = createTranscriptsServer({
+      convexUrl: env.CONVEX_URL,
+      openaiApiKey: env.OPENAI_API_KEY,
+      // With a Slack channel wired, the agent can also CLIP the footage into the thread.
+      slack: deps?.client,
+      channelId: deps?.channelId,
+      threadTs: deps?.threadTs,
+    });
     allowedTools.push('mcp__transcripts__*');
     systemPrompt = `${systemPrompt}\n\n${TRANSCRIPTS_PROMPT}`;
   }

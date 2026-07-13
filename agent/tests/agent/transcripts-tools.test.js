@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { runTranscriptSearch, runVideoMoment } from '../../agent/transcripts/search.js';
+import { runClipMoment, runTranscriptSearch, runVideoMoment } from '../../agent/transcripts/search.js';
 import { videoMomentDeepLink } from '../../transcripts/video.js';
 
 const deepLink = videoMomentDeepLink;
@@ -132,6 +132,74 @@ test('runVideoMoment reports information_unavailable when the item has no video 
       getEvent: async () => ({ EventMedia: '5210' }),
       deepLink,
     },
+  );
+  assert.match(result, /information_unavailable/);
+});
+
+// clip_video_moment — Milwaukee publishes meeting video but no transcripts, so this is how a
+// resident gets the actual footage of a moment instead of a two-hour webcast to scrub through.
+
+const clipDeps = (overrides = {}) => ({
+  getEventItem: async () => ({ EventItemVideoIndex: 1466, EventItemAgendaNumber: '5' }),
+  getEvent: async () => ({
+    EventMedia: '5226',
+    EventBodyName: 'CITY PLAN COMMISSION',
+    EventDate: '2026-06-29T00:00:00',
+  }),
+  deepLink: videoMomentDeepLink,
+  postClip: async () => {},
+  ...overrides,
+});
+
+test('runClipMoment clips the agenda item at its video index and posts it in-thread', async () => {
+  let posted;
+  const result = await runClipMoment(
+    { eventId: 13556, eventItemId: 99 },
+    clipDeps({
+      postClip: async (args) => {
+        posted = args;
+      },
+    }),
+  );
+  assert.equal(posted.eventMedia, 5226); // coerced from the string Legistar returns
+  assert.equal(posted.startSeconds, 1466);
+  assert.match(posted.title, /CITY PLAN COMMISSION/);
+  assert.match(result, /Posted the clip/);
+  assert.match(result, /do not paste a link/i); // the clip plays inline; a link would be noise
+});
+
+test('runClipMoment honours an explicit startSeconds (a search_transcripts receipt timestamp)', async () => {
+  let posted;
+  await runClipMoment(
+    { eventId: 13556, startSeconds: 1455, durationSeconds: 90 },
+    clipDeps({
+      getEventItem: async () => assert.fail('must not need the agenda item when given a timestamp'),
+      postClip: async (args) => {
+        posted = args;
+      },
+    }),
+  );
+  assert.equal(posted.startSeconds, 1455);
+  assert.equal(posted.durationSeconds, 90);
+});
+
+test('runClipMoment falls back to the deep link when clipping fails — never strands the resident', async () => {
+  const result = await runClipMoment(
+    { eventId: 13556, startSeconds: 1455 },
+    clipDeps({
+      postClip: async () => {
+        throw new Error('ffmpeg exploded');
+      },
+    }),
+  );
+  assert.match(result, /couldn't cut the clip/i);
+  assert.match(result, /starttime=1455/); // the city's own player still works
+});
+
+test('runClipMoment reports honestly when the meeting has no video', async () => {
+  const result = await runClipMoment(
+    { eventId: 13556, startSeconds: 10 },
+    clipDeps({ getEvent: async () => ({ EventMedia: '0' }) }),
   );
   assert.match(result, /information_unavailable/);
 });
