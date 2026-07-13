@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background: #000; font-family: Inter, -apple-system, "Helvetica Neue", sans-serif; }
+
+      .card {
+        position: relative; overflow: hidden; background: #0b0c10; color: #fff;
+        display: flex; flex-direction: column; justify-content: center;
+      }
+      /* Sizes are set per-render by the screenshot script via body class. */
+      body.yt .card { width: 1280px; height: 720px; }
+      body.dp .card { width: 1200px; height: 800px; }
+
+      /* --- Concept A: the euphemism --- */
+      .a { padding: 0 88px; }
+      .a .kicker {
+        font-size: 34px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+        color: #8b8b94; margin-bottom: 26px;
+      }
+      .a .euph {
+        font-size: 76px; font-weight: 900; font-style: italic; line-height: 1.08;
+        color: #a78bfa; letter-spacing: -0.02em; margin-bottom: 30px;
+      }
+      body.dp .a .euph { font-size: 84px; }
+      .a .truth {
+        font-size: 104px; font-weight: 900; line-height: 1.0; letter-spacing: -0.035em; color: #fff;
+      }
+      body.dp .a .truth { font-size: 112px; }
+      .a .rule { width: 132px; height: 8px; background: #a78bfa; border-radius: 4px; margin: 34px 0 30px; }
+      .a .foot { display: flex; align-items: center; gap: 16px; font-size: 30px; color: #c7c7cf; font-weight: 600; }
+      .a .foot b { color: #fff; font-weight: 900; }
+      .a .glow {
+        position: absolute; width: 900px; height: 900px; right: -320px; top: -300px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(167,139,250,.20) 0%, rgba(167,139,250,0) 62%);
+      }
+
+      /* --- Concept B: same file, two records --- */
+      .b { padding: 0; }
+      .b .split { display: flex; width: 100%; height: 100%; }
+      .b .half { position: relative; flex: 1; overflow: hidden; }
+      .b .half img { width: 100%; height: 100%; object-fit: cover; object-position: 0% 22%; }
+      .b .left img { filter: grayscale(.55) contrast(.95) brightness(.86); }
+      /* One label per half, bottom-left. Nothing else down there to collide with. */
+      .b .tag {
+        position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 28px 26px;
+        font-size: 30px; font-weight: 900; letter-spacing: .01em; line-height: 1.25;
+        background: linear-gradient(to top, rgba(6,6,9,.97) 55%, rgba(6,6,9,0));
+      }
+      .b .left .tag { color: #fca5a5; }
+      .b .right .tag { color: #86efac; }
+      .b .divider { width: 6px; background: #a78bfa; box-shadow: 0 0 34px rgba(167,139,250,.9); }
+      .b .banner {
+        position: absolute; left: 0; right: 0; top: 0; padding: 30px 40px 54px; text-align: center;
+        background: linear-gradient(to bottom, rgba(6,6,9,.97) 60%, rgba(6,6,9,0));
+      }
+      .b .banner .big { font-size: 60px; font-weight: 900; letter-spacing: -0.03em; }
+      body.dp .b .banner .big { font-size: 56px; }
+      .b .banner .big em { color: #a78bfa; font-style: normal; }
+      .b .banner .sub {
+        margin-top: 12px; font-size: 27px; font-weight: 700; color: #c7c7cf;
+      }
+      .b .banner .sub b { color: #fff; }
+    </style>
+  </head>
+  <body>
+    <!-- CONCEPT A — the euphemism (the hook) -->
+    <div class="card a" id="concept-a">
+      <div class="glow"></div>
+      <div class="kicker">The city's own filing called it a</div>
+      <div class="euph">"computational research&nbsp;facility"</div>
+      <div class="truth">It was a data center.</div>
+      <div class="rule"></div>
+      <div class="foot">⚖︎ <b>Gavel</b> — the Slack agent that reads City Hall so you don't have to</div>
+    </div>
+
+    <!-- CONCEPT B — same file, two records -->
+    <div class="card b" id="concept-b" style="display:none">
+      <div class="split">
+        <div class="half left">
+          <img src="../assembly/assets/legistar-calendar.png" />
+          <div class="tag">CITY HALL<br />“Minutes: not available.”</div>
+        </div>
+        <div class="divider"></div>
+        <div class="half right">
+          <img src="assets/card.png" />
+          <div class="tag">GAVEL<br />Plain English. And Spanish.</div>
+        </div>
+      </div>
+      <div class="banner">
+        <div class="big">Same vote. <em>One of them is readable.</em></div>
+        <div class="sub">⚖︎ <b>Gavel</b> — a Slack agent for your neighborhood</div>
+      </div>
+    </div>
+  </body>
+</html>

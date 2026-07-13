@@ -15,7 +15,8 @@ const tok = process.env.SLACK_BOT_TOKEN;
 const existingCanvasId = process.argv[2];
 
 // Demo/seeded channels whose members should be able to read the guide.
-const SHARE_CHANNELS = ['C0BAPMK6HE2']; // #clarke-square (add more as needed)
+// #general is the demo channel judges land in; #clarke-square is the Spanish one.
+const SHARE_CHANNELS = ['C0B8KS5VCCC', 'C0BAPMK6HE2'];
 
 const MARKDOWN = `# Gavel — User Guide
 
@@ -23,12 +24,30 @@ const MARKDOWN = `# Gavel — User Guide
 
 This guide is organized by who you are.
 
-## Judges & first-time testers — start here
-A 2-minute path that shows the whole thing:
-1. Open a seeded channel — *#clarke-square* (Spanish) or *#sherman-park*. Scroll up: Gavel has already posted plain-English/Spanish **alerts** about real Milwaukee agenda items, each with a *"How to be heard"* footer.
-2. Type \`/gavel help\` — a role-aware guide opens; switch personas with the buttons.
-3. Ask in a thread — *"what did the committee say about the Punta Cana license?"* → real quote + who said it + a ▶ timestamped clip.
-4. \`/gavel video\` lists searchable footage; \`/gavel stories\` ranks what's newsworthy.
+## 🧪 Judges & first-time testers — start here
+
+**The 60-second path.** It follows the demo video, and every answer below is generated live — nothing is canned. Each step hits a *different* memory, so doing all five tours the whole agent.
+
+**1. See the alert nobody asked for.** Open *#general*. Gavel posted a bilingual card about a real item on the **July 20 City Plan Commission** agenda: a data center in the old Midtown Walmart (File #260030). Plain English, Spanish, the hearing date, and the local reporting — all on one card.
+
+**2. Ask the question that shows what's different.** *Reply directly in that card's thread* (or hit 💬 **Ask Gavel** first — either works):
+> *Didn't we already push back on this?*
+
+It answers with the **official record** *and* **what this neighborhood already said** — pulled live from your own Slack history through the **Real-Time Search API**, and never stored. That's the whole design: Gavel indexes the public record and queries the private one live.
+
+**3. Ask who's actually behind it.** In the same thread:
+> *Who owns 5825 W Hope Ave?*
+
+→ **AFS Milwaukee LLC**, straight from the city's property record via our custom Milwaukee Civic MCP server.
+
+**4. Ask what they *said*, not what they filed.** Milwaukee publishes meeting *video*, not transcripts — so what's said in the room is effectively unsearchable:
+> *What did the Plan Commission actually call it on June 29?*
+
+Gavel searches its transcript of the hearing. (Watch it decline to put words in commissioners' mouths when the record doesn't support it — that's deliberate.)
+
+**5. Close the loop — act.** Hit ✍️ **Make my voice heard** on the card. Gavel drafts your public comment; you edit it and send it. 🧪 **Demo mode: it goes to a test inbox, never a real city clerk.**
+
+**Other ways in:** DM Gavel · @mention it in any channel · open it from the sidebar for the **App Home** (there's a test script at the top) · the assistant thread opens with four one-click prompts · \`/gavel help\` for the full command list.
 
 ## If you're a resident or neighborhood association
 *Know what's coming to your block before it's decided — and how to be heard.*
