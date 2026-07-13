@@ -32,13 +32,39 @@ export function videoMomentDeepLink(eventMedia, startSeconds, { subdomain = DEFA
 
 /**
  * Granicus's archive MP4 honors HTTP range requests; its HLS endpoint is throttled to ~0.45x
- * realtime and its player-page downloader breaks. Map a resolved stream URL to the direct MP4 so
- * ffmpeg can seek straight to the moment instead of streaming everything before it.
+ * realtime. Map a resolved stream URL to the direct MP4 so ffmpeg can seek straight to the moment
+ * instead of streaming everything before it.
  * @returns {string|null} the direct MP4 URL, or null when the stream URL isn't a Granicus archive
  */
 export function archiveMp4Url(streamUrl) {
   const archive = String(streamUrl ?? '').match(/mp4:archive\/([^/]+)\/([^/]+\.mp4)/);
   return archive ? `https://archive-video.granicus.com/${archive[1]}/${archive[2]}` : null;
+}
+
+/**
+ * The player page (after redirects) names the archive MP4 outright. Scraping it is how we avoid
+ * yt-dlp entirely: its Granicus extractor fails intermittently with "No video formats found", which
+ * is not something to hang a resident's request on.
+ * @returns {string|null} the direct MP4 URL, or null when the page doesn't name one
+ */
+export function extractArchiveMp4(html) {
+  const found = String(html ?? '').match(/archive-video\.granicus\.com\/[^"'\s<>\\]+\.mp4/);
+  return found ? `https://${found[0]}` : null;
+}
+
+/**
+ * Resolve a Granicus clip id to its range-seekable archive MP4 by reading the player page.
+ * @param {{fetchFn?:typeof fetch}} deps
+ */
+export async function resolveArchiveMp4(eventMedia, { fetchFn = fetch, subdomain = DEFAULT_SUBDOMAIN } = {}) {
+  const res = await fetchFn(mediaPlayerUrl(eventMedia, subdomain), {
+    headers: { 'User-Agent': BROWSER_UA },
+    redirect: 'follow',
+  });
+  if (!res.ok) throw new Error(`Granicus player page returned ${res.status} for clip ${eventMedia}`);
+  const mp4Url = extractArchiveMp4(await res.text());
+  if (!mp4Url) throw new Error(`the Granicus player page for clip ${eventMedia} names no archive MP4`);
+  return mp4Url;
 }
 
 /**
@@ -84,15 +110,9 @@ export function buildClipArgs({ mp4Url, startSeconds, durationSeconds = DEFAULT_
  */
 export async function clipVideoMoment(
   { eventMedia, startSeconds, durationSeconds, outPath, subdomain = DEFAULT_SUBDOMAIN },
-  { run },
+  { run, fetchFn = fetch },
 ) {
-  const { stdout } = await run('yt-dlp', ['--no-warnings', '-g', mediaPlayerUrl(eventMedia, subdomain)]);
-  const mp4Url = archiveMp4Url(
-    String(stdout ?? '')
-      .trim()
-      .split('\n')[0],
-  );
-  if (!mp4Url) throw new Error(`could not resolve an archive MP4 for Granicus clip ${eventMedia}`);
+  const mp4Url = await resolveArchiveMp4(eventMedia, { fetchFn, subdomain });
   await run('ffmpeg', buildClipArgs({ mp4Url, startSeconds, durationSeconds, outPath }));
   return outPath;
 }

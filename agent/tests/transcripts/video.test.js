@@ -6,6 +6,7 @@ import {
   buildClipArgs,
   buildUploadParams,
   clipVideoMoment,
+  extractArchiveMp4,
   granicusMediaUrl,
   uploadClipToSlack,
   videoMomentDeepLink,
@@ -61,32 +62,44 @@ test('a short item still gets a sane minimum clip length', () => {
   assert.match(args.join(' '), /-t 30/); // floored to 30s
 });
 
-test('clipVideoMoment resolves the archive URL, then range-fetches the window with ffmpeg', async () => {
+const PLAYER_HTML = `<html><script>var src="https://archive-video.granicus.com/milwaukee/milwaukee_adc29e9d-892b-4908-b1d6-7ae1f63bfd19.mp4";</script></html>`;
+
+test('extractArchiveMp4 pulls the archive MP4 straight out of the player page', () => {
+  assert.equal(
+    extractArchiveMp4(PLAYER_HTML),
+    'https://archive-video.granicus.com/milwaukee/milwaukee_adc29e9d-892b-4908-b1d6-7ae1f63bfd19.mp4',
+  );
+  assert.equal(extractArchiveMp4('<html>no video here</html>'), null);
+});
+
+test('clipVideoMoment resolves via the player page (no yt-dlp) then range-fetches with ffmpeg', async () => {
   const calls = [];
   const out = await clipVideoMoment(
     { eventMedia: 5226, startSeconds: 1466, durationSeconds: 90, outPath: '/tmp/clip.mp4' },
     {
       run: async (cmd, args) => {
         calls.push({ cmd, args });
-        return { stdout: `${STREAM_URL}\n` };
+      },
+      fetchFn: async (url) => {
+        assert.match(url, /clip_id=5226/);
+        return { ok: true, text: async () => PLAYER_HTML };
       },
     },
   );
-  assert.equal(calls[0].cmd, 'yt-dlp'); // extractor only
-  assert.match(calls[0].args.join(' '), /-g .*clip_id=5226/);
-  assert.equal(calls[1].cmd, 'ffmpeg'); // ffmpeg does the ranged fetch
-  assert.match(calls[1].args.join(' '), /-ss 1466/);
-  assert.match(calls[1].args.join(' '), /archive-video\.granicus\.com/);
+  assert.equal(calls.length, 1, 'only ffmpeg is shelled out to — yt-dlp is gone');
+  assert.equal(calls[0].cmd, 'ffmpeg');
+  assert.match(calls[0].args.join(' '), /-ss 1466/);
+  assert.match(calls[0].args.join(' '), /archive-video\.granicus\.com/);
   assert.equal(out, '/tmp/clip.mp4');
 });
 
-test('clipVideoMoment fails loudly when the archive MP4 cannot be resolved', async () => {
+test('clipVideoMoment fails loudly when the player page names no MP4', async () => {
   await assert.rejects(
     clipVideoMoment(
       { eventMedia: 99, startSeconds: 10, outPath: '/tmp/c.mp4' },
-      { run: async () => ({ stdout: 'https://example.com/not-granicus.m3u8' }) },
+      { run: async () => {}, fetchFn: async () => ({ ok: true, text: async () => '<html>nothing</html>' }) },
     ),
-    /could not resolve an archive MP4/,
+    /names no archive MP4/,
   );
 });
 
