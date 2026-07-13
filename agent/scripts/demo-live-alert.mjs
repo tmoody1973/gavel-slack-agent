@@ -52,7 +52,9 @@ const card = buildAlertCard({
   event: { date: '2026-07-20', time: '1:30 PM', location: 'City Hall, Room 201-B' },
   summary,
   footer: buildFooter({ date: '2026-07-20', time: '1:30 PM', location: 'City Hall, Room 201-B' }, null),
-  language: 'en',
+  // 'es' renders the bilingual card (EN section · divider · ES section) — the demo thesis.
+  // 'en' would drop the Spanish half entirely.
+  language: 'es',
   newsLinks,
 });
 

@@ -95,7 +95,8 @@ Every live shot shows the same three things. **Let them play — do not cut them
 ### 🖥️ SHOT 7 — ⭐ ACT: file the comment (live) · ~28s
 1. In `#clarke-square` (Spanish) or the thread, ask **in Spanish**: `¿Qué significa esto para nuestro barrio?`
    → Gavel answers **in Spanish.** Let it stream.
-2. Click **`✍️ Make my voice heard`**.
+2. Click the CTA button. ⚠️ On a Spanish/bilingual card it reads **`✍️ Haz oír tu voz`** — *not*
+   "Make my voice heard." Same button, same modal.
 3. Modal opens on **"✨ Gavel is drafting your comment…"** → **wait** → the real draft swaps in.
 4. Pick a position, **edit a word or two** (proves the human is in the loop), type a name.
 5. **Send to the city.**
