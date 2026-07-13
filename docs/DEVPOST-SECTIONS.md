@@ -149,3 +149,41 @@ The other direction is reporters. Everything a neighborhood association needs is
 under-resourced newsroom needs, except they need it across every committee at once instead of one
 block. Watchlists, a weekly digest, a way to be told when a long-running story comes back to committee.
 Milwaukee has lost a lot of local coverage. The meetings didn't stop.
+
+---
+
+## Built With
+
+_Paste the tags into Devpost's "Built With" field. Judges check this field to confirm track
+eligibility, so the three qualifying technologies are listed first and by their exact names._
+
+**Slack Real-Time Search (RTS) API** · **Model Context Protocol (MCP)** · **Slack AI / agent surface**
+· slack-bolt · socket-mode · anthropic-claude · claude-agent-sdk · convex · deepgram · elevenlabs ·
+fly.io · node.js · javascript · legistar-api · ckan · census-geocoder · ffmpeg · playwright · biome
+
+### How each qualifying technology is actually used
+
+**Real-Time Search API.** `community-memory/rts-client.js` calls `assistant.search.context` directly,
+with a user token carrying `search:read.public`. This is what lets Gavel answer "didn't we already push
+back on this?" with the neighborhood's own words. It is also the reason we can promise the community's
+messages are never stored: Gavel queries them live at the moment you ask and keeps nothing. Take RTS
+away and the agent either goes deaf to its own neighborhood or starts warehousing people's
+conversations. The whole architecture is shaped around not having to make that choice.
+
+**MCP.** Three servers are registered in `buildAgentOptions()`:
+
+- `milwaukee-civic` — **an MCP server we wrote**, not one we consumed. It wraps Milwaukee's Legistar
+  API plus the city's open property, permit, and zoning data, and exposes them as agent tools. It is
+  open source, and it is parameterized by city, so it works for the roughly 300 municipalities running
+  Legistar. This is the piece that outlives the hackathon.
+- `community-memory` — an SDK MCP server that wraps the RTS call above as a tool the agent can reach
+  for on its own.
+- `slack-mcp` — Slack's hosted MCP server over HTTP, used as the fallback search path when RTS is
+  unavailable.
+
+**Slack AI / agent surface.** Gavel is built as an agent, not a bot that posts messages.
+`assistant_thread_started` fires `setSuggestedPrompts` with four one-click questions, each one hitting
+a different memory. `setStatus` drives the visible "Thinking…" tool trace while it works, and
+`sayStream` streams the answer in word by word rather than dropping a finished block. Receipts (the
+sources it grounded on) attach underneath. It also handles `app_mention` and DMs, and reply-in-thread
+on any of its own messages.
