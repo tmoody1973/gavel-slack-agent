@@ -41,9 +41,11 @@ cd /Users/tarikmoody/Documents/Projects/gavel-slack-agent/agent && npx convex co
 - [ ] **Step 2: Deploy**
 
 ```bash
-cd /Users/tarikmoody/Documents/Projects/gavel-slack-agent/agent && fly deploy -a gavel-app
+# ⚠️ NOT `-a gavel-app` from agent/ — agent/fly.toml is the POLLER config and -a only renames
+# the target; it would replace the Bolt agent with supercronic and downsize 4GB→256MB.
+cd /Users/tarikmoody/Documents/Projects/gavel-slack-agent && fly deploy -c fly.app.toml --remote-only
 ```
-Expected: deploy completes; machines restart.
+Expected: deploy completes; machines restart at shared-cpu-2x:4096MB.
 
 - [ ] **Step 3: Verify settled**
 
