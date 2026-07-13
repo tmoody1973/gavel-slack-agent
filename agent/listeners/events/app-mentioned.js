@@ -1,6 +1,7 @@
 import { runAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
+import { THINKING_STATUS } from './status.js';
 
 /**
  * Handle app_mention events and run the agent.
@@ -25,17 +26,7 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
       return;
     }
 
-    // Set assistant thread status with loading messages
-    await setStatus({
-      status: 'Thinking\u2026',
-      loading_messages: [
-        'Teaching the hamsters to type faster\u2026',
-        'Untangling the internet cables\u2026',
-        'Consulting the office goldfish\u2026',
-        'Polishing up the response just for you\u2026',
-        'Convincing the AI to stop overthinking\u2026',
-      ],
-    });
+    await setStatus(THINKING_STATUS);
 
     // Get session ID for conversation context
     const existingSessionId = sessionStore.getSession(channelId, threadTs);

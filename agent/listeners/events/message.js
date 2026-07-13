@@ -1,6 +1,7 @@
 import { runAgent } from '../../agent/index.js';
 import { primeStore, sessionStore } from '../../thread-context/index.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
+import { THINKING_STATUS } from './status.js';
 
 /**
  * @param {import('@slack/types').MessageEvent} event
@@ -52,17 +53,7 @@ export async function handleMessage({ client, context, event, logger, say, saySt
     const prime = existingSessionId ? null : primeStore.getSession(channelId, threadTs);
     const prompt = prime ? `${prime}\n\nUser question: ${text}` : text;
 
-    // Set assistant thread status with loading messages
-    await setStatus({
-      status: 'Thinking\u2026',
-      loading_messages: [
-        'Teaching the hamsters to type faster\u2026',
-        'Untangling the internet cables\u2026',
-        'Consulting the office goldfish\u2026',
-        'Polishing up the response just for you\u2026',
-        'Convincing the AI to stop overthinking\u2026',
-      ],
-    });
+    await setStatus(THINKING_STATUS);
 
     // Run the agent with deps for tool access
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken };
