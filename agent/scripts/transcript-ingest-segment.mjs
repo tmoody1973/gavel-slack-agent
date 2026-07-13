@@ -26,6 +26,10 @@ import { granicusMediaUrl } from '../transcripts/video.js';
 import { embedTexts } from '../zoning/embed.js';
 
 const run = promisify(execFile);
+
+// Granicus's archive CDN 403s a bare ffmpeg; it wants a browser UA.
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
 const LEGISTAR = 'https://webapi.legistar.com/v1/milwaukee';
 const UA = { 'User-Agent': 'GavelCivicAgent/0.1 (tarik@radiomilwaukee.org)' };
 
@@ -68,16 +72,34 @@ async function main() {
   console.log('  downloading audio segment…');
   rmSync('/tmp/t_seg.mp4', { force: true });
   rmSync('/tmp/t_seg.wav', { force: true });
-  await run('yt-dlp', [
-    '--no-warnings',
-    '--quiet',
-    '--download-sections',
-    `*${startSeconds}-${endSeconds}`,
-    '-o',
-    '/tmp/t_seg.mp4',
-    granicusMediaUrl(eventMedia),
+  // Granicus throttles its HLS endpoint to ~0.45x realtime, so streaming down to a deep offset
+  // cost minutes and its player-page downloader is brittle. The archive MP4 honors HTTP range
+  // requests, so ffmpeg seeks straight to startSeconds — a 20-minute window lands in ~13s.
+  // yt-dlp is used ONLY to resolve the archive URL; ffmpeg does the ranged fetch.
+  const { stdout: resolved } = await run('yt-dlp', ['--no-warnings', '-g', granicusMediaUrl(eventMedia)]);
+  const archive = resolved.trim().split('\n')[0].match(/mp4:archive\/([^/]+)\/([^/]+\.mp4)/);
+  if (!archive) throw new Error(`could not resolve a direct archive MP4 for clip ${eventMedia}`);
+  const mp4Url = `https://archive-video.granicus.com/${archive[1]}/${archive[2]}`;
+  await run('ffmpeg', [
+    '-nostdin',
+    '-loglevel',
+    'error',
+    '-user_agent',
+    BROWSER_UA,
+    '-ss',
+    String(startSeconds),
+    '-t',
+    String(endSeconds - startSeconds),
+    '-i',
+    mp4Url,
+    '-vn',
+    '-ac',
+    '1',
+    '-ar',
+    '16000',
+    '/tmp/t_seg.wav',
+    '-y',
   ]);
-  await run('ffmpeg', ['-nostdin', '-loglevel', 'error', '-i', '/tmp/t_seg.mp4', '-vn', '-ac', '1', '-ar', '16000', '/tmp/t_seg.wav', '-y']);
 
   console.log('  transcribing (Deepgram Nova-3, diarized)…');
   const raw = await transcribeAudio(readFileSync('/tmp/t_seg.wav'), { apiKey: process.env.DEEPGRAM_API_KEY });
