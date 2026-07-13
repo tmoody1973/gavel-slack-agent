@@ -70,22 +70,37 @@ NNS/WTMJ/CBS58 reporting), posted now because Slack can't backdate.
 
 ---
 
-## BEAT 3 — Who's behind it (1:02–1:22)
+## BEAT 3 — Who's behind it, and what they're calling it (1:02–1:30)
 
-*(Parcel card: **AFS MILWAUKEE LLC · RB2 · $3.5M · open building violation**.)*
+*(Parcel card: **AFS MILWAUKEE LLC · RB2 · $3.5M · open building violation**. Then the transcript
+receipt from the June 29 hearing, with the ▶ deep link.)*
 
 > Residents have been asking one question for months: **who is actually behind this?** The city wouldn't
 > say. It made the news.
 >
-> Gavel just answers it. It pulls the property record live: **AFS Milwaukee, LLC.** Zoned **RB2** —
-> which does **not** permit this by right, so they're asking the city for a **deviation** — and the
-> building is already carrying an **open violation.**
+> Gavel answers it. It pulls the property record live: **AFS Milwaukee, LLC.** Zoned **RB2** — which
+> does **not** permit this by right, so they're asking the city for a **deviation** — and the building is
+> already carrying an **open violation.**
+>
+> And here's the part that tells you everything.
+>
+> **The city's filing never says "data center."**
+>
+> *(bring up the transcript receipt — 24:26 of the June 29 webcast)*
+>
+> It calls it a **"computational research facility."**
+>
+> Gavel pulled that straight out of the meeting audio — the actual words said in the room, with a link
+> to the second they were said. **You cannot search for a thing when nobody will call it by its name.
+> Gavel doesn't need you to know the name.**
 
-**Real:** live MPROP/CKAN + zoning.
+**Real:** live MPROP/CKAN + zoning + a real Deepgram-diarized transcript of the June 29 City Plan
+Commission webcast (EventId 13556), timestamped and deep-linked. **This is the line that lands — do not
+rush it. Pause after "computational research facility."**
 
 ---
 
-## BEAT 4 — The dots nobody connected (1:22–1:40)
+## BEAT 4 — The dots nobody connected (1:30–1:44) — **cut this first if you run long**
 
 *(Both file numbers, same agenda.)*
 
@@ -99,7 +114,7 @@ NNS/WTMJ/CBS58 reporting), posted now because Slack can't backdate.
 
 ---
 
-## BEAT 5 — ACT. The loop closes. (1:40–2:12)
+## BEAT 5 — ACT. The loop closes. (1:44–2:14)
 
 *(A neighbor replies **in Spanish**. Gavel answers in Spanish. Then click **✍️ Make my voice heard**.)*
 
@@ -161,5 +176,8 @@ comment goes to a **test inbox, never a real city clerk.**
 3. The public comment goes to a **test inbox**, never a real clerk.
 
 ## What is NOT in this video (on purpose)
-Story Radar · meeting-video search · watchlists · Sunday digest · App Home · civic-mail digest.
+Story Radar · watchlists · Sunday digest · App Home · civic-mail digest · the full video browser.
 They all ship. They live in the **Devpost text**, one line each. **The video proves one spine.**
+
+*(The meeting transcript appears only as the one receipt in Beat 3 — as evidence for the story, not as
+a feature tour. Don't demo `/gavel video`.)*
