@@ -1,0 +1,2 @@
+{ "name": "gavel-demo-video", "private": true, "type": "module",
+  "dependencies": { "playwright": "^1.49.0" } }
