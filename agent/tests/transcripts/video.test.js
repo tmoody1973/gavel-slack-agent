@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  archiveMp4Url,
   buildClipArgs,
   buildUploadParams,
   clipVideoMoment,
@@ -20,32 +21,63 @@ test('videoMomentDeepLink points the player at the item timestamp (tier 1)', () 
   assert.match(link, /starttime=770/);
 });
 
-test('buildClipArgs requests just the [start, start+duration] section via yt-dlp', () => {
-  const args = buildClipArgs({ eventMedia: 5210, startSeconds: 770, durationSeconds: 90, outPath: '/tmp/c.mp4' });
+const STREAM_URL =
+  'https://archive-stream.granicus.com/OnDemand/_definst_/mp4:archive/milwaukee/milwaukee_adc29e9d-892b-4908-b1d6-7ae1f63bfd19.mp4/chunklist.m3u8';
+
+test('archiveMp4Url maps a resolved HLS stream to the range-seekable archive MP4', () => {
+  assert.equal(
+    archiveMp4Url(STREAM_URL),
+    'https://archive-video.granicus.com/milwaukee/milwaukee_adc29e9d-892b-4908-b1d6-7ae1f63bfd19.mp4',
+  );
+});
+
+test('archiveMp4Url returns null for anything that is not a Granicus archive stream', () => {
+  assert.equal(archiveMp4Url('https://example.com/video.m3u8'), null);
+  assert.equal(archiveMp4Url(undefined), null);
+});
+
+test('buildClipArgs seeks the archive MP4 to [start, start+duration] with a browser UA', () => {
+  const args = buildClipArgs({ mp4Url: 'https://cdn/x.mp4', startSeconds: 770, durationSeconds: 90, outPath: '/tmp/c.mp4' });
   const joined = args.join(' ');
-  assert.match(joined, /--download-sections \*770-860/);
-  assert.match(joined, /-o \/tmp\/c\.mp4/);
-  assert.match(joined, /MediaPlayer\.php\?clip_id=5210/);
+  assert.match(joined, /-ss 770/);
+  assert.match(joined, /-t 90/);
+  assert.match(joined, /-i https:\/\/cdn\/x\.mp4/);
+  assert.match(joined, /-user_agent Mozilla/); // Granicus 403s a bare ffmpeg
+  assert.ok(joined.endsWith('/tmp/c.mp4 -y'), 'writes to the requested path');
 });
 
 test('a short item still gets a sane minimum clip length', () => {
-  const args = buildClipArgs({ eventMedia: 1, startSeconds: 100, durationSeconds: 2, outPath: '/tmp/c.mp4' });
-  assert.match(args.join(' '), /\*100-130/); // floored to 30s
+  const args = buildClipArgs({ mp4Url: 'https://cdn/x.mp4', startSeconds: 100, durationSeconds: 2, outPath: '/tmp/c.mp4' });
+  assert.match(args.join(' '), /-t 30/); // floored to 30s
 });
 
-test('clipVideoMoment invokes the injected runner with yt-dlp + args and returns the path', async () => {
-  let calledWith;
+test('clipVideoMoment resolves the archive URL, then range-fetches the window with ffmpeg', async () => {
+  const calls = [];
   const out = await clipVideoMoment(
-    { eventMedia: 5210, startSeconds: 770, durationSeconds: 90, outPath: '/tmp/clip.mp4' },
+    { eventMedia: 5226, startSeconds: 1466, durationSeconds: 90, outPath: '/tmp/clip.mp4' },
     {
       run: async (cmd, args) => {
-        calledWith = { cmd, args };
+        calls.push({ cmd, args });
+        return { stdout: `${STREAM_URL}\n` };
       },
     },
   );
-  assert.equal(calledWith.cmd, 'yt-dlp');
-  assert.match(calledWith.args.join(' '), /\*770-860/);
+  assert.equal(calls[0].cmd, 'yt-dlp'); // extractor only
+  assert.match(calls[0].args.join(' '), /-g .*clip_id=5226/);
+  assert.equal(calls[1].cmd, 'ffmpeg'); // ffmpeg does the ranged fetch
+  assert.match(calls[1].args.join(' '), /-ss 1466/);
+  assert.match(calls[1].args.join(' '), /archive-video\.granicus\.com/);
   assert.equal(out, '/tmp/clip.mp4');
+});
+
+test('clipVideoMoment fails loudly when the archive MP4 cannot be resolved', async () => {
+  await assert.rejects(
+    clipVideoMoment(
+      { eventMedia: 99, startSeconds: 10, outPath: '/tmp/c.mp4' },
+      { run: async () => ({ stdout: 'https://example.com/not-granicus.m3u8' }) },
+    ),
+    /could not resolve an archive MP4/,
+  );
 });
 
 test('buildUploadParams maps a clip path to files.uploadV2 arguments', () => {
