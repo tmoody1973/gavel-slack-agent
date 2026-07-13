@@ -17,7 +17,8 @@ const COPY = {
     bodyLabel: 'Your comment (edit freely)',
     drafting: ':sparkles: Gavel is drafting your comment… one moment.',
     nameLabel: 'Your name (required for the public record)',
-    addressLabel: 'Your address (optional)',
+    // Slack renders its own "(optional)" hint on optional inputs — don't repeat it in the label.
+    addressLabel: 'Your address',
     demo: (inbox) => `:test_tube: Demo mode — this is sent to a test inbox (${inbox || 'test'}), *not* the city.`,
   },
   es: {
@@ -30,7 +31,7 @@ const COPY = {
     bodyLabel: 'Tu comentario (edítalo libremente)',
     drafting: ':sparkles: Gavel está redactando tu comentario… un momento.',
     nameLabel: 'Tu nombre (requerido para el registro público)',
-    addressLabel: 'Tu dirección (opcional)',
+    addressLabel: 'Tu dirección',
     demo: (inbox) => `:test_tube: Modo demo — se envía a un buzón de prueba (${inbox || 'test'}), *no* a la ciudad.`,
   },
 };
