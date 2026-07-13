@@ -46,14 +46,29 @@ export function buildCommentDraftPrompt({ fileNumber, title, position, language,
   return { system: SYSTEM, prompt: lines.join('\n') };
 }
 
+/** The generate boundary is schema-bound, so ask for the draft in a named field. */
+export const COMMENT_DRAFT_SCHEMA = {
+  type: 'object',
+  properties: { comment: { type: 'string' } },
+  required: ['comment'],
+  additionalProperties: false,
+};
+
 /**
  * Draft the comment via the injected generate boundary. Thin.
+ *
+ * Accepts both shapes the boundary can return: a bare string (test fakes) and the parsed
+ * `{ comment }` object that createClaudeGenerate actually resolves to — it always applies a
+ * json_schema, so it never yields a string. Blindly String()-ing that object rendered a literal
+ * "[object Object]" into the comment modal for every real user.
+ *
  * @param {object} input - same shape as buildCommentDraftPrompt
- * @param {{ generate: (args: {system: string, prompt: string}) => Promise<string> }} deps
+ * @param {{ generate: (args: {system: string, prompt: string}) => Promise<string|{comment: string}> }} deps
  * @returns {Promise<string>}
  */
 export async function draftComment(input, { generate }) {
   const { system, prompt } = buildCommentDraftPrompt(input);
-  const text = await generate({ system, prompt });
+  const out = await generate({ system, prompt });
+  const text = typeof out === 'string' ? out : (out?.comment ?? '');
   return String(text ?? '').trim();
 }

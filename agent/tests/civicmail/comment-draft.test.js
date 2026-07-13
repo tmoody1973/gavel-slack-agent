@@ -53,4 +53,19 @@ describe('draftComment — thin wrapper over the injected generate boundary', ()
     assert.ok(seen.prompt.includes('260030'));
     assert.equal(text, 'Estimada comisión, me opongo...'); // trimmed
   });
+
+  // The real boundary is createClaudeGenerate, which ALWAYS applies a json_schema and therefore
+  // resolves to a parsed object — never a bare string. String(obj) is "[object Object]", which is
+  // exactly what shipped into the comment modal's textarea. Accept the schema'd shape.
+  it('unwraps the {comment} object the schema-bound generate actually returns', async () => {
+    const generate = async () => ({ comment: '  Estimada comisión, me opongo...  ' });
+    const text = await draftComment({ ...baseItem, language: 'es' }, { generate });
+    assert.equal(text, 'Estimada comisión, me opongo...');
+  });
+
+  it('never yields the string "[object Object]"', async () => {
+    const generate = async () => ({ comment: 'Real draft.' });
+    const text = await draftComment({ ...baseItem, language: 'en' }, { generate });
+    assert.doesNotMatch(text, /\[object Object\]/);
+  });
 });

@@ -1,7 +1,7 @@
 import { ConvexHttpClient } from 'convex/browser';
 
 import { enrichForAlert } from '../../alerts/enrich.js';
-import { draftComment } from '../../civicmail/comment-draft.js';
+import { COMMENT_DRAFT_SCHEMA, draftComment } from '../../civicmail/comment-draft.js';
 import { api } from '../../convex/_generated/api.js';
 import { createHomeDeps } from '../../home/deps.js';
 import { createLegistarClient } from '../../poller/legistar.js';
@@ -194,7 +194,10 @@ export function register(app) {
         return null;
       }
     },
-    draftComment: (input) => draftComment(input, { generate: createClaudeGenerate({}) }),
+    // Bind the draft schema explicitly. createClaudeGenerate({}) falls back to the SUMMARY schema,
+    // so the model returned a summary object and the modal rendered "[object Object]".
+    draftComment: (input) =>
+      draftComment(input, { generate: createClaudeGenerate({ schema: COMMENT_DRAFT_SCHEMA }) }),
     send: civicCommentSend,
     recentByUserFile: ({ userId, fileNumber }) =>
       requireConvex(convex).query(api.civicComments.recentByUserFile, { userId, fileNumber }),

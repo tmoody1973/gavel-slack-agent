@@ -51,20 +51,25 @@ const threadMessageCount = (page) => page.locator(`${SEL.threadPane} [data-qa="m
 //  2. Settling on "thread text stopped changing" returns the instant OUR OWN message renders —
 //     long before Gavel starts. Wait for the message COUNT to grow (Gavel's reply arriving), then
 //     let the stream settle.
-async function askInThread(page, question) {
-  const before = await threadMessageCount(page);
+// Wait for Gavel's answer by its CONTENT, not by message count. Slack virtualizes long thread
+// lists, so counting rendered [data-qa="message_container"] nodes under-reports once a thread grows
+// past a handful of replies — the count never reaches the target and the wait times out even though
+// the answer is right there. Every shot therefore names a phrase its real answer must contain.
+async function waitForAnswer(page, expectText, timeoutMs = 260000) {
+  const needle = expectText.toLowerCase();
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const text = await page.locator(SEL.threadPane).innerText().catch(() => '');
+    if (text.toLowerCase().includes(needle)) return;
+    await page.waitForTimeout(1500);
+  }
+  throw new Error(`Gavel's answer never contained "${expectText}" — did the thread get primed?`);
+}
+
+async function askInThread(page, question, expectText) {
   await typeHuman(page, SEL.threadComposer, question);
   await page.keyboard.press('Enter');
-
-  // Our message (+1), then Gavel's reply (+2). Gavel runs a tool loop — give it room.
-  const deadline = Date.now() + 150000;
-  while (Date.now() < deadline) {
-    if ((await threadMessageCount(page)) >= before + 2) break;
-    await page.waitForTimeout(1000);
-  }
-  if ((await threadMessageCount(page)) < before + 2) {
-    throw new Error(`Gavel never replied to "${question}" — is the thread primed via "Ask Gavel"?`);
-  }
+  await waitForAnswer(page, expectText);   // Gavel runs a multi-step tool loop; s5 is the slowest
   await waitForStreamDone(page, SEL.threadPane); // let the answer finish streaming
   await page.waitForTimeout(3000); // receipts settle
 }
@@ -122,25 +127,24 @@ const SHOTS = {
   async s3(page) {
     await openChannel(page, CHANNELS.general);
     await primeAlertThread(page);
-    await askInThread(page, "Didn't we already push back on this?");
+    await askInThread(page, "Didn't we already push back on this?", 'community');
   },
 
   async s4(page) {
     await openChannel(page, CHANNELS.general);
     await primeAlertThread(page);
-    await askInThread(page, 'Who owns 5825 W Hope Ave?');
+    await askInThread(page, 'Who owns 5825 W Hope Ave?', 'AFS');
   },
 
-  // Live transcript find, then click play on the clip in-channel.
+  // ⭐ The live transcript find: Gavel searches the hearing and streams back the quote + ▶ link.
+  // We deliberately do NOT click play on the in-Slack clip here. Playwright records no audio, and
+  // the money shot IS audio — so the assembly cuts to the real clip MP4 (with its own sound) for
+  // playback. Chasing the virtualized <video> node just added a failure mode for nothing.
   async s5(page) {
     await openChannel(page, CHANNELS.general);
     await primeAlertThread(page);
-    await askInThread(page, 'What did the Plan Commission actually call it on June 29?');
-    await page.keyboard.press('Escape'); // close thread pane
-    const clip = page.locator('video, [data-qa="video_player"]').last();
-    await clip.scrollIntoViewIfNeeded();
-    await clickAt(page, 'video, [data-qa="video_player"]');
-    await page.waitForTimeout(14000); // playback runs; assembly cuts to the source MP4 here
+    await askInThread(page, 'What did the Plan Commission actually call it on June 29?', 'computational');
+    await page.waitForTimeout(4000); // hold on the quote + timestamp for the zoom cue
   },
 
   async s6(page) {
@@ -151,21 +155,42 @@ const SHOTS = {
     await page.waitForTimeout(6000);
   },
 
-  // ⭐ Act: Spanish thread answer → modal → edit → send.
+  // ⭐ Act: Spanish thread answer → comment modal → human edits it → sent. The never-cut beat.
   async s7(page) {
     await openChannel(page, CHANNELS.clarkeSquare);
     await primeAlertThread(page);
-    await askInThread(page, '¿Qué significa esto para nuestro barrio?');
-    await clickAt(page, 'button:has-text("Haz oír tu voz")');
-    // Wait for the drafting placeholder to swap into the editable draft.
-    await page.waitForSelector('textarea, [data-qa="texty_single_line_input"]', { timeout: 90000 });
-    await clickAt(page, 'text=En contra'); // position: Oppose
-    await clickAt(page, '[data-qa*="wysiwyg"], textarea');
+    await askInThread(page, '¿Qué significa esto para nuestro barrio?', 'centro de datos');
+    await page.keyboard.press('Escape'); // close the thread pane; the CTA lives on the card
+
+    const card = page.locator('[data-qa="virtual-list-item"]', { hasText: 'Conditional use' }).last();
+    await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    await clickLocator(page, card.locator('button:has-text("Haz oír tu voz")').first());
+
+    // Slack renders more than one [role="dialog"] node; scope to the wizard modal body or a bare
+    // [role="dialog"] locator trips strict mode.
+    const modal = page.locator('[data-qa="wizard_modal_body"]').first();
+    await modal.waitFor({ timeout: 20000 });
+    await page.waitForTimeout(2500); // ✨ "Gavel is drafting your comment…" is on screen — hold on it
+
+    // The drafting placeholder is read-only; the textarea only exists once Claude's draft lands.
+    const body = modal.locator('textarea').first();
+    await body.waitFor({ timeout: 120000 });
+    await page.waitForTimeout(2500); // let the draft be readable before we touch it
+
+    await clickLocator(page, modal.locator('text=En contra').first()); // position: Oppose
+    await clickLocator(page, body);
     await page.keyboard.press('End');
-    await page.keyboard.type(' Gracias.', { delay: 60 }); // the human-in-the-loop edit
-    await typeHuman(page, 'input[type="text"]', 'María López');
-    await clickAt(page, 'button:has-text("Enviar a la ciudad")');
-    await page.waitForTimeout(6000); // confirmation with 🧪 notice
+    await page.keyboard.type(' Gracias por escucharnos.', { delay: 55 }); // human in the loop
+    await page.waitForTimeout(1200);
+
+    await clickLocator(page, modal.locator('input').first()); // "Tu nombre"
+    await page.keyboard.type('María López', { delay: 55 });
+    await page.waitForTimeout(1500); // the 🧪 demo-mode notice is visible here — zoom cue
+
+    // The submit button lives in the modal FOOTER, a sibling of the body.
+    await clickLocator(page, page.locator('button:has-text("Enviar a la ciudad")').first());
+    await page.waitForTimeout(7000); // confirmation
   },
 };
 
