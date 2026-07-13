@@ -34,7 +34,7 @@ Nothing else. Scroll and shoot.
 > Record each as its own file. Name them `shot-1.mov`, `shot-2.mov`… Don't worry about mistakes —
 > reshoot the single shot, not the whole video.
 
-### 🎥 SHOT 1 — Camera: the cold open · ~18s
+### 🎥 SHOT 1 — Camera: the cold open · ~25s
 - **On screen:** you, talking head. No slides, no logo, no terminal.
 - **Action:** none. Just deliver the cold open.
 - **Watch for:** do not say the product name until the last line.
@@ -68,10 +68,10 @@ Nothing else. Scroll and shoot.
 - **⚠️ Honesty:** say *"Gavel clipped this moment out of the webcast"* — **true**. Do **not** imply the
   agent generated it live on request; it was posted ahead of recording (see the script's note).
 
-### 🖥️ SHOT 6 — The dots nobody connected · ~12s — **CUT THIS FIRST IF LONG**
+### 🖥️ SHOT 6 — The fight isn't over · ~14s — **CUT THIS FIRST IF LONG**
 - **On screen:** the July 20 agenda.
-- **Action:** `/gavel search "data center"` → show **#260142** (citywide rules) **and** **#260029/#260030**
-  (this site) on the **same** agenda.
+- **Action:** `/gavel search "data center"` → show **#260142** — the **citywide rules for data centers**,
+  still to be voted on July 20. They beat it on THEIR block; the city-wide rule is still live.
 
 ### 🖥️ SHOT 7 — ⭐ ACT: file the comment · ~28s
 - **On screen:** `#clarke-square` (Spanish) **or** the thread — your call, but Spanish is stronger.
@@ -98,7 +98,7 @@ Nothing else. Scroll and shoot.
 
 | Order | Shot | Runs | Ends at |
 |---|---|---|---|
-| 1 | SHOT 1 — camera cold open | 0:18 | **0:18** |
+| 1 | SHOT 1 — camera cold open | 0:25 | **0:25** |
 | 2 | SHOT 2 — the alert | 0:22 | 0:40 |
 | 3 | SHOT 3 — RTS wow ⭐ | 0:22 | **1:02** ← wow is in by 1:00 ✅ |
 | 4 | SHOT 4 — who owns it | 0:14 | 1:16 |
@@ -117,7 +117,8 @@ Nothing else. Scroll and shoot.
 
 - [ ] Total ≤ **3:00**
 - [ ] The **wow lands before 1:00** (SHOT 3)
-- [ ] All three disclosures said out loud: manual alert trigger · seeded neighbor thread · test inbox
+- [ ] All FOUR disclosures said out loud: manual alert trigger · seeded neighbor thread · test inbox ·
+      the clip was cut by Gavel but posted ahead of recording (not generated live)
 - [ ] No terminal, no code, no IDE anywhere on screen
 - [ ] Upload to YouTube/Vimeo → **open the link in an incognito window, logged out.** If it asks you to
       sign in, it is **private** and the judges cannot watch it.
