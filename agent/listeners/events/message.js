@@ -12,6 +12,35 @@ function isGenericMessageEvent(event) {
 }
 
 /**
+ * Should a channel thread reply engage the agent?
+ *
+ * Engaged sessions and Ask-Gavel primes are the explicit paths. The third case is the one that
+ * decides whether the app feels alive: a reply posted UNDER one of Gavel's own messages — an alert
+ * card, or an answer it already gave — is unambiguously aimed at Gavel. Ignoring it (the old
+ * behavior) meant anyone who simply replied to the card got total silence and reasonably concluded
+ * the agent was broken.
+ *
+ * @param {{session: string|null, prime: string|null, parent: object|undefined, botUserId: string|undefined}} input
+ * @returns {boolean}
+ */
+export function shouldEngageThread({ session, prime, parent, botUserId }) {
+  if (session) return true;
+  if (prime) return true;
+  // Our own message only — another app's bot post in the channel must not pull Gavel into its thread.
+  return Boolean(parent?.bot_id) && Boolean(botUserId) && parent?.user === botUserId;
+}
+
+/** The thread's parent message, or undefined if it can't be read. Never throws. */
+async function fetchThreadParent(client, channel, threadTs) {
+  try {
+    const res = await client.conversations.replies({ channel, ts: threadTs, limit: 1 });
+    return res?.messages?.[0];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Handle messages sent to the agent via DM or in threads the bot is part of.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'message'>} args
  * @returns {Promise<void>}
@@ -29,12 +58,14 @@ export async function handleMessage({ client, context, event, logger, say, saySt
   if (isDm) {
     // DMs are always handled
   } else if (isThreadReply) {
-    // Channel thread replies are handled if the bot is already engaged OR the
-    // thread was primed by the Ask Gavel button (MOO-73).
+    // Channel thread replies engage if the bot is already in the conversation, the thread was
+    // primed by the Ask Gavel button (MOO-73), or the thread hangs off one of Gavel's own messages.
     const replyThreadTs = /** @type {string} */ (event.thread_ts);
     const session = sessionStore.getSession(event.channel, replyThreadTs);
     const prime = primeStore.getSession(event.channel, replyThreadTs);
-    if (session === null && prime === null) return;
+    const parent =
+      session || prime ? undefined : await fetchThreadParent(client, event.channel, replyThreadTs);
+    if (!shouldEngageThread({ session, prime, parent, botUserId: context.botUserId })) return;
   } else {
     // Top-level channel messages are handled by app_mentioned
     return;

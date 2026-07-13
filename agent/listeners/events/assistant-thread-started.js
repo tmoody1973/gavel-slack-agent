@@ -1,9 +1,16 @@
-/** Persona-cut suggested prompts (MOO-75): Denise · Marcos (ES) · Rachel · watch-flavored. */
+/**
+ * The four prompts Slack renders as one-click chips the moment a thread opens.
+ *
+ * These are the product's proof, not a menu: each one lands on a different memory — the community's
+ * (RTS), the property record (MCP), the spoken record (transcripts), and bilingual generation. A
+ * first-time user (or a judge with five minutes) clicks one and immediately sees what Gavel is for.
+ * Generic prompts like "what's happening this week?" return a shrug; these return the real thing.
+ */
 export const SUGGESTED_PROMPTS = [
-  { title: 'My neighborhood this week', message: "What's happening near my neighborhood this week?" },
-  { title: 'En español', message: '¿Qué decisiones está por tomar la ciudad esta semana?' },
-  { title: 'Vote record', message: 'Show me the vote record on a file' },
-  { title: "This channel's watches", message: "What's new on the things this channel watches?" },
+  { title: 'Did we push back already?', message: "Didn't we already push back on the Midtown Walmart data center?" },
+  { title: 'Who owns this parcel?', message: 'Who owns 5825 W Hope Ave?' },
+  { title: 'What did they SAY?', message: 'What did the Plan Commission actually call it on June 29?' },
+  { title: 'En español', message: '¿Qué significa el proyecto del antiguo Walmart para nuestro barrio?' },
 ];
 
 /**

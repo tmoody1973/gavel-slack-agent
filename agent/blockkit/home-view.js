@@ -7,6 +7,46 @@ import { meetingVideoSection } from './video-modal.js';
 
 const mrkdwn = (text) => ({ type: 'section', text: { type: 'mrkdwn', text } });
 
+/**
+ * "Try me in 60 seconds" — the first thing anyone new sees on the Home tab.
+ *
+ * App Home is the only Slack surface that renders unprompted (views.publish needs no trigger_id),
+ * so it is the one place we can hand a first-time visitor a script before they've clicked anything.
+ * Each step exercises a DIFFERENT memory — community (RTS), property record (MCP), spoken record
+ * (transcripts), bilingual generation — so following it end to end tours the whole agent.
+ *
+ * Deliberately handler-free: text and a channel link, no new action_ids. Nothing here can break.
+ */
+function tryMeBlocks(language) {
+  if (language === 'es') {
+    return [
+      { type: 'header', text: { type: 'plain_text', text: '🧪 ¿Nuevo aquí? Pruébame en 60 segundos', emoji: true } },
+      mrkdwn(
+        '*1.* Abre <#C0B8KS5VCCC|general> y busca la alerta de Gavel sobre el antiguo Walmart.\n' +
+          '*2.* *Responde en el hilo* de esa tarjeta (o pulsa 💬 *Ask Gavel*) y pregunta:\n' +
+          '>_¿Qué significa esto para nuestro barrio?_\n' +
+          '*3.* Pregunta *quién está detrás*: `¿Quién es el dueño de 5825 W Hope Ave?`\n' +
+          '*4.* Pulsa ✍️ *Haz oír tu voz* — Gavel redacta tu comentario público. Tú lo editas. 🧪 Modo demo: va a un buzón de prueba, nunca a la ciudad.',
+      ),
+      { type: 'divider' },
+    ];
+  }
+  return [
+    { type: 'header', text: { type: 'plain_text', text: '🧪 New here? Test me in 60 seconds', emoji: true } },
+    mrkdwn(
+      "*1.* Open <#C0B8KS5VCCC|general>. Gavel posted an alert there — nobody asked it to.\n" +
+        '*2.* *Reply in that card’s thread* (or hit 💬 *Ask Gavel*) with the question that shows what makes this different:\n' +
+        '>_Didn’t we already push back on this?_\n' +
+        '_It answers with the official record **and** what this neighborhood already said — queried live through Slack’s Real-Time Search API, and never stored._\n' +
+        '*3.* Follow up with `Who owns 5825 W Hope Ave?` → the live property record.\n' +
+        '*4.* Then ask `What did the Plan Commission actually call it on June 29?` → it searches the *meeting transcript*. Milwaukee publishes the video, not the words.\n' +
+        '*5.* Hit ✍️ *Make my voice heard* → Gavel drafts your public comment. You edit it. 🧪 Demo mode: it goes to a test inbox, never a real city clerk.',
+    ),
+    mrkdwn('_You can also just DM me, or @mention me in any channel I’m in._'),
+    { type: 'divider' },
+  ];
+}
+
 const plural = (count, singular, pluralForm = `${singular}s`) => (count === 1 ? singular : pluralForm);
 
 const STRIP_COPY = {
@@ -36,6 +76,7 @@ export function homeView({ strip, watches, channels, discover = [], storyLeads =
   const hasReporter = channels.some((c) => c.role === 'reporter');
 
   const blocks = [
+    ...tryMeBlocks(language),
     { type: 'header', text: { type: 'plain_text', text: '🏛️ Gavel — your civic week', emoji: true } },
     mrkdwn((STRIP_COPY[language] ?? STRIP_COPY.en)(strip)),
     { type: 'divider' },
