@@ -72,8 +72,8 @@ NNS/WTMJ/CBS58 reporting), posted now because Slack can't backdate.
 
 ## BEAT 3 — Who's behind it, and what they're calling it (1:02–1:36) ⭐ THE MONEY SHOT
 
-*(Parcel card: **AFS MILWAUKEE LLC · RB2 · $3.5M · open building violation**. Then the transcript
-receipt from the June 29 hearing, with the ▶ deep link.)*
+*(Parcel card: **AFS MILWAUKEE LLC · RB2 · $3.5M · open building violation**. Then scroll to the
+**video clip already sitting in the channel** and press play.)*
 
 > Residents have been asking one question for months: **who is actually behind this?** The city wouldn't
 > say. It made the news.
@@ -111,7 +111,7 @@ COMMISSION — moment at 00:24:15."* Confirm it plays inline before you roll.
 
 ---
 
-## BEAT 4 — The dots nobody connected (1:30–1:44) — **cut this first if you run long**
+## BEAT 4 — The dots nobody connected (1:36–1:48) — **cut this first if you run long**
 
 *(Both file numbers, same agenda.)*
 
@@ -125,7 +125,7 @@ COMMISSION — moment at 00:24:15."* Confirm it plays inline before you roll.
 
 ---
 
-## BEAT 5 — ACT. The loop closes. (1:44–2:14)
+## BEAT 5 — ACT. The loop closes. (1:48–2:16)
 
 *(A neighbor replies **in Spanish**. Gavel answers in Spanish. Then click **✍️ Make my voice heard**.)*
 
