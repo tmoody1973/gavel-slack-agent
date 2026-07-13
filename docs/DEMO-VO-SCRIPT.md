@@ -99,9 +99,18 @@ NNS/WTMJ/CBS58 reporting), posted now because Slack can't backdate.
 > **You can't search for a thing when nobody will call it by its name. Gavel doesn't need you to know
 > the name.**
 
-**Real, and this is the money shot:** an actual **MP4 clip of the June 29 City Plan Commission**, cut from
-the Granicus webcast at the exact second, **playing inline in Slack** (`files.uploadV2`). Backed by a real
-Deepgram-diarized transcript (EventId 13556). Nothing staged, nothing cached.
+**Real:** the footage is genuine — an actual MP4 of the **June 29 City Plan Commission**, cut from the
+Granicus webcast at the exact second by **Gavel's own clipping pipeline**, playing inline in Slack
+(`files.uploadV2`), backed by a real Deepgram-diarized transcript (EventId 13556).
+
+**⚠️ SAY IT ACCURATELY.** Gavel *cut* this clip — but it was **posted ahead of the recording**, not
+generated live in response to a question. The `clip_video_moment` tool is built, tested and deployed, but
+**Granicus 403s our cloud host's IP for media files** (verified: 403 from Fly, 206 from a residential IP —
+every header combination), so in the deployed app it **degrades to a timestamped deep link**. That
+degrade is real and it's in the video's favour — it's what an honest agent does.
+
+- ✅ Safe to say: *"Gavel clipped this moment out of the webcast."* — true.
+- ❌ Do **not** say or imply: *"watch Gavel generate this clip live for me right now."* — it didn't.
 
 **Direction:** let the clip play. **Do not talk over it.** Then land "computational research facility"
 and **pause.** This is the beat a judge repeats to another judge.

@@ -74,6 +74,13 @@ Say this plainly — most submissions can't.
 4. Meeting-video **transcription is batch-ingested** (Deepgram bills per hour of audio), so a subset of
    meetings are transcript-searchable; discovery covers all of them.
 
+5. **On-demand video clipping degrades in the deployed app.** Gavel can cut the real footage out of a
+   webcast and post it playing inline in Slack (`clip_video_moment`, built + tested + deployed). But
+   Granicus **403s our cloud host's IP for media files** (verified: 403 from Fly, 206 from a residential
+   IP, every header combination), so in production the agent **degrades to a timestamped deep link plus
+   real transcript quotes** rather than failing. Clips in the demo were cut by the same pipeline from a
+   non-blocked network. Fixing it means an allowed egress or caching clips at ingest — not header tuning.
+
 ---
 
 ## Reach / "why this isn't just Milwaukee"

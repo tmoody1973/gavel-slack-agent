@@ -54,6 +54,14 @@ export function extractArchiveMp4(html) {
 
 /**
  * Resolve a Granicus clip id to its range-seekable archive MP4 by reading the player page.
+ *
+ * KNOWN LIMITATION (verified 2026-07-12): Granicus serves this page to anyone, but 403s the archive
+ * MP4 itself when the request comes from a datacenter IP — every header combination (UA, Referer,
+ * none) returns 403 from Fly, while the identical request from a residential IP returns 206. So
+ * `clip_video_moment` works from the ingest host but degrades to a timestamped deep link in the
+ * deployed app. Don't spend another night on headers; it is an IP block. Fixing it means fetching
+ * the media through an allowed egress (or caching clips at ingest), not more request tuning.
+ *
  * @param {{fetchFn?:typeof fetch}} deps
  */
 export async function resolveArchiveMp4(eventMedia, { fetchFn = fetch, subdomain = DEFAULT_SUBDOMAIN } = {}) {
