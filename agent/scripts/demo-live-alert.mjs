@@ -29,6 +29,13 @@ const CHANNEL = process.env.DEMO_CHANNEL_ID || 'C0B8KS5VCCC';
 const UA = 'GavelCivicAgent/0.1 (contact tarik@radiomilwaukee.org)';
 const TITLE = 'Conditional use for a data center at the former Midtown Walmart, 5825 W Hope Ave';
 
+// The card's Watch / History / Ask Gavel buttons carry `String(row.eventItemId)` as their value,
+// and their handlers look that up in detectedAgendaItems. Without it the value is "undefined",
+// every button throws `no detectedAgendaItems row`, and the card is a dead end — you can't open a
+// primed thread, so the agent never answers. This is the REAL poller-detected row for File #260030
+// (matterId 73825, the July 20 City Plan Commission item).
+const EVENT_ITEM_ID = 492078;
+
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
 const convex = new ConvexHttpClient(process.env.CONVEX_URL);
 
@@ -47,7 +54,13 @@ const news = createNewsService({
 const newsLinks = await news.enrichForAlert({ fileNumber: FILE, title: TITLE, addresses: ['5825 W Hope Ave'] });
 
 const card = buildAlertCard({
-  row: { title: TITLE, eventBodyName: 'CITY PLAN COMMISSION', walkOnFlag: false, consentFlag: false },
+  row: {
+    eventItemId: EVENT_ITEM_ID,
+    title: TITLE,
+    eventBodyName: 'CITY PLAN COMMISSION',
+    walkOnFlag: false,
+    consentFlag: false,
+  },
   matter: { fileNumber: FILE },
   event: { date: '2026-07-20', time: '1:30 PM', location: 'City Hall, Room 201-B' },
   summary,
@@ -70,5 +83,13 @@ console.log(`ready (${newsLinks.length} news links).`);
 console.log('\n>>> SWITCH TO SLACK NOW. Posting in 5 seconds… <<<\n');
 await new Promise((r) => setTimeout(r, 5000));
 
-const res = await slack.chat.postMessage({ channel: CHANNEL, text: card.text, blocks: card.blocks });
+// No unfurls: the news links are already rendered inside the card, and Slack's auto-unfurl
+// stacks three redundant "Google News" previews underneath it — noise, on camera.
+const res = await slack.chat.postMessage({
+  channel: CHANNEL,
+  text: card.text,
+  blocks: card.blocks,
+  unfurl_links: false,
+  unfurl_media: false,
+});
 console.log(`posted ts=${res.ts}`);

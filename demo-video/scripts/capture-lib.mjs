@@ -13,7 +13,7 @@ export const CHANNELS = { general: 'C0B8KS5VCCC', clarkeSquare: 'C0BAPMK6HE2' };
 export const SEL = {
   composer: '[data-qa="message_input"] .ql-editor',
   threadPane: '[data-qa="threads_flexpane"]',
-  threadComposer: '[data-qa="threads_flexpane"] [data-qa="message_input"] .ql-editor',
+  threadComposer: '[data-qa="threads_flexpane"] .ql-editor',
   messageActions: '[data-qa="message_actions"]',
   replyInThread: '[data-qa="start_thread"]',
   browserContinue: 'text=use Slack in your browser',
@@ -27,7 +27,11 @@ const CURSOR_INIT = `
       box-shadow:0 1px 6px rgba(0,0,0,.4);z-index:2147483647;pointer-events:none;
       transform:translate(-50%,-50%);transition:left .12s ease-out,top .12s ease-out}
     #hf-cursor.click{animation:hfring .45s ease-out}
-    @keyframes hfring{0%{box-shadow:0 0 0 0 rgba(64,158,255,.75)}100%{box-shadow:0 0 0 26px rgba(64,158,255,0)}}\`;
+    @keyframes hfring{0%{box-shadow:0 0 0 0 rgba(64,158,255,.75)}100%{box-shadow:0 0 0 26px rgba(64,158,255,0)}}
+    /* Slack's promo/sandbox chrome — hidden outright. Clicking the X is unreliable and they
+       reappear on navigation; on camera they are pure noise. */
+    [data-qa="sandbox_banner"],[data-qa="banner"],[data-qa="sidebar_promo"],
+    .p-sandbox_banner,.p-ia4_top_nav_banner,[class*="sandbox_banner"]{display:none !important}\`;
   document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
     const dot = document.createElement('div'); dot.id = 'hf-cursor'; document.body.appendChild(dot);
@@ -58,6 +62,23 @@ async function setCursor(page, x, y, click = false) {
   );
 }
 
+// Slack's promo banners ("Explore AI in Slack", the Slackbot AI-features bar) sit in frame on
+// every shot. Dismiss them before recording matters. Best-effort — never fail a capture on chrome.
+export async function dismissBanners(page) {
+  const closers = [
+    '[data-qa="sidebar_promo"] button[aria-label*="lose"]',
+    'button[aria-label="Close"]',
+    '[data-qa="banner"] button[aria-label*="ismiss"]',
+    '[data-qa="banner_close_button"]',
+  ];
+  for (const sel of closers) {
+    for (const btn of await page.locator(sel).all().catch(() => [])) {
+      await btn.click({ timeout: 1500 }).catch(() => {});
+    }
+  }
+  await page.waitForTimeout(500);
+}
+
 export async function moveTo(page, target) {
   const box = typeof target === 'string' ? await page.locator(target).first().boundingBox() : null;
   const x = box ? box.x + box.width / 2 : target.x;
@@ -75,8 +96,31 @@ export async function clickAt(page, target) {
   await page.waitForTimeout(300);
 }
 
+// Click a Locator with Playwright's own actionability (auto-wait, scroll, hover preserved),
+// while still driving the visible cursor dot. Required for hover-revealed controls like Slack's
+// message-actions toolbar: a synthetic mouse path can drift off the message and hide the toolbar
+// before the click lands.
+export async function clickLocator(page, locator) {
+  const box = await locator.boundingBox();
+  if (box) {
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await setCursor(page, x, y);
+    await page.waitForTimeout(200);
+    await setCursor(page, x, y, true);
+  }
+  await locator.click();
+  await page.waitForTimeout(300);
+}
+
+// Focus a composer and type. MUST scroll the target into view first: the alert card is tall enough
+// to push the thread composer below the fold, and a raw mouse click at an off-viewport coordinate
+// silently does nothing — focus stays in the main channel composer and the message posts publicly.
 export async function typeHuman(page, selector, text) {
-  await clickAt(page, selector);
+  const target = page.locator(selector).first();
+  await target.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  await clickLocator(page, target);
   await page.keyboard.type(text, { delay: 45 });
 }
 
