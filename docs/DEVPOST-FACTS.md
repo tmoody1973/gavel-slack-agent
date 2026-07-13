@@ -35,8 +35,12 @@ Answer these in your own words, in this order. Don't be clever — be clear.
 - Residents **could not find out who was behind it.** The owner is **AFS Milwaukee, LLC** — Gavel pulls
   that from the property record in seconds.
 - **May 18:** pulled from the agenda after residents objected.
-  **June 29:** heard at Plan Commission → **HELD IN COMMITTEE.**
-  **July 20:** back on the agenda. *(All three verifiable in Legistar.)*
+  **June 29:** 7-hour hearing → Plan Commission **punts** the decision.
+  **July 6-8:** the developer **DROPS the data center** after resident pushback (Urban Milwaukee, WISN, TMJ4).
+  **July 20:** the redevelopment AND the **citywide data-center rules (#260142)** are still on the agenda.
+  *(All verifiable in Legistar + the press.)*
+- **The residents WON — and they had to do it in the dark.** That is the Agent-for-Good story: not "here is
+  a threat," but "here is a community that beat one, and the tool that makes the win repeatable."
 - Clarke Square is a heavily **Spanish-speaking** neighborhood. The city publishes in English only.
 - Gavel turns that into: **a plain-English + Spanish alert the day the agenda drops, and a public comment
   filed before the hearing.**

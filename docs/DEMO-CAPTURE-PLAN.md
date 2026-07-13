@@ -1,21 +1,18 @@
 # Gavel — Video Capture Plan (shot list)
 
-_Companion to `DEMO-VO-SCRIPT.md` (what you SAY). This is what you **capture** and in what order._
+_Companion to `DEMO-VO-SCRIPT.md` (what you SAY) — now at **v4, the true arc: the residents WON**. This is what you **capture** and in what order._
 _Target ≤ 3:00. Record each shot separately, then assemble. Do NOT try to do it in one take._
 
 ---
 
-## ⛔ TWO BLOCKERS — fix before you roll
+## ✅ CHANNEL IS RESET AND READY (done 2026-07-13)
 
-**1. The demo channel is dirty.** `#general` currently has my testing debris (two `@Gavel` messages,
-duplicate clips) and the data-center alert card has scrolled out of view under unrelated alerts
-(Fire & Police reappointments, funding allocations). **There is nothing clean to scroll to.**
+`#general` now reads, top to bottom:
+1. **6 neighbor messages** — real documented sentiment, so RTS has something to find (Shot 3)
+2. **The data-center alert card** — news block (3 real headlines incl. "Drops Data Center Plan") + ✍️ button
+3. **The video clip** — plays inline (Shot 5)
 
-**2. The RTS thread is not seeded.** Beat 2 — the wow — asks *"didn't we already push back on this?"*
-Right now there is **nothing in the channel for RTS to find.** It will return nothing on camera.
-
-👉 **Say the word and I'll reset the channel:** delete the debris, seed the neighbor conversation, and
-re-post a clean data-center alert + the clip, in the right order, so you can just scroll and shoot.
+Nothing else. Scroll and shoot.
 
 ---
 
