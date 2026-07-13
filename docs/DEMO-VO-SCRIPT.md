@@ -70,7 +70,7 @@ NNS/WTMJ/CBS58 reporting), posted now because Slack can't backdate.
 
 ---
 
-## BEAT 3 — Who's behind it, and what they're calling it (1:02–1:30)
+## BEAT 3 — Who's behind it, and what they're calling it (1:02–1:36) ⭐ THE MONEY SHOT
 
 *(Parcel card: **AFS MILWAUKEE LLC · RB2 · $3.5M · open building violation**. Then the transcript
 receipt from the June 29 hearing, with the ▶ deep link.)*
@@ -86,17 +86,28 @@ receipt from the June 29 hearing, with the ▶ deep link.)*
 >
 > **The city's filing never says "data center."**
 >
-> *(bring up the transcript receipt — 24:26 of the June 29 webcast)*
+> *(**hit play on the clip in the channel** — it starts at 24:15 of the June 29 webcast)*
+>
+> **▶ [let the clip play — the commission reads it into the record]**
 >
 > It calls it a **"computational research facility."**
 >
-> Gavel pulled that straight out of the meeting audio — the actual words said in the room, with a link
-> to the second they were said. **You cannot search for a thing when nobody will call it by its name.
-> Gavel doesn't need you to know the name.**
+> **Milwaukee publishes video of these meetings. It does not publish transcripts.** So what gets said in
+> that room is, in practice, unsearchable. **Gavel transcribed it, found the moment, and clipped it — and
+> it plays right here in Slack.**
+>
+> **You can't search for a thing when nobody will call it by its name. Gavel doesn't need you to know
+> the name.**
 
-**Real:** live MPROP/CKAN + zoning + a real Deepgram-diarized transcript of the June 29 City Plan
-Commission webcast (EventId 13556), timestamped and deep-linked. **This is the line that lands — do not
-rush it. Pause after "computational research facility."**
+**Real, and this is the money shot:** an actual **MP4 clip of the June 29 City Plan Commission**, cut from
+the Granicus webcast at the exact second, **playing inline in Slack** (`files.uploadV2`). Backed by a real
+Deepgram-diarized transcript (EventId 13556). Nothing staged, nothing cached.
+
+**Direction:** let the clip play. **Do not talk over it.** Then land "computational research facility"
+and **pause.** This is the beat a judge repeats to another judge.
+
+**Pre-flight:** the clip is already posted in `#general` — `gavel-clip-13556-1455.mp4`, *"CITY PLAN
+COMMISSION — moment at 00:24:15."* Confirm it plays inline before you roll.
 
 ---
 
