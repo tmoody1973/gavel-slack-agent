@@ -91,3 +91,24 @@ test('consecutive chunks overlap for context continuity', () => {
 test('empty input yields no chunks, never throws', () => {
   assert.deepEqual(buildTranscriptChunks([], items, { eventId: 1, eventDate: '2026-06-16' }), []);
 });
+
+// Regression: a long utterance following a carried-over one used to break the inner loop
+// without consuming anything, so `index` never advanced and windowing spun forever —
+// it OOM'd the real 2026-06-29 Plan Commission ingest. Chunking must always terminate.
+test('an utterance that busts the window on its own still terminates (no infinite loop)', () => {
+  const utterances = [
+    { start: 0, end: 50, speaker: 0, transcript: 'short opening' },
+    { start: 50, end: 200, speaker: 1, transcript: 'a very long uninterrupted statement' },
+    { start: 200, end: 210, speaker: 2, transcript: 'brief reply' },
+  ];
+  const chunks = buildTranscriptChunks(utterances, items, {
+    eventId: 1,
+    eventDate: '2026-06-16',
+    windowSeconds: 45,
+    maxWindowSeconds: 60,
+  });
+  assert.ok(chunks.length > 0, 'produces chunks');
+  assert.ok(chunks.length <= utterances.length * 2, `bounded output, got ${chunks.length}`);
+  const all = chunks.map((c) => c.text).join(' ');
+  assert.match(all, /very long uninterrupted statement/, 'the long utterance is not dropped');
+});

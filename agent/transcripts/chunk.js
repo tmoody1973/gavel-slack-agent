@@ -101,6 +101,7 @@ function windowUtterances(utterances, windowSeconds, maxWindowSeconds) {
   while (index < utterances.length) {
     const slice = carry ? [carry] : [];
     const start = (carry ?? utterances[index]).start;
+    const indexAtWindowStart = index;
 
     while (index < utterances.length) {
       const next = utterances[index];
@@ -110,7 +111,10 @@ function windowUtterances(utterances, windowSeconds, maxWindowSeconds) {
       slice.push(next);
       index += 1;
     }
-    if (slice.length === 0) {
+    // Progress guard: a carried-over utterance already fills the slice, so an utterance that
+    // busts the window on its own would break the inner loop without consuming anything —
+    // leaving index unmoved and spinning this loop forever. Advance on no forward progress.
+    if (index === indexAtWindowStart) {
       slice.push(utterances[index]);
       index += 1;
     }
